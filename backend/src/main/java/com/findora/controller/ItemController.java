@@ -7,6 +7,8 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -105,7 +107,7 @@ public class ItemController {
                 page, size, sort, category, keyword, type, status
             );
 
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(toFrontendListResponse(response));
 
         } catch (IllegalArgumentException e) {
             log.warn("Invalid pagination params: {}", e.getMessage());
@@ -147,14 +149,16 @@ public class ItemController {
     @GetMapping("/my/items")
     public ResponseEntity<?> getMyItems(
             @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
+            @RequestParam(defaultValue = "10") Integer size,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String status) {
 
         try {
             Long userId = getCurrentUserId();
 
-            PaginatedResponse<ItemDTO> response = itemService.getUserItems(userId, page, size);
+            PaginatedResponse<ItemDTO> response = itemService.getUserItems(userId, page, size, type, status);
 
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(toFrontendListResponse(response));
 
         } catch (Exception e) {
             log.error("Error fetching user items", e);
@@ -265,5 +269,20 @@ public class ItemController {
         return userRepository.findByUsername(username)
             .map(user -> user.getId())
             .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
+    }
+
+    private Map<String, Object> toFrontendListResponse(PaginatedResponse<ItemDTO> response) {
+        List<ItemDTO> items = response.getContent();
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("items", items);
+        body.put("count", response.getTotalElements());
+
+        // Keep current response contract too, so existing consumers remain unaffected.
+        body.put("content", items);
+        body.put("pageNumber", response.getPageNumber());
+        body.put("pageSize", response.getPageSize());
+        body.put("totalPages", response.getTotalPages());
+        body.put("totalElements", response.getTotalElements());
+        return body;
     }
 }

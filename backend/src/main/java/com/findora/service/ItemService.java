@@ -1,12 +1,10 @@
 package com.findora.service;
 
-import com.findora.dto.ItemDTO;
-import com.findora.dto.PaginatedResponse;
-import com.findora.model.Item;
-import com.findora.model.ItemCategory;
-import com.findora.model.ItemStatus;
-import com.findora.model.ItemType;
-import com.findora.repository.ItemRepository;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -16,10 +14,13 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import com.findora.dto.ItemDTO;
+import com.findora.dto.PaginatedResponse;
+import com.findora.model.Item;
+import com.findora.model.ItemCategory;
+import com.findora.model.ItemStatus;
+import com.findora.model.ItemType;
+import com.findora.repository.ItemRepository;
 
 /**
  * ItemService - Business logic for items (lost/found).
@@ -141,6 +142,13 @@ public class ItemService {
      * Get items by user ID with pagination.
      */
     public PaginatedResponse<ItemDTO> getUserItems(Long userId, int page, int size) {
+        return getUserItems(userId, page, size, null, null);
+    }
+
+    /**
+     * Get items by user ID with optional type/status filters.
+     */
+    public PaginatedResponse<ItemDTO> getUserItems(Long userId, int page, int size, String type, String status) {
         if (page < 0 || size < 1 || size > 100) {
             throw new IllegalArgumentException("Invalid page or size");
         }
@@ -148,7 +156,17 @@ public class ItemService {
         Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        Page<Item> itemPage = itemRepository.findByUserId(userId, pageable);
+        ItemType itemType = null;
+        if (type != null && !type.isBlank()) {
+            itemType = ItemType.valueOf(type.trim().toUpperCase());
+        }
+
+        ItemStatus itemStatus = null;
+        if (status != null && !status.isBlank()) {
+            itemStatus = ItemStatus.valueOf(status.trim().toUpperCase());
+        }
+
+        Page<Item> itemPage = itemRepository.findUserItemsFiltered(userId, itemType, itemStatus, pageable);
 
         List<ItemDTO> dtos = itemPage.getContent().stream()
             .map(this::convertToDTO)
@@ -205,6 +223,7 @@ public class ItemService {
             item.getId(),
             item.getItemName(),
             toApiCategory(item.getCategory()),
+            item.getType() != null ? item.getType().toString().toLowerCase() : null,
             item.getDescription(),
             item.getLocation(),
             item.getStatus() != null ? item.getStatus().toString().toLowerCase() : null,

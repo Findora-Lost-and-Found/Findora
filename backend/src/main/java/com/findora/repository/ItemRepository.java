@@ -1,9 +1,8 @@
 package com.findora.repository;
 
-import com.findora.model.Item;
-import com.findora.model.ItemCategory;
-import com.findora.model.ItemStatus;
-import com.findora.model.ItemType;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,8 +10,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Optional;
+import com.findora.model.Item;
+import com.findora.model.ItemCategory;
+import com.findora.model.ItemStatus;
+import com.findora.model.ItemType;
 
 /**
  * ItemRepository - Data access for Item entity.
@@ -52,6 +53,14 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
      * Find items by user and optional type filter.
      */
     Page<Item> findByUserId(Long userId, Pageable pageable);
+
+    @Query("SELECT i FROM Item i WHERE i.userId = :userId AND " +
+           "(:type IS NULL OR i.type = :type) AND " +
+           "(:status IS NULL OR i.status = :status)")
+    Page<Item> findUserItemsFiltered(@Param("userId") Long userId,
+                                     @Param("type") ItemType type,
+                                     @Param("status") ItemStatus status,
+                                     Pageable pageable);
 
     Optional<Item> findByIdAndUserId(Long id, Long userId);
 }

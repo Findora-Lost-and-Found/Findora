@@ -1,5 +1,7 @@
 package com.findora.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * ItemDTO - DTO for Item responses.
  * Matches node API field names exactly: id, name, category, description, location, status, imageUrl, createdAt
@@ -9,6 +11,7 @@ public class ItemDTO {
     private Long id;
     private String name;               // Maps from itemName in DB
     private String category;           // e.g., "NIC", "Wallet"
+    private String type;               // e.g., "lost", "found"
     private String description;
     private String location;
     private String status;             // e.g., "active", "claimed"
@@ -18,10 +21,11 @@ public class ItemDTO {
     public ItemDTO() {
     }
 
-    public ItemDTO(Long id, String name, String category, String description, String location, String status, String imageUrl, String createdAt) {
+    public ItemDTO(Long id, String name, String category, String type, String description, String location, String status, String imageUrl, String createdAt) {
         this.id = id;
         this.name = name;
         this.category = category;
+        this.type = type;
         this.description = description;
         this.location = location;
         this.status = status;
@@ -51,6 +55,14 @@ public class ItemDTO {
 
     public void setCategory(String category) {
         this.category = category;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
     }
 
     public String getDescription() {
@@ -91,5 +103,21 @@ public class ItemDTO {
 
     public void setCreatedAt(String createdAt) {
         this.createdAt = createdAt;
+    }
+
+    // Frontend legacy aliases kept for compatibility.
+    @JsonProperty("item_name")
+    public String getItemName() {
+        return name;
+    }
+
+    @JsonProperty("image_url")
+    public String getImageUrlLegacy() {
+        return imageUrl;
+    }
+
+    @JsonProperty("created_at")
+    public String getCreatedAtLegacy() {
+        return createdAt;
     }
 }
