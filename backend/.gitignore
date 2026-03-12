@@ -1,4 +1,7 @@
-node_modules/
+# Maven build output
+target/
+target/**
+!target/.gitkeep
 
 # Environment and secrets
 .env
@@ -14,6 +17,9 @@ logs/
 *.log
 *.pid
 *.tmp
+*.temp
+*.swp
+*~
 
 # OS/editor
 .DS_Store
