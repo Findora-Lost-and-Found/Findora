@@ -284,13 +284,15 @@ To enable email notifications:
 
 ## 👤 Default Admin Account
 
-After running the database schema, a default admin account is created:
+In development/testing mode, a temporary admin account is auto-seeded on backend startup (if no admin exists):
 
 - **Username:** `admin`
-- **Email:** `admin@findora.com`
-- **Password:** `Admin@123`
+- **Email:** `admin@test.com`
+- **Password:** `Admin@1234`
 
-**Important:** Change this password immediately after first login!
+The password is hashed with `bcryptjs` before storing, and no duplicate is created if an admin already exists.
+
+**Note:** This account is intended for development/testing and can be removed later.
 
 ## 🎯 User Roles & Permissions
 
