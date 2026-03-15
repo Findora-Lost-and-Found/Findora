@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import './FoundItemCard.css';
 import ClaimModal from './ClaimModal';
 import { normalizeCategory } from '../utils/categoryUtils';
@@ -7,6 +8,7 @@ import { maskNicInText } from '../utils/itemDisplayUtils';
 
 const FoundItemCard = ({ item, onClaim }) => {
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
   const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
   const normalizedItem = {
     ...item,
@@ -16,6 +18,9 @@ const FoundItemCard = ({ item, onClaim }) => {
   const displayDescription = normalizedItem.category === 'NIC'
     ? maskNicInText(normalizedItem.description)
     : normalizedItem.description;
+  
+  // Check if current user owns this item
+  const isOwnItem = currentUser && (currentUser.id === normalizedItem?.posted_by?.id || currentUser.id === normalizedItem?.user_id);
   
   const formatDate = (dateString) => {
     const options = { month: 'short', day: 'numeric', year: 'numeric' };
@@ -61,12 +66,18 @@ const FoundItemCard = ({ item, onClaim }) => {
         </div>
 
         <div className="card-actions">
-          <button 
-            onClick={handleClaimClick}
-            className="btn btn-claim"
-          >
-            🏷️ Claim This Item
-          </button>
+          {isOwnItem ? (
+            <div className="own-item-notice">
+              <p>ℹ️ This is your item</p>
+            </div>
+          ) : (
+            <button 
+              onClick={handleClaimClick}
+              className="btn btn-claim"
+            >
+              🏷️ Claim This Item
+            </button>
+          )}
           <button 
             onClick={handleReportClick}
             className="btn btn-report"

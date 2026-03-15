@@ -180,6 +180,32 @@
   transform: scale(0.98);
 }
 
+.own-item-notice {
+  background: #EFF6FF;
+  border: 2px solid #3B82F6;
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+  grid-column: 1 / -1;
+}
+
+.own-item-notice p {
+  margin: 0;
+  color: #1E40AF;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+body.dark-mode .own-item-notice {
+  background: #1E3A8A;
+  border-color: #60A5FA;
+  color: #93C5FD;
+}
+
+body.dark-mode .own-item-notice p {
+  color: #93C5FD;
+}
+
 body.dark-mode .found-item-card {
   background: #111827;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
