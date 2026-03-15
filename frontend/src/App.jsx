@@ -29,6 +29,8 @@ const MyClaims = lazy(() => import('./pages/MyClaims'));
 
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'));
+const AdminPendingApprovals = lazy(() => import('./pages/admin/AdminPendingApprovals'));
+const AdminItemsByStatus = lazy(() => import('./pages/admin/AdminItemsByStatus'));
 
 const SecurityPendingClaims = lazy(() => import('./pages/security/SecurityPendingClaims'));
 
@@ -75,8 +77,12 @@ function App() {
               <Route path="/security/pending-claims" element={<PrivateRoute roles={['security', 'admin']}><SecurityPendingClaims /></PrivateRoute>} />
 
               {/* Admin Routes */}
-              <Route path="/admin/dashboard" element={<PrivateRoute roles={['admin']}><AdminDashboard /></PrivateRoute>} />
+              <Route path="/admin/dashboard" element={<PrivateRoute roles={['admin']}><Navigate to="/admin-panel" replace /></PrivateRoute>} />
+              <Route path="/admin-panel" element={<PrivateRoute roles={['admin']}><AdminDashboard /></PrivateRoute>} />
               <Route path="/admin/users" element={<PrivateRoute roles={['admin']}><AdminUsers /></PrivateRoute>} />
+              <Route path="/admin/pending-approvals" element={<PrivateRoute roles={['admin']}><AdminPendingApprovals /></PrivateRoute>} />
+              <Route path="/admin/items" element={<PrivateRoute roles={['admin']}><Navigate to="/admin/items/found" replace /></PrivateRoute>} />
+              <Route path="/admin/items/:section" element={<PrivateRoute roles={['admin']}><AdminItemsByStatus /></PrivateRoute>} />
             </Routes>
           </Suspense>
           <ToastContainer position="top-right" autoClose={3000} />
