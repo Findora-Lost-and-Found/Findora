@@ -1,11 +1,7 @@
-import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
-import { itemsAPI, claimsAPI } from '../services/api';
-import PostModal from '../components/PostModal';
-import FoundItemCard from '../components/FoundItemCard';
-import { normalizeCategory } from '../utils/categoryUtils';
-import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
+import { Navigate } from 'react-router-dom';
+import { getHomeRouteForUser } from '../utils/navigation';
+import StudentDashboard from './StudentDashboard';
 
 const ADMIN_PREVIEW_LIMIT = 5;
 const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
