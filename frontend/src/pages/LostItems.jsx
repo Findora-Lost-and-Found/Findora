@@ -1,11 +1,20 @@
 import { useEffect, useState } from 'react';
 import { itemsAPI } from '../services/api';
 import ItemCard from '../components/ItemCard';
-import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
+import Pagination from '../components/Pagination';
+
+const PAGE_SIZE = 4;
 
 const LostItems = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({
+    totalPages: 0,
+    totalElements: 0,
+    pageNumber: 0,
+    pageSize: PAGE_SIZE
+  });
+  const [currentPage, setCurrentPage] = useState(0);
   const [filters, setFilters] = useState({
     category: '',
     search: ''
@@ -13,28 +22,37 @@ const LostItems = () => {
 
   useEffect(() => {
     loadItems();
-  }, [filters]);
+  }, [currentPage, filters.category, filters.search]);
 
   const loadItems = async () => {
     try {
-      // My Lost Items shows only the logged-in user's lost posts.
-      const response = await itemsAPI.getMy({ type: 'lost' });
-      const myLostItems = (response.data.items || []).filter((item) => item.type === 'lost');
-      const searchTerm = filters.search.trim().toLowerCase();
+      setLoading(true);
 
-      const filteredItems = myLostItems.filter((item) => {
-        const matchesCategory = !filters.category || item.category === filters.category;
-        const matchesSearch = !searchTerm
-          || (item.item_name || '').toLowerCase().includes(searchTerm)
-          || (item.description || '').toLowerCase().includes(searchTerm)
-          || (item.location || '').toLowerCase().includes(searchTerm)
-          || (item.category || '').toLowerCase().includes(searchTerm);
-        return matchesCategory && matchesSearch;
+      const response = await itemsAPI.getMy({
+        type: 'lost',
+        page: currentPage,
+        size: PAGE_SIZE,
+        sort: 'createdAt,desc',
+        category: filters.category || undefined,
+        keyword: filters.search || undefined
       });
 
-      setItems(sortFoundItems(filteredItems, FOUND_ITEM_SORT.LATEST));
+      setItems(response.data?.content || []);
+      setPagination({
+        totalPages: response.data?.totalPages ?? 0,
+        totalElements: response.data?.totalElements ?? 0,
+        pageNumber: response.data?.pageNumber ?? currentPage,
+        pageSize: response.data?.pageSize ?? PAGE_SIZE
+      });
     } catch (error) {
       console.error('Error loading items:', error);
+      setItems([]);
+      setPagination({
+        totalPages: 0,
+        totalElements: 0,
+        pageNumber: 0,
+        pageSize: PAGE_SIZE
+      });
     } finally {
       setLoading(false);
     }
@@ -42,6 +60,7 @@ const LostItems = () => {
 
   const handleFilterChange = (e) => {
     setFilters({ ...filters, [e.target.name]: e.target.value });
+    setCurrentPage(0);
   };
 
   if (loading) {
@@ -78,6 +97,12 @@ const LostItems = () => {
           items.map(item => <ItemCard key={item.id} item={item} />)
         )}
       </div>
+
+      <Pagination
+        currentPage={pagination.pageNumber}
+        totalPages={pagination.totalPages}
+        onPageChange={setCurrentPage}
+      />
     </div>
   );
 };
