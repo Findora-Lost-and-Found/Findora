@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getHomeRouteForRole } from '../utils/navigation';
 
 const MobileWarning = ({ userRole }) => {
   const [isMobile, setIsMobile] = useState(false);
@@ -34,7 +35,7 @@ const MobileWarning = ({ userRole }) => {
       </p>
       <button 
         className="btn btn-secondary"
-        onClick={() => navigate('/dashboard')}
+        onClick={() => navigate(getHomeRouteForRole(userRole))}
         style={{ marginTop: '1rem' }}
       >
         Go to Dashboard
