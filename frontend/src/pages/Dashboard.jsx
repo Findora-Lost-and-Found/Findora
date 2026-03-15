@@ -7,6 +7,59 @@ import FoundItemCard from '../components/FoundItemCard';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
 
+const ADMIN_PREVIEW_LIMIT = 5;
+const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
+
+const readFirst = (obj, keys, fallback = '') => {
+  for (const key of keys) {
+    const value = obj?.[key];
+    if (value !== undefined && value !== null && String(value).trim() !== '') {
+      return value;
+    }
+  }
+  return fallback;
+};
+
+const toImageUrl = (rawImage) => {
+  if (!rawImage) return 'https://via.placeholder.com/120x80?text=No+Image';
+  if (rawImage.startsWith('http://') || rawImage.startsWith('https://')) {
+    return rawImage;
+  }
+  return `${API_ORIGIN}${rawImage.startsWith('/') ? rawImage : `/${rawImage}`}`;
+};
+
+const toTimestamp = (value) => {
+  if (!value) return 0;
+  const parsed = new Date(value).getTime();
+  return Number.isNaN(parsed) ? 0 : parsed;
+};
+
+const formatDateTime = (value) => {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
+};
+
+const normalizeAdminDashboardItem = (item, section) => {
+  const dateTime = section === 'released'
+    ? readFirst(item, ['released_at', 'releasedAt', 'date_released', 'dateReleased', 'created_at', 'createdAt'])
+    : section === 'received'
+      ? readFirst(item, ['received_at', 'receivedAt', 'date_received', 'dateReceived', 'created_at', 'createdAt'])
+      : readFirst(item, ['date_found', 'dateFound', 'date_time_found', 'dateTimeFound', 'created_at', 'createdAt']);
+
+  return {
+    id: item.id,
+    itemName: readFirst(item, ['name', 'item_name', 'itemName'], 'Unnamed Item'),
+    itemImage: toImageUrl(readFirst(item, ['image', 'image_url', 'imageUrl'])),
+    founder: readFirst(item, ['founder_username', 'founderUsername', 'found_by_username', 'posted_by_username', 'username'], 'Unknown'),
+    security: readFirst(item, ['security_username', 'securityUsername', 'received_by_username', 'released_by_username'], 'Unknown'),
+    receiver: readFirst(item, ['receiver_username', 'receiverUsername', 'claimer_username', 'owner_username'], 'Unknown'),
+    dateTime,
+    timestamp: toTimestamp(dateTime)
+  };
+};
+
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -14,6 +67,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [foundItems, setFoundItems] = useState([]);
+  const [adminSections, setAdminSections] = useState({ found: [], received: [], released: [] });
 
   useEffect(() => {
     if (user) {
@@ -55,10 +109,38 @@ const Dashboard = () => {
           console.error('Dashboard found items fetch failed:', foundRes.reason?.response?.data || foundRes.reason?.message);
           setFoundItems([]);
         }
+      } else if (user.role === 'admin') {
+        const [foundRes, receivedRes, releasedRes] = await Promise.allSettled([
+          itemsAPI.getAll({ type: 'found', status: 'active', page: 0, size: ADMIN_PREVIEW_LIMIT, sort: 'createdAt,desc' }),
+          itemsAPI.getAll({ type: 'found', status: 'claimed', page: 0, size: ADMIN_PREVIEW_LIMIT, sort: 'createdAt,desc' }),
+          itemsAPI.getAll({ type: 'found', status: 'closed', page: 0, size: ADMIN_PREVIEW_LIMIT, sort: 'createdAt,desc' })
+        ]);
+
+        const extractItems = (result) => {
+          if (result.status !== 'fulfilled') return [];
+          return result.value.data.items || result.value.data.content || [];
+        };
+
+        // Found/Receive/Release sections are sourced from backend statuses: active/claimed/closed.
+        setAdminSections({
+          found: extractItems(foundRes)
+            .map((item) => normalizeAdminDashboardItem(item, 'found'))
+            .sort((a, b) => b.timestamp - a.timestamp)
+            .slice(0, ADMIN_PREVIEW_LIMIT),
+          received: extractItems(receivedRes)
+            .map((item) => normalizeAdminDashboardItem(item, 'received'))
+            .sort((a, b) => b.timestamp - a.timestamp)
+            .slice(0, ADMIN_PREVIEW_LIMIT),
+          released: extractItems(releasedRes)
+            .map((item) => normalizeAdminDashboardItem(item, 'released'))
+            .sort((a, b) => b.timestamp - a.timestamp)
+            .slice(0, ADMIN_PREVIEW_LIMIT)
+        });
       }
     } catch (error) {
       console.error('Error loading dashboard:', error);
       setFoundItems([]);
+      setAdminSections({ found: [], received: [], released: [] });
     } finally {
       setLoading(false);
     }
@@ -121,6 +203,125 @@ const Dashboard = () => {
               ))}
             </div>
           </div>
+        )}
+
+        {user?.role === 'admin' && (
+          <>
+            <div className="section" style={{ marginTop: '2rem' }}>
+              <div className="section-header" style={{ borderBottom: 'none', marginBottom: '0.25rem' }}>
+                <h2>Found</h2>
+                <Link to="/admin/items/found" className="link-more">View All →</Link>
+              </div>
+              <div className="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Founder username</th>
+                      <th>Item name</th>
+                      <th>Item picture</th>
+                      <th>Date and time found</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {adminSections.found.length === 0 ? (
+                      <tr>
+                        <td colSpan={4}>No found items available.</td>
+                      </tr>
+                    ) : (
+                      adminSections.found.map((item) => (
+                        <tr key={`dashboard-found-${item.id}`}>
+                          <td>{item.founder}</td>
+                          <td>{item.itemName}</td>
+                          <td>
+                            <img src={item.itemImage} alt={item.itemName} style={{ width: '88px', height: '56px', objectFit: 'cover', borderRadius: '6px' }} />
+                          </td>
+                          <td>{formatDateTime(item.dateTime)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="section" style={{ marginTop: '2rem' }}>
+              <div className="section-header" style={{ borderBottom: 'none', marginBottom: '0.25rem' }}>
+                <h2>Receive</h2>
+                <Link to="/admin/items/receive" className="link-more">View All →</Link>
+              </div>
+              <div className="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Security username</th>
+                      <th>Founder student username</th>
+                      <th>Item name</th>
+                      <th>Item picture</th>
+                      <th>Date and time received</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {adminSections.received.length === 0 ? (
+                      <tr>
+                        <td colSpan={5}>No receive items available.</td>
+                      </tr>
+                    ) : (
+                      adminSections.received.map((item) => (
+                        <tr key={`dashboard-received-${item.id}`}>
+                          <td>{item.security}</td>
+                          <td>{item.founder}</td>
+                          <td>{item.itemName}</td>
+                          <td>
+                            <img src={item.itemImage} alt={item.itemName} style={{ width: '88px', height: '56px', objectFit: 'cover', borderRadius: '6px' }} />
+                          </td>
+                          <td>{formatDateTime(item.dateTime)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="section" style={{ marginTop: '2rem' }}>
+              <div className="section-header" style={{ borderBottom: 'none', marginBottom: '0.25rem' }}>
+                <h2>Release</h2>
+                <Link to="/admin/items/release" className="link-more">View All →</Link>
+              </div>
+              <div className="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Security username</th>
+                      <th>Receiver student username</th>
+                      <th>Item name</th>
+                      <th>Item picture</th>
+                      <th>Date and time released</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {adminSections.released.length === 0 ? (
+                      <tr>
+                        <td colSpan={5}>No release items available.</td>
+                      </tr>
+                    ) : (
+                      adminSections.released.map((item) => (
+                        <tr key={`dashboard-released-${item.id}`}>
+                          <td>{item.security}</td>
+                          <td>{item.receiver}</td>
+                          <td>{item.itemName}</td>
+                          <td>
+                            <img src={item.itemImage} alt={item.itemName} style={{ width: '88px', height: '56px', objectFit: 'cover', borderRadius: '6px' }} />
+                          </td>
+                          <td>{formatDateTime(item.dateTime)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
         )}
       </div>
 

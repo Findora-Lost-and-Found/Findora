@@ -23,15 +23,18 @@ The phone number field during signup is **optional** and only used for contact i
 6. Click **Generate**
 7. **Copy the 16-character password** (format: xxxx xxxx xxxx xxxx)
 
-### Step 3: Update .env File
+### Step 3: Update Spring Boot Mail Properties
 
-Open `backend/.env` and update:
+Open `backend/src/main/resources/application.properties` and update:
 
-```env
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USER=your_actual_gmail@gmail.com
-EMAIL_PASSWORD=xxxx xxxx xxxx xxxx
+```properties
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=your_actual_gmail@gmail.com
+spring.mail.password=xxxx xxxx xxxx xxxx
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+spring.mail.properties.mail.smtp.starttls.required=true
 ```
 
 **Replace:**
@@ -40,12 +43,11 @@ EMAIL_PASSWORD=xxxx xxxx xxxx xxxx
 
 ### Step 4: Restart Backend Server
 
-After updating .env, restart the backend:
+After updating `application.properties`, restart the backend:
 
-```powershell
-# Stop the current server (Ctrl+C)
-# Then restart:
-npm run dev
+```bash
+cd backend
+mvn spring-boot:run
 ```
 
 ## Testing Email OTP
@@ -59,7 +61,7 @@ npm run dev
 ## Common Issues
 
 ### "Error sending email"
-- Check if EMAIL_USER and EMAIL_PASSWORD are correct
+- Check if `spring.mail.username` and `spring.mail.password` are correct
 - Make sure you used an App Password, not your regular password
 - Verify 2FA is enabled on your Google account
 
@@ -84,18 +86,18 @@ For development/testing, you can use services like:
 
 1. Sign up at https://mailtrap.io
 2. Get SMTP credentials from your inbox
-3. Update .env:
+3. Update `backend/src/main/resources/application.properties`:
 
-```env
-EMAIL_HOST=smtp.mailtrap.io
-EMAIL_PORT=2525
-EMAIL_USER=your_mailtrap_username
-EMAIL_PASSWORD=your_mailtrap_password
+```properties
+spring.mail.host=smtp.mailtrap.io
+spring.mail.port=2525
+spring.mail.username=your_mailtrap_username
+spring.mail.password=your_mailtrap_password
 ```
 
 ## Security Notes
 
-- Never commit your .env file to Git
+- Do not commit real mail credentials or secrets to version control
 - App passwords are safer than regular passwords
 - Change app passwords regularly
 - Revoke unused app passwords
