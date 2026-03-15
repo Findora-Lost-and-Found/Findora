@@ -137,8 +137,4 @@ CREATE TABLE post_reports (
   INDEX idx_reporter (reporter_id)
 );
 
--- Insert default admin user (password: Admin@123)
--- Password hash for 'Admin@123'
-INSERT INTO users (username, email, password, full_name, role, is_verified, is_approved) 
-VALUES 
-('admin', 'admin@findora.com', '$2a$10$rZ4JqL9WGxYnXH3kqVqVvOQNUZJxKD7GKqFNO3NfGOvHgZ8FfKFVW', 'System Admin', 'admin', TRUE, TRUE);
+-- Temporary test admin is seeded by backend/utils/seedTestAdmin.js in non-production environments.

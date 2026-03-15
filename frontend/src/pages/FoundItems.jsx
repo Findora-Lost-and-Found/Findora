@@ -2,14 +2,24 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { itemsAPI } from '../services/api';
 import FoundItemCard from '../components/FoundItemCard';
+import Pagination from '../components/Pagination';
 import { normalizeCategory } from '../utils/categoryUtils';
-import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
+import { FOUND_ITEM_SORT } from '../utils/itemDisplayUtils';
+
+const PAGE_SIZE = 4;
 
 const FoundItems = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const [allItems, setAllItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({
+    totalPages: 0,
+    totalElements: 0,
+    pageNumber: 0,
+    pageSize: PAGE_SIZE
+  });
+  const [currentPage, setCurrentPage] = useState(0);
   const [filters, setFilters] = useState({
     category: '',
     search: '',
@@ -34,46 +44,63 @@ const FoundItems = () => {
     }
   });
 
+  const sortParam = useMemo(() => {
+    if (filters.sortBy === FOUND_ITEM_SORT.NAME_ASC) {
+      return 'name,asc';
+    }
+    if (filters.sortBy === FOUND_ITEM_SORT.NAME_DESC) {
+      return 'name,desc';
+    }
+    return 'createdAt,desc';
+  }, [filters.sortBy]);
+
   useEffect(() => {
     loadItems();
-  }, [location.state?.refreshAt]);
+  }, [location.state?.refreshAt, currentPage, filters.category, filters.search, sortParam]);
 
   const loadItems = async () => {
     try {
-      // Fetch all found posts from all users; no user_id/status restriction here.
-      const response = await itemsAPI.getAll({ type: 'found' });
-      const apiItems = response.data?.items || [];
+      setLoading(true);
+
+      const response = await itemsAPI.getAll({
+        type: 'found',
+        page: currentPage,
+        size: PAGE_SIZE,
+        sort: sortParam,
+        category: filters.category || undefined,
+        keyword: filters.search || undefined
+      });
+
+      const apiItems = response.data?.content || [];
       console.log('FoundItems fetched from API:', apiItems);
       const normalizedItems = apiItems.map(normalizeItem);
       setAllItems(normalizedItems);
+
+      setPagination({
+        totalPages: response.data?.totalPages ?? 0,
+        totalElements: response.data?.totalElements ?? 0,
+        pageNumber: response.data?.pageNumber ?? currentPage,
+        pageSize: response.data?.pageSize ?? PAGE_SIZE
+      });
     } catch (error) {
       console.error('Error loading found items:', error.response?.data || error.message);
       setAllItems([]);
+      setPagination({
+        totalPages: 0,
+        totalElements: 0,
+        pageNumber: 0,
+        pageSize: PAGE_SIZE
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const displayedItems = useMemo(() => {
-    const searchTerm = filters.search.trim().toLowerCase();
-
-    const filteredItems = allItems.filter((item) => {
-      const matchesCategory = !filters.category || item.category === filters.category;
-      const matchesSearch = !searchTerm ||
-        item.name.toLowerCase().includes(searchTerm) ||
-        item.description.toLowerCase().includes(searchTerm) ||
-        item.location.toLowerCase().includes(searchTerm) ||
-        item.category.toLowerCase().includes(searchTerm);
-
-      return matchesCategory && matchesSearch;
-    });
-
-    // Keep sorting behavior consistent with Dashboard and apply it after filtering.
-    return sortFoundItems(filteredItems, filters.sortBy);
-  }, [allItems, filters]);
+  const displayedItems = allItems;
 
   const handleFilterChange = (e) => {
     setFilters({ ...filters, [e.target.name]: e.target.value });
+    setCurrentPage(0);
   };
 
   useEffect(() => {
@@ -137,6 +164,12 @@ const FoundItems = () => {
           ))
         )}
       </div>
+
+      <Pagination
+        currentPage={pagination.pageNumber}
+        totalPages={pagination.totalPages}
+        onPageChange={setCurrentPage}
+      />
     </div>
   );
 };
