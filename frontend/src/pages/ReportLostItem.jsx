@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import { itemsAPI } from '../services/api';
 import './ReportLostItem.css';
 
 const CATEGORY_OPTIONS = ['NIC', 'Student / Staff ID', 'Bank Card', 'Purse / Wallet', 'Others'];
@@ -6,9 +9,7 @@ const CATEGORY_OPTIONS = ['NIC', 'Student / Staff ID', 'Bank Card', 'Purse / Wal
 const ReportLostItem = () => {
   const [category, setCategory] = useState('');
   const [purseOption, setPurseOption] = useState('with-id');
-  const [submitted, setSubmitted] = useState(false);
-  const [verified, setVerified] = useState(false);
-  const [otp, setOtp] = useState('');
+  const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
     nicName: '',
@@ -42,16 +43,28 @@ const ReportLostItem = () => {
     otherLocation3: '',
     otherDateLost: '',
     otherFromTime: '',
-    otherToTime: ''
+    otherToTime: '',
+    nicLocation1: '',
+    nicLocation2: '',
+    nicDateLost: '',
+    nicFromTime: '',
+    nicToTime: '',
+    idLocation1: '',
+    idLocation2: '',
+    idDateLost: '',
+    idFromTime: '',
+    idToTime: '',
+    purseWithIdLocation1: '',
+    purseWithIdLocation2: '',
+    purseWithIdDateLost: '',
+    purseWithIdFromTime: '',
+    purseWithIdToTime: ''
   });
 
-  const requiresVerification = category !== 'Others' && category !== '';
+  const navigate = useNavigate();
 
   const handleCategoryChange = (e) => {
     setCategory(e.target.value);
-    setSubmitted(false);
-    setVerified(false);
-    setOtp('');
     setErrors({});
   };
 
@@ -72,11 +85,19 @@ const ReportLostItem = () => {
     if (category === 'NIC') {
       if (!formData.nicName.trim()) nextErrors.nicName = 'Name is required.';
       if (!formData.nicNumber.trim()) nextErrors.nicNumber = 'NIC Number is required.';
+      if (!formData.nicLocation1.trim()) nextErrors.nicLocation1 = 'Location is required.';
+      if (!formData.nicDateLost) nextErrors.nicDateLost = 'Date is required.';
+      if (!formData.nicFromTime) nextErrors.nicFromTime = 'From time is required.';
+      if (!formData.nicToTime) nextErrors.nicToTime = 'To time is required.';
     }
 
     if (category === 'Student / Staff ID') {
       if (!formData.idName.trim()) nextErrors.idName = 'Name is required.';
       if (!formData.studentOrStaffId.trim()) nextErrors.studentOrStaffId = 'Student ID or Staff ID is required.';
+      if (!formData.idLocation1.trim()) nextErrors.idLocation1 = 'Location is required.';
+      if (!formData.idDateLost) nextErrors.idDateLost = 'Date is required.';
+      if (!formData.idFromTime) nextErrors.idFromTime = 'From time is required.';
+      if (!formData.idToTime) nextErrors.idToTime = 'To time is required.';
     }
 
     if (category === 'Bank Card') {
@@ -94,6 +115,10 @@ const ReportLostItem = () => {
     if (category === 'Purse / Wallet') {
       if (purseOption === 'with-id') {
         if (!formData.purseIdNumber.trim()) nextErrors.purseIdNumber = 'NIC number or Student/Staff ID is required.';
+        if (!formData.purseWithIdLocation1.trim()) nextErrors.purseWithIdLocation1 = 'Location is required.';
+        if (!formData.purseWithIdDateLost) nextErrors.purseWithIdDateLost = 'Date is required.';
+        if (!formData.purseWithIdFromTime) nextErrors.purseWithIdFromTime = 'From time is required.';
+        if (!formData.purseWithIdToTime) nextErrors.purseWithIdToTime = 'To time is required.';
       }
 
       if (purseOption === 'without-id') {
@@ -116,18 +141,84 @@ const ReportLostItem = () => {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
-    setSubmitted(true);
-    setVerified(false);
-    setOtp('');
-  };
 
-  const handleVerify = () => {
-    const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    setOtp(generatedOtp);
-    setVerified(true);
+    const categoryMap = {
+      'NIC': 'NIC',
+      'Student / Staff ID': 'Student ID',
+      'Bank Card': 'Bank Card',
+      'Purse / Wallet': 'Wallet',
+      'Others': 'Other'
+    };
+
+    let item_name, description, location, date, time, image;
+
+    if (category === 'NIC') {
+      item_name = `NIC - ${formData.nicName}`;
+      description = `NIC Number: ${formData.nicNumber}`;
+      location = [formData.nicLocation1, formData.nicLocation2].filter(Boolean).join(', ');
+      date = formData.nicDateLost;
+      time = formData.nicFromTime;
+      image = null;
+    } else if (category === 'Student / Staff ID') {
+      item_name = `Student/Staff ID - ${formData.idName}`;
+      description = `ID: ${formData.studentOrStaffId}`;
+      location = [formData.idLocation1, formData.idLocation2].filter(Boolean).join(', ');
+      date = formData.idDateLost;
+      time = formData.idFromTime;
+      image = null;
+    } else if (category === 'Bank Card') {
+      item_name = `${formData.cardType} Card - ${formData.bankName}`;
+      description = formData.cardLast4 ? `Last 4 digits: ${formData.cardLast4}` : '';
+      location = [formData.bankLocation1, formData.bankLocation2, formData.bankLocation3].filter(Boolean).join(', ');
+      date = formData.bankDateLost;
+      time = formData.bankFromTime;
+      image = null;
+    } else if (category === 'Purse / Wallet') {
+      item_name = 'Purse / Wallet';
+      if (purseOption === 'with-id') {
+        description = `Contains ID/NIC: ${formData.purseIdNumber}`;
+        location = [formData.purseWithIdLocation1, formData.purseWithIdLocation2].filter(Boolean).join(', ');
+        date = formData.purseWithIdDateLost;
+        time = formData.purseWithIdFromTime;
+      } else {
+        const items = [formData.purseItems1, formData.purseItems2, formData.purseItems3].filter(Boolean).join(', ');
+        description = items ? `Contains: ${items}` : '';
+        location = [formData.purseLocation1, formData.purseLocation2, formData.purseLocation3].filter(Boolean).join(', ');
+        date = formData.purseDateLost;
+        time = formData.purseFromTime;
+      }
+      image = formData.pursePhoto;
+    } else {
+      item_name = 'Other Item';
+      description = '';
+      location = [formData.otherLocation1, formData.otherLocation2, formData.otherLocation3].filter(Boolean).join(', ');
+      date = formData.otherDateLost;
+      time = formData.otherFromTime;
+      image = formData.otherPhoto;
+    }
+
+    setLoading(true);
+    try {
+      await itemsAPI.create({
+        type: 'lost',
+        category: categoryMap[category],
+        item_name,
+        description,
+        location,
+        date,
+        time,
+        image
+      });
+      toast.success('Lost item reported successfully!');
+      navigate('/lost-items');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to submit. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -160,6 +251,38 @@ const ReportLostItem = () => {
                 <input name="nicNumber" value={formData.nicNumber} onChange={handleInputChange} />
                 {errors.nicNumber && <p className="report-lost-error">{errors.nicNumber}</p>}
               </div>
+              <div className="report-lost-private">
+                <h4>Where did you lose it?</h4>
+                <div className="report-lost-form-group">
+                  <label className="required">Field 1</label>
+                  <input name="nicLocation1" value={formData.nicLocation1} onChange={handleInputChange} />
+                  {errors.nicLocation1 && <p className="report-lost-error">{errors.nicLocation1}</p>}
+                </div>
+                <div className="report-lost-form-group">
+                  <label>Field 2 (optional)</label>
+                  <input name="nicLocation2" value={formData.nicLocation2} onChange={handleInputChange} />
+                </div>
+                <div className="report-lost-form-group">
+                  <label className="required">What date did you lose it?</label>
+                  <input type="date" name="nicDateLost" value={formData.nicDateLost} onChange={handleInputChange} />
+                  {errors.nicDateLost && <p className="report-lost-error">{errors.nicDateLost}</p>}
+                </div>
+                <div className="report-lost-form-group">
+                  <label className="required">What time span did you lose it?</label>
+                  <div className="report-lost-row">
+                    <div>
+                      <label>From</label>
+                      <input type="time" name="nicFromTime" value={formData.nicFromTime} onChange={handleInputChange} />
+                      {errors.nicFromTime && <p className="report-lost-error">{errors.nicFromTime}</p>}
+                    </div>
+                    <div>
+                      <label>To</label>
+                      <input type="time" name="nicToTime" value={formData.nicToTime} onChange={handleInputChange} />
+                      {errors.nicToTime && <p className="report-lost-error">{errors.nicToTime}</p>}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -175,6 +298,38 @@ const ReportLostItem = () => {
                 <label className="required">Student ID or Staff ID</label>
                 <input name="studentOrStaffId" value={formData.studentOrStaffId} onChange={handleInputChange} />
                 {errors.studentOrStaffId && <p className="report-lost-error">{errors.studentOrStaffId}</p>}
+              </div>
+              <div className="report-lost-private">
+                <h4>Where did you lose it?</h4>
+                <div className="report-lost-form-group">
+                  <label className="required">Field 1</label>
+                  <input name="idLocation1" value={formData.idLocation1} onChange={handleInputChange} />
+                  {errors.idLocation1 && <p className="report-lost-error">{errors.idLocation1}</p>}
+                </div>
+                <div className="report-lost-form-group">
+                  <label>Field 2 (optional)</label>
+                  <input name="idLocation2" value={formData.idLocation2} onChange={handleInputChange} />
+                </div>
+                <div className="report-lost-form-group">
+                  <label className="required">What date did you lose it?</label>
+                  <input type="date" name="idDateLost" value={formData.idDateLost} onChange={handleInputChange} />
+                  {errors.idDateLost && <p className="report-lost-error">{errors.idDateLost}</p>}
+                </div>
+                <div className="report-lost-form-group">
+                  <label className="required">What time span did you lose it?</label>
+                  <div className="report-lost-row">
+                    <div>
+                      <label>From</label>
+                      <input type="time" name="idFromTime" value={formData.idFromTime} onChange={handleInputChange} />
+                      {errors.idFromTime && <p className="report-lost-error">{errors.idFromTime}</p>}
+                    </div>
+                    <div>
+                      <label>To</label>
+                      <input type="time" name="idToTime" value={formData.idToTime} onChange={handleInputChange} />
+                      {errors.idToTime && <p className="report-lost-error">{errors.idToTime}</p>}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -291,10 +446,44 @@ const ReportLostItem = () => {
               </div>
 
               {purseOption === 'with-id' && (
-                <div className="report-lost-form-group">
-                  <label className="required">Enter NIC number or Student/Staff ID</label>
-                  <input name="purseIdNumber" value={formData.purseIdNumber} onChange={handleInputChange} />
-                  {errors.purseIdNumber && <p className="report-lost-error">{errors.purseIdNumber}</p>}
+                <div>
+                  <div className="report-lost-form-group">
+                    <label className="required">Enter NIC number or Student/Staff ID</label>
+                    <input name="purseIdNumber" value={formData.purseIdNumber} onChange={handleInputChange} />
+                    {errors.purseIdNumber && <p className="report-lost-error">{errors.purseIdNumber}</p>}
+                  </div>
+                  <div className="report-lost-private">
+                    <h4>Where did you lose it?</h4>
+                    <div className="report-lost-form-group">
+                      <label className="required">Field 1</label>
+                      <input name="purseWithIdLocation1" value={formData.purseWithIdLocation1} onChange={handleInputChange} />
+                      {errors.purseWithIdLocation1 && <p className="report-lost-error">{errors.purseWithIdLocation1}</p>}
+                    </div>
+                    <div className="report-lost-form-group">
+                      <label>Field 2 (optional)</label>
+                      <input name="purseWithIdLocation2" value={formData.purseWithIdLocation2} onChange={handleInputChange} />
+                    </div>
+                    <div className="report-lost-form-group">
+                      <label className="required">What date did you lose it?</label>
+                      <input type="date" name="purseWithIdDateLost" value={formData.purseWithIdDateLost} onChange={handleInputChange} />
+                      {errors.purseWithIdDateLost && <p className="report-lost-error">{errors.purseWithIdDateLost}</p>}
+                    </div>
+                    <div className="report-lost-form-group">
+                      <label className="required">What time span did you lose it?</label>
+                      <div className="report-lost-row">
+                        <div>
+                          <label>From</label>
+                          <input type="time" name="purseWithIdFromTime" value={formData.purseWithIdFromTime} onChange={handleInputChange} />
+                          {errors.purseWithIdFromTime && <p className="report-lost-error">{errors.purseWithIdFromTime}</p>}
+                        </div>
+                        <div>
+                          <label>To</label>
+                          <input type="time" name="purseWithIdToTime" value={formData.purseWithIdToTime} onChange={handleInputChange} />
+                          {errors.purseWithIdToTime && <p className="report-lost-error">{errors.purseWithIdToTime}</p>}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -409,24 +598,11 @@ const ReportLostItem = () => {
           )}
 
           <div className="report-lost-actions">
-            <button type="submit" className="btn-primary">Submit</button>
+            <button type="submit" className="btn-primary" disabled={loading}>
+              {loading ? 'Submitting...' : 'Submit'}
+            </button>
           </div>
         </form>
-
-        {submitted && (
-          <div className="report-lost-status notify">
-            <p>We will notify you.</p>
-            {requiresVerification && !verified && (
-              <button className="btn-primary" onClick={handleVerify}>Verify</button>
-            )}
-          </div>
-        )}
-
-        {verified && otp && (
-          <div className="report-lost-status otp">
-            <p>OTP for security: <strong>{otp}</strong></p>
-          </div>
-        )}
       </div>
     </div>
   );
