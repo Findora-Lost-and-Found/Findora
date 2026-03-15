@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }) => {
       setToken(token);
       setUser(user);
       toast.success(response.data.message);
-      return { success: true };
+      return { success: true, user };
     } catch (error) {
       const message = getApiErrorMessage(error, 'Registration failed');
       toast.error(message);
@@ -67,7 +67,7 @@ export const AuthProvider = ({ children }) => {
       setToken(token);
       setUser(user);
       toast.success('Login successful');
-      return { success: true };
+      return { success: true, user };
     } catch (error) {
       const message = getApiErrorMessage(error, 'Login failed');
       toast.error(message);
