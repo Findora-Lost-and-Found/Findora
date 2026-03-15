@@ -17,6 +17,12 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('token'));
 
+  const getApiErrorMessage = (error, fallbackMessage) => {
+    const apiError = error.response?.data;
+    const validationMessage = apiError?.errors?.[0]?.msg;
+    return validationMessage || apiError?.message || fallbackMessage;
+  };
+
   useEffect(() => {
     if (token) {
       loadUser();
@@ -47,7 +53,7 @@ export const AuthProvider = ({ children }) => {
       toast.success(response.data.message);
       return { success: true };
     } catch (error) {
-      const message = error.response?.data?.message || 'Registration failed';
+      const message = getApiErrorMessage(error, 'Registration failed');
       toast.error(message);
       return { success: false, message };
     }
@@ -63,7 +69,7 @@ export const AuthProvider = ({ children }) => {
       toast.success('Login successful');
       return { success: true };
     } catch (error) {
-      const message = error.response?.data?.message || 'Login failed';
+      const message = getApiErrorMessage(error, 'Login failed');
       toast.error(message);
       return { success: false, message };
     }
