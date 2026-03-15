@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect } from 'react';
 import { notificationsAPI } from '../services/api';
+import { getHomeRouteForUser } from '../utils/navigation';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -40,13 +41,13 @@ const Navbar = () => {
 
         {user && (
           <div className="nav-menu">
-            <Link to="/dashboard" className="nav-link">Dashboard</Link>
+            <Link to={getHomeRouteForUser(user)} className="nav-link">Dashboard</Link>
             
-            {(user.role === 'student' || user.role === 'staff') && (
+            {(user.role === 'student' || user.role === 'staff' || user.role === 'security') && (
               <>
                 <Link to="/lost-items" className="nav-link">My Lost Items</Link>
                 <Link to="/found-items" className="nav-link">Found Items</Link>
-                <Link to="/my-claims" className="nav-link">My Claims</Link>
+                {user.role !== 'security' && <Link to="/my-claims" className="nav-link">My Claims</Link>}
               </>
             )}
 

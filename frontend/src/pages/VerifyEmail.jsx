@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
+import { getHomeRouteForUser } from '../utils/navigation';
 
 const VerifyEmail = () => {
   const [otp, setOtp] = useState('');
@@ -21,7 +22,7 @@ const VerifyEmail = () => {
     try {
       await verifyEmail(otp);
       toast.success('Email verified successfully!');
-      navigate('/dashboard');
+      navigate(getHomeRouteForUser(user));
     } catch (error) {
       toast.error(error.response?.data?.message || 'Invalid OTP');
     } finally {

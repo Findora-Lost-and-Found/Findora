@@ -69,6 +69,7 @@ export const securityAPI = {
   verifyClaim: (claim_id, otp) => api.post('/security/verify-claim', { claim_id, otp }),
   receiveItem: (data) => api.post('/security/receive-item', data),
   getTransactions: (params) => api.get('/security/transactions', { params }),
+  getFoundItems: (params) => api.get('/security/found-items', { params }),
   getStats: () => api.get('/security/stats'),
   getPendingClaims: () => api.get('/security/pending-claims')
 };

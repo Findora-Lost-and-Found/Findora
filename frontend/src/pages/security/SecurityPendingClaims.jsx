@@ -1,16 +1,33 @@
 import { useEffect, useState } from 'react';
 import { securityAPI } from '../../services/api';
 import { toast } from 'react-toastify';
+import Pagination from '../../components/Pagination';
+
+const PAGE_SIZE = 10;
 
 const SecurityPendingClaims = () => {
   const [claims, setClaims] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [claimsLoading, setClaimsLoading] = useState(true);
+  const [foundItems, setFoundItems] = useState([]);
+  const [foundItemsLoading, setFoundItemsLoading] = useState(true);
+  const [foundItemsError, setFoundItemsError] = useState('');
+  const [page, setPage] = useState(0);
+  const [pagination, setPagination] = useState({
+    pageNumber: 0,
+    totalPages: 0,
+    totalElements: 0,
+    pageSize: PAGE_SIZE
+  });
   const [selectedClaim, setSelectedClaim] = useState(null);
   const [otp, setOtp] = useState('');
 
   useEffect(() => {
     loadClaims();
   }, []);
+
+  useEffect(() => {
+    loadFoundItems(page);
+  }, [page]);
 
   const loadClaims = async () => {
     try {
@@ -19,8 +36,60 @@ const SecurityPendingClaims = () => {
     } catch (error) {
       console.error('Error loading claims:', error);
     } finally {
-      setLoading(false);
+      setClaimsLoading(false);
     }
+  };
+
+  const loadFoundItems = async (requestedPage) => {
+    try {
+      setFoundItemsLoading(true);
+      setFoundItemsError('');
+
+      const response = await securityAPI.getFoundItems({
+        page: requestedPage,
+        size: PAGE_SIZE,
+        sort: 'createdAt,desc'
+      });
+
+      const apiItems = response.data?.content || response.data?.items || [];
+      setFoundItems(apiItems);
+      setPagination({
+        pageNumber: response.data?.pageNumber ?? requestedPage,
+        totalPages: response.data?.totalPages ?? 0,
+        totalElements: response.data?.totalElements ?? 0,
+        pageSize: response.data?.pageSize ?? PAGE_SIZE
+      });
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to load found items';
+      setFoundItems([]);
+      setPagination({ pageNumber: 0, totalPages: 0, totalElements: 0, pageSize: PAGE_SIZE });
+      setFoundItemsError(message);
+      toast.error(message);
+    } finally {
+      setFoundItemsLoading(false);
+    }
+  };
+
+  const handlePageChange = (nextPage) => {
+    setPage(nextPage);
+  };
+
+  const getImageUrl = (item) => {
+    if (item.image_url) {
+      return `http://localhost:8080/${item.image_url}`;
+    }
+    if (item.imageUrl) {
+      return `http://localhost:8080/${item.imageUrl}`;
+    }
+    return 'https://via.placeholder.com/80x80?text=No+Photo';
+  };
+
+  const formatDate = (item) => {
+    const dateValue = item.created_at || item.createdAt || item.date;
+    if (!dateValue) {
+      return 'N/A';
+    }
+    return new Date(dateValue).toLocaleDateString();
   };
 
   const handleVerify = async (e) => {
@@ -36,15 +105,74 @@ const SecurityPendingClaims = () => {
     }
   };
 
-  if (loading) {
+  if (claimsLoading && foundItemsLoading) {
     return <div className="loading">Loading...</div>;
   }
 
   return (
     <div className="container">
+      <h1>Security Dashboard</h1>
+
+      <div className="found-items-section">
+        <div className="section-header">
+          <h2>Found Items</h2>
+          <span>Total: {pagination.totalElements}</span>
+        </div>
+
+        {foundItemsLoading ? (
+          <p>Loading found items...</p>
+        ) : foundItemsError ? (
+          <div className="alert alert-warning">{foundItemsError}</div>
+        ) : foundItems.length === 0 ? (
+          <p>No found items available.</p>
+        ) : (
+          <>
+            <div className="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Photo</th>
+                    <th>Location</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {foundItems.map((item) => (
+                    <tr key={item.id}>
+                      <td>{item.name || item.item_name || 'Unnamed Item'}</td>
+                      <td>
+                        <img
+                          src={getImageUrl(item)}
+                          alt={item.name || item.item_name || 'Found item'}
+                          style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '6px' }}
+                          onError={(e) => {
+                            e.target.src = 'https://via.placeholder.com/80x80?text=No+Photo';
+                          }}
+                        />
+                      </td>
+                      <td>{item.location || 'Unknown location'}</td>
+                      <td>{formatDate(item)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <Pagination
+              currentPage={pagination.pageNumber}
+              totalPages={pagination.totalPages}
+              onPageChange={handlePageChange}
+            />
+          </>
+        )}
+      </div>
+
       <h1>Pending Claims</h1>
 
-      {claims.length === 0 ? (
+      {claimsLoading ? (
+        <p>Loading pending claims...</p>
+      ) : claims.length === 0 ? (
         <p>No pending claims.</p>
       ) : (
         <div className="claims-list">
