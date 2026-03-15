@@ -129,6 +129,10 @@
   gap: 0.75rem;
 }
 
+.card-actions.single-action {
+  grid-template-columns: 1fr;
+}
+
 .btn {
   padding: 0.65rem 1rem;
   border: none;

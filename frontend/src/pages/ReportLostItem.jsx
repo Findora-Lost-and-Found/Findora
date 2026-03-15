@@ -1,14 +1,19 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import { itemsAPI } from '../services/api';
 import './ReportLostItem.css';
 
 const CATEGORY_OPTIONS = ['NIC', 'Student / Staff ID', 'Bank Card', 'Purse / Wallet', 'Others'];
 
 const ReportLostItem = () => {
+  const navigate = useNavigate();
   const [category, setCategory] = useState('');
   const [purseOption, setPurseOption] = useState('with-id');
   const [submitted, setSubmitted] = useState(false);
   const [verified, setVerified] = useState(false);
   const [otp, setOtp] = useState('');
+  const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
     nicName: '',
@@ -121,10 +126,110 @@ const ReportLostItem = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    submitLostItem();
+  };
+
+  const mapCategoryToApi = (value) => {
+    switch (value) {
+      case 'NIC':
+        return 'NIC';
+      case 'Student / Staff ID':
+        return 'Student ID';
+      case 'Bank Card':
+        return 'Bank Card';
+      case 'Purse / Wallet':
+        return 'Wallet';
+      default:
+        return 'Other';
+    }
+  };
+
+  const getDefaultDate = () => new Date().toISOString().slice(0, 10);
+  const getDefaultTime = () => new Date().toTimeString().slice(0, 5);
+
+  const buildLostItemPayload = () => {
+    const apiCategory = mapCategoryToApi(category);
+    let item_name = 'Lost Item';
+    let description = '';
+    let location = 'Campus';
+    let date = getDefaultDate();
+    let time = getDefaultTime();
+    let image = null;
+
+    if (category === 'NIC') {
+      item_name = `NIC - ${formData.nicName || 'Unknown'}`;
+      description = `NIC Number: ${formData.nicNumber}`;
+    }
+
+    if (category === 'Student / Staff ID') {
+      item_name = `Student/Staff ID - ${formData.idName || 'Unknown'}`;
+      description = `ID Number: ${formData.studentOrStaffId}`;
+    }
+
+    if (category === 'Bank Card') {
+      item_name = `${formData.bankName} ${formData.cardType} Card`;
+      description = `Last 4 digits: ${formData.cardLast4 || 'N/A'}${formData.cvv ? ` | CVV (remembered): ${formData.cvv}` : ''}`;
+      location = formData.bankLocation1 || location;
+      date = formData.bankDateLost || date;
+      time = formData.bankFromTime || time;
+    }
+
+    if (category === 'Purse / Wallet') {
+      item_name = 'Purse / Wallet';
+      if (purseOption === 'with-id') {
+        description = `Claim with ID: ${formData.purseIdNumber}`;
+      } else {
+        description = `Items inside: ${formData.purseItems1 || ''}${formData.purseItems2 ? `, ${formData.purseItems2}` : ''}${formData.purseItems3 ? `, ${formData.purseItems3}` : ''}`;
+        location = formData.purseLocation1 || location;
+        date = formData.purseDateLost || date;
+        time = formData.purseFromTime || time;
+      }
+      image = formData.pursePhoto;
+    }
+
+    if (category === 'Others') {
+      item_name = formData.otherItemName || 'Other Lost Item';
+      description = formData.otherDescription || 'General lost item report';
+      location = formData.otherLocation1 || location;
+      date = formData.otherDateLost || date;
+      time = formData.otherFromTime || time;
+      image = formData.otherPhoto;
+    }
+
+    return {
+      type: 'lost',
+      category: apiCategory,
+      item_name,
+      description,
+      location,
+      date,
+      time,
+      image
+    };
+  };
+
+  const submitLostItem = async () => {
     if (!validate()) return;
-    setSubmitted(true);
-    setVerified(false);
-    setOtp('');
+
+    const payload = buildLostItemPayload();
+
+    try {
+      setLoading(true);
+      await itemsAPI.create(payload);
+      setSubmitted(true);
+      setVerified(false);
+      setOtp('');
+      toast.success('Lost item reported successfully');
+
+      setTimeout(() => {
+        navigate('/lost-items', { state: { refreshAt: Date.now() } });
+      }, 500);
+    } catch (error) {
+      console.error('Failed to create lost item:', error.response?.data || error.message);
+      toast.error(error.response?.data?.message || 'Failed to report lost item');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleVerify = () => {
@@ -420,7 +525,9 @@ const ReportLostItem = () => {
           )}
 
           <div className="report-lost-actions">
-            <button type="submit" className="btn-primary">Submit</button>
+            <button type="submit" className="btn-primary" disabled={loading}>
+              {loading ? 'Submitting...' : 'Submit'}
+            </button>
           </div>
         </form>
 

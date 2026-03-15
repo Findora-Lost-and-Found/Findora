@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { itemsAPI } from '../services/api';
 import ItemCard from '../components/ItemCard';
 import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
 
 const LostItems = () => {
+  const location = useLocation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
@@ -13,13 +15,24 @@ const LostItems = () => {
 
   useEffect(() => {
     loadItems();
-  }, [filters]);
+  }, [filters, location.state?.refreshAt]);
 
   const loadItems = async () => {
     try {
       // My Lost Items shows only the logged-in user's lost posts.
       const response = await itemsAPI.getMy({ type: 'lost' });
-      const myLostItems = (response.data.items || []).filter((item) => item.type === 'lost');
+      const rawItems = Array.isArray(response.data?.items) ? response.data.items : [];
+      const myLostItems = rawItems
+        .filter((item) => item && item.type === 'lost')
+        .map((item) => ({
+          ...item,
+          item_name: item.item_name || item.name || 'Unnamed Item',
+          description: item.description || '',
+          location: item.location || 'Unknown location',
+          category: item.category || 'Other',
+          date: item.date || item.created_at || null,
+          time: item.time || '--:--'
+        }));
       const searchTerm = filters.search.trim().toLowerCase();
 
       const filteredItems = myLostItems.filter((item) => {
@@ -35,6 +48,7 @@ const LostItems = () => {
       setItems(sortFoundItems(filteredItems, FOUND_ITEM_SORT.LATEST));
     } catch (error) {
       console.error('Error loading items:', error);
+      setItems([]);
     } finally {
       setLoading(false);
     }
