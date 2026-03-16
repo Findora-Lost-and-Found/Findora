@@ -33,6 +33,8 @@ public class ItemService {
     private final ItemRepository itemRepository;
     private static final Logger log = LoggerFactory.getLogger(ItemService.class);
     private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_DATE_TIME;
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
 
     public ItemService(ItemRepository itemRepository) {
         this.itemRepository = itemRepository;
@@ -226,6 +228,8 @@ public class ItemService {
             item.getType() != null ? item.getType().toString().toLowerCase() : null,
             item.getDescription(),
             item.getLocation(),
+            item.getDate() != null ? item.getDate().format(DATE_FORMATTER) : null,
+            item.getTime() != null ? item.getTime().format(TIME_FORMATTER) : null,
             item.getStatus() != null ? item.getStatus().toString().toLowerCase() : null,
             item.getImageUrl(),
             item.getCreatedAt() != null ? item.getCreatedAt().format(ISO_FORMATTER) : null,

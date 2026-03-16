@@ -67,7 +67,6 @@ const NICClaim = ({ item, onSubmit, onCancel }) => {
               placeholder="Enter your NIC number"
               value={nicNumber}
               onChange={(e) => setNicNumber(normalizeNicNumber(e.target.value))}
-              maxLength="12"
             />
             <small style={{ color: '#9CA3AF' }}>
               Accepted formats: 200012345678 or 901234567V

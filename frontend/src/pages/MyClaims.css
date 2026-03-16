@@ -28,6 +28,11 @@
   flex-direction: column;
 }
 
+.claim-card-focus {
+  border-color: #2f7d32;
+  box-shadow: 0 0 0 3px rgba(47, 125, 50, 0.15);
+}
+
 .claim-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -156,6 +161,17 @@
   padding: 40px 20px;
   color: #666;
   font-size: 1.1rem;
+}
+
+.claims-error {
+  text-align: center;
+  color: #b42318;
+  background: #fef3f2;
+  border: 1px solid #fecdca;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 0 auto 24px;
+  max-width: 640px;
 }
 
 .container > p {
