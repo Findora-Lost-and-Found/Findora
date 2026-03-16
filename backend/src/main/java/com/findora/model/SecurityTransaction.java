@@ -6,8 +6,6 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -16,6 +14,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Convert;
 
 /**
  * SecurityTransaction entity - Item transactions (receive/release).
@@ -54,9 +53,13 @@ public class SecurityTransaction {
     @JoinColumn(name = "claim_id", referencedColumnName = "id", insertable = false, updatable = false)
     private Claim claim;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = SecurityTransactionTypeConverter.class)
     @Column(name = "transaction_type", nullable = false)
     private TransactionType transactionType;
+
+    @Convert(converter = SecurityTransactionStatusConverter.class)
+    @Column(nullable = false)
+    private TransactionStatus status;
 
     @Column(name = "received_from", length = 100)
     private String receivedFrom;
@@ -69,9 +72,93 @@ public class SecurityTransaction {
 
     @CreationTimestamp
     @Column(name = "transaction_date", nullable = false, updatable = false)
-    private LocalDateTime transactionDate;
+    private LocalDateTime createdAt;
 
     public enum TransactionType {
         RECEIVE, RELEASE
+    }
+
+    public enum TransactionStatus {
+        REQUESTED, RECEIVED
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Long getSecurityOfficerId() {
+        return securityOfficerId;
+    }
+
+    public void setSecurityOfficerId(Long securityOfficerId) {
+        this.securityOfficerId = securityOfficerId;
+    }
+
+    public Long getItemId() {
+        return itemId;
+    }
+
+    public void setItemId(Long itemId) {
+        this.itemId = itemId;
+    }
+
+    public Long getClaimId() {
+        return claimId;
+    }
+
+    public void setClaimId(Long claimId) {
+        this.claimId = claimId;
+    }
+
+    public TransactionType getTransactionType() {
+        return transactionType;
+    }
+
+    public void setTransactionType(TransactionType transactionType) {
+        this.transactionType = transactionType;
+    }
+
+    public TransactionStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(TransactionStatus status) {
+        this.status = status;
+    }
+
+    public String getReceivedFrom() {
+        return receivedFrom;
+    }
+
+    public void setReceivedFrom(String receivedFrom) {
+        this.receivedFrom = receivedFrom;
+    }
+
+    public String getReleasedTo() {
+        return releasedTo;
+    }
+
+    public void setReleasedTo(String releasedTo) {
+        this.releasedTo = releasedTo;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 }

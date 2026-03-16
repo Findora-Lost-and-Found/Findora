@@ -228,7 +228,9 @@ public class ItemService {
             item.getLocation(),
             item.getStatus() != null ? item.getStatus().toString().toLowerCase() : null,
             item.getImageUrl(),
-            item.getCreatedAt() != null ? item.getCreatedAt().format(ISO_FORMATTER) : null
+            item.getCreatedAt() != null ? item.getCreatedAt().format(ISO_FORMATTER) : null,
+            item.getUserId(),
+            item.getUser() != null ? item.getUser().getFullName() : null
         );
     }
 

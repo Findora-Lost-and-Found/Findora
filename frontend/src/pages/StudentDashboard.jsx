@@ -52,7 +52,7 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
           ...item,
           name: item.name || item.item_name,
           date_found: item.date_found || item.date || item.created_at,
-          image: item.image || (item.image_url ? `http://localhost:5000${item.image_url}` : 'https://via.placeholder.com/300x200?text=Item+Image'),
+          image: item.image || (item.image_url ? `http://localhost:8080${item.image_url}` : 'https://via.placeholder.com/300x200?text=Item+Image'),
           category: normalizeCategory(item.category, item.name || item.item_name),
           posted_by: item.posted_by || {
             id: item.user_id,
