@@ -5,9 +5,8 @@ import java.time.LocalDateTime;
 import org.hibernate.annotations.CreationTimestamp;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -53,7 +52,7 @@ public class Claim {
     @Column(name = "otp_expiry", nullable = false)
     private LocalDateTime otpExpiry;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = ClaimStatusConverter.class)
     @Column(nullable = false)
     private ClaimStatus status;
 
