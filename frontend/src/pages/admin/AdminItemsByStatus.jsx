@@ -3,11 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { adminAPI } from '../../services/api';
 import MobileWarning from '../../components/MobileWarning';
 
-const configuredApiUrl = import.meta.env.VITE_API_URL;
-const normalizedApiUrl = configuredApiUrl?.includes('localhost:5000')
-  ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')
-  : configuredApiUrl || 'http://localhost:8080/api';
-const API_ORIGIN = normalizedApiUrl.replace(/\/api\/?$/, '');
+const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
 
 const STATUS_PAGE_CONFIG = {
   found: {
