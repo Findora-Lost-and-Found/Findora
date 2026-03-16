@@ -92,12 +92,16 @@ public class SecurityService {
     }
 
     @Transactional
-    public void verifyClaim(Long claimId, String otp, Long securityOfficerId) {
+    public void verifyClaim(Long claimId, Long itemId, String otp, Long securityOfficerId) {
         Claim claim = claimRepository.findById(claimId)
             .orElseThrow(() -> new IllegalArgumentException("Claim not found"));
 
         if (claim.getStatus() != Claim.ClaimStatus.PENDING && claim.getStatus() != Claim.ClaimStatus.APPROVED) {
             throw new IllegalArgumentException("Claim is not pending verification");
+        }
+
+        if (!Objects.equals(claim.getItemId(), itemId)) {
+            throw new IllegalArgumentException("Claim does not belong to the provided item");
         }
 
         if (claim.getOtp() == null || !claim.getOtp().equals(otp)) {
@@ -259,6 +263,7 @@ public class SecurityService {
         }
 
         String itemName = item != null && item.getItemName() != null ? item.getItemName() : "Unknown Item";
+        String imageUrl = item != null ? item.getImageUrl() : null;
         String category = item != null && item.getCategory() != null ? item.getCategory().name() : "UNKNOWN";
         String location = item != null && item.getLocation() != null ? item.getLocation() : "Unknown location";
         String fullName = claimer != null && claimer.getFullName() != null ? claimer.getFullName() : "Unknown claimer";
@@ -268,6 +273,7 @@ public class SecurityService {
             claim.getId(),
             claim.getItemId(),
             itemName,
+            imageUrl,
             category,
             location,
             fullName,

@@ -66,7 +66,7 @@ export const claimsAPI = {
 
 // Security API
 export const securityAPI = {
-  verifyClaim: (claim_id, otp) => api.post('/security/verify-claim', { claim_id, otp }),
+  verifyClaim: (claimId, itemId, otp) => api.post('/security/verify-claim', { claimId, itemId, otp }),
   handoverRequest: (itemId) => api.post('/security/handover-request', { itemId }),
   getReceiveItems: () => api.get('/security/receive-items'),
   getHeldItems: () => api.get('/items', { params: { type: 'found', status: 'held_by_security', page: 0, size: 50, sort: 'createdAt,desc' } }),
