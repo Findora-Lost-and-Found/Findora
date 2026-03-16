@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
-import { itemsAPI } from '../services/api';
+import { toast } from 'react-toastify';
+import { itemsAPI, securityAPI } from '../services/api';
 import FoundItemCard from '../components/FoundItemCard';
 import Pagination from '../components/Pagination';
 import { normalizeCategory } from '../utils/categoryUtils';
@@ -49,6 +50,7 @@ const FoundItems = () => {
     pageSize: PAGE_SIZE
   });
   const [currentPage, setCurrentPage] = useState(0);
+  const [handoverLoadingById, setHandoverLoadingById] = useState({});
   const [filters, setFilters] = useState({
     category: '',
     search: '',
@@ -127,6 +129,21 @@ const FoundItems = () => {
 
   const displayedItems = allItems;
 
+  const handleHandoverRequest = async (itemId) => {
+    try {
+      setHandoverLoadingById((prev) => ({ ...prev, [itemId]: true }));
+      await securityAPI.handoverRequest(itemId);
+      setAllItems((prevItems) => prevItems.map((item) => (
+        item.id === itemId ? { ...item, status: 'handover_requested' } : item
+      )));
+      toast.success('Handover request submitted successfully');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to submit handover request');
+    } finally {
+      setHandoverLoadingById((prev) => ({ ...prev, [itemId]: false }));
+    }
+  };
+
   const handleFilterChange = (e) => {
     setFilters({ ...filters, [e.target.name]: e.target.value });
     setCurrentPage(0);
@@ -189,6 +206,8 @@ const FoundItems = () => {
             <FoundItemCard
               key={item.id}
               item={item}
+              onHandover={handleHandoverRequest}
+              handoverInProgress={!!handoverLoadingById[item.id]}
             />
           ))
         )}

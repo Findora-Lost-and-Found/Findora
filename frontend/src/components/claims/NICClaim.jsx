@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { isValidNicNumber, normalizeNicNumber } from '../../utils/nicUtils';
 
 const NICClaim = ({ item, onSubmit, onCancel }) => {
   const [step, setStep] = useState('template'); // template, verify
@@ -9,15 +10,19 @@ const NICClaim = ({ item, onSubmit, onCancel }) => {
   };
 
   const handleVerify = () => {
-    if (!nicNumber.trim()) {
+    const normalizedNicNumber = normalizeNicNumber(nicNumber);
+
+    if (!normalizedNicNumber) {
       alert('Please enter your NIC number');
       return;
     }
-    if (nicNumber.length < 9) {
-      alert('Please enter a valid NIC number');
+
+    if (!isValidNicNumber(normalizedNicNumber)) {
+      alert('NIC must be 12 digits or 9 digits followed by V.');
       return;
     }
-    onSubmit({ nicNumber, itemId: item.id });
+
+    onSubmit({ nicNumber: normalizedNicNumber, itemId: item.id });
   };
 
   return (
@@ -61,11 +66,11 @@ const NICClaim = ({ item, onSubmit, onCancel }) => {
               type="text"
               placeholder="Enter your NIC number"
               value={nicNumber}
-              onChange={(e) => setNicNumber(e.target.value.toUpperCase())}
+              onChange={(e) => setNicNumber(normalizeNicNumber(e.target.value))}
               maxLength="12"
             />
             <small style={{ color: '#9CA3AF' }}>
-              Format: XXXXXXXXX123 (9 digits + 3 characters)
+              Accepted formats: 200012345678 or 901234567V
             </small>
           </div>
 
