@@ -1,23 +1,13 @@
 import { useEffect, useState } from 'react';
 import { securityAPI } from '../../services/api';
 import { toast } from 'react-toastify';
-import Pagination from '../../components/Pagination';
-
-const PAGE_SIZE = 10;
 
 const SecurityPendingClaims = () => {
   const [claims, setClaims] = useState([]);
   const [claimsLoading, setClaimsLoading] = useState(true);
-  const [foundItems, setFoundItems] = useState([]);
-  const [foundItemsLoading, setFoundItemsLoading] = useState(true);
-  const [foundItemsError, setFoundItemsError] = useState('');
-  const [page, setPage] = useState(0);
-  const [pagination, setPagination] = useState({
-    pageNumber: 0,
-    totalPages: 0,
-    totalElements: 0,
-    pageSize: PAGE_SIZE
-  });
+  const [heldItems, setHeldItems] = useState([]);
+  const [heldItemsLoading, setHeldItemsLoading] = useState(true);
+  const [heldItemsError, setHeldItemsError] = useState('');
   const [selectedClaim, setSelectedClaim] = useState(null);
   const [otp, setOtp] = useState('');
 
@@ -26,8 +16,8 @@ const SecurityPendingClaims = () => {
   }, []);
 
   useEffect(() => {
-    loadFoundItems(page);
-  }, [page]);
+    loadHeldItems();
+  }, []);
 
   const loadClaims = async () => {
     try {
@@ -40,41 +30,31 @@ const SecurityPendingClaims = () => {
     }
   };
 
-  const loadFoundItems = async (requestedPage) => {
+  const loadHeldItems = async () => {
     try {
-      setFoundItemsLoading(true);
-      setFoundItemsError('');
+      setHeldItemsLoading(true);
+      setHeldItemsError('');
 
-      const response = await securityAPI.getFoundItems({
-        page: requestedPage,
-        size: PAGE_SIZE,
-        sort: 'createdAt,desc'
-      });
+      const response = await securityAPI.getHeldItems();
 
       const apiItems = response.data?.content || response.data?.items || [];
-      setFoundItems(apiItems);
-      setPagination({
-        pageNumber: response.data?.pageNumber ?? requestedPage,
-        totalPages: response.data?.totalPages ?? 0,
-        totalElements: response.data?.totalElements ?? 0,
-        pageSize: response.data?.pageSize ?? PAGE_SIZE
-      });
+      setHeldItems(apiItems);
     } catch (error) {
-      const message = error.response?.data?.message || 'Failed to load found items';
-      setFoundItems([]);
-      setPagination({ pageNumber: 0, totalPages: 0, totalElements: 0, pageSize: PAGE_SIZE });
-      setFoundItemsError(message);
+      const message = error.response?.data?.message || 'Failed to load pending handover items';
+      setHeldItems([]);
+      setHeldItemsError(message);
       toast.error(message);
     } finally {
-      setFoundItemsLoading(false);
+      setHeldItemsLoading(false);
     }
   };
 
-  const handlePageChange = (nextPage) => {
-    setPage(nextPage);
-  };
-
   const getImageUrl = (item) => {
+    const imagePath = item.imageUrl || item.image_url;
+    if (imagePath) {
+      return `http://localhost:8080/${String(imagePath).replace(/^\/+/, '')}`;
+    }
+
     if (item.image_url) {
       return `http://localhost:8080/${item.image_url}`;
     }
@@ -85,7 +65,7 @@ const SecurityPendingClaims = () => {
   };
 
   const formatDate = (item) => {
-    const dateValue = item.created_at || item.createdAt || item.date;
+    const dateValue = item.date || item.created_at || item.createdAt;
     if (!dateValue) {
       return 'N/A';
     }
@@ -105,7 +85,7 @@ const SecurityPendingClaims = () => {
     }
   };
 
-  if (claimsLoading && foundItemsLoading) {
+  if (claimsLoading && heldItemsLoading) {
     return <div className="loading">Loading...</div>;
   }
 
@@ -115,16 +95,16 @@ const SecurityPendingClaims = () => {
 
       <div className="found-items-section">
         <div className="section-header">
-          <h2>Found Items</h2>
-          <span>Total: {pagination.totalElements}</span>
+          <h2>Pending Handover Items</h2>
+          <span>Total: {heldItems.length}</span>
         </div>
 
-        {foundItemsLoading ? (
-          <p>Loading found items...</p>
-        ) : foundItemsError ? (
-          <div className="alert alert-warning">{foundItemsError}</div>
-        ) : foundItems.length === 0 ? (
-          <p>No found items available.</p>
+        {heldItemsLoading ? (
+          <p>Loading pending handover items...</p>
+        ) : heldItemsError ? (
+          <div className="alert alert-warning">{heldItemsError}</div>
+        ) : heldItems.length === 0 ? (
+          <p>No pending handover items available.</p>
         ) : (
           <>
             <div className="table-container">
@@ -133,24 +113,26 @@ const SecurityPendingClaims = () => {
                   <tr>
                     <th>Name</th>
                     <th>Photo</th>
+                    <th>Owner Name</th>
                     <th>Location</th>
                     <th>Date</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {foundItems.map((item) => (
+                  {heldItems.map((item) => (
                     <tr key={item.id}>
-                      <td>{item.name || item.item_name || 'Unnamed Item'}</td>
+                      <td>{item.itemName || item.name || item.item_name || 'Unnamed Item'}</td>
                       <td>
                         <img
                           src={getImageUrl(item)}
-                          alt={item.name || item.item_name || 'Found item'}
+                          alt={item.itemName || item.name || item.item_name || 'Found item'}
                           style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '6px' }}
                           onError={(e) => {
                             e.target.src = 'https://via.placeholder.com/80x80?text=No+Photo';
                           }}
                         />
                       </td>
+                      <td>{item.full_name || item.fullName || item.username || 'Unknown User'}</td>
                       <td>{item.location || 'Unknown location'}</td>
                       <td>{formatDate(item)}</td>
                     </tr>
@@ -158,12 +140,6 @@ const SecurityPendingClaims = () => {
                 </tbody>
               </table>
             </div>
-
-            <Pagination
-              currentPage={pagination.pageNumber}
-              totalPages={pagination.totalPages}
-              onPageChange={handlePageChange}
-            />
           </>
         )}
       </div>
