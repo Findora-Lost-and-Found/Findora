@@ -41,7 +41,10 @@ const ReportFoundItem = () => {
     pursePrivateLocation: '',
     pursePrivateDate: '',
     pursePrivateTime: '',
+    pursePhoto: null,
     otherPhoto: null,
+    otherItemName: '',
+    otherDescription: '',
     otherPrivateLocation: '',
     otherPrivateDate: '',
     otherPrivateTime: ''
@@ -68,6 +71,10 @@ const ReportFoundItem = () => {
 
   const handleFileChange = (e) => {
     setFormData((prev) => ({ ...prev, otherPhoto: e.target.files?.[0] || null }));
+  };
+
+  const handlePurseFileChange = (e) => {
+    setFormData((prev) => ({ ...prev, pursePhoto: e.target.files?.[0] || null }));
   };
 
   const validate = () => {
@@ -123,6 +130,7 @@ const ReportFoundItem = () => {
     }
 
     if (category === 'Others') {
+      if (!formData.otherItemName.trim()) nextErrors.otherItemName = 'Item name is required.';
       if (!formData.otherPhoto) nextErrors.otherPhoto = 'Photo upload is required.';
       if (!formData.otherPrivateLocation.trim()) nextErrors.otherPrivateLocation = 'Location is required.';
       if (!formData.otherPrivateDate) nextErrors.otherPrivateDate = 'Date is required.';
@@ -180,6 +188,7 @@ const ReportFoundItem = () => {
 
     if (category === 'Purse') {
       item_name = 'Purse / Wallet';
+      image = formData.pursePhoto;
       if (purseOption === 'with-id') {
         description = `Claim with ID: ${formData.purseIdNumber}`;
       } else {
@@ -191,8 +200,8 @@ const ReportFoundItem = () => {
     }
 
     if (category === 'Others') {
-      item_name = 'Other Found Item';
-      description = 'General found item report';
+      item_name = formData.otherItemName || 'Other Found Item';
+      description = formData.otherDescription || 'General found item report';
       location = formData.otherPrivateLocation || location;
       date = formData.otherPrivateDate || date;
       time = formData.otherPrivateTime || time;
@@ -384,6 +393,11 @@ const ReportFoundItem = () => {
             <div className="category-section">
               <h3>Purse Details</h3>
 
+              <div className="form-group">
+                <label>Upload Photo of the Purse</label>
+                <input type="file" accept="image/*" onChange={handlePurseFileChange} />
+              </div>
+
               <div className="purse-options">
                 <label>
                   <input
@@ -466,6 +480,28 @@ const ReportFoundItem = () => {
           {category === 'Others' && (
             <div className="category-section">
               <h3>Other Item Details</h3>
+
+              <div className="form-group">
+                <label className="required">Item Name</label>
+                <input
+                  name="otherItemName"
+                  value={formData.otherItemName}
+                  onChange={handleInputChange}
+                  placeholder="e.g. Black backpack, Umbrella, Keys..."
+                />
+                {errors.otherItemName && <p className="error-text">{errors.otherItemName}</p>}
+              </div>
+
+              <div className="form-group">
+                <label>Description</label>
+                <textarea
+                  name="otherDescription"
+                  value={formData.otherDescription}
+                  onChange={handleInputChange}
+                  rows={3}
+                  placeholder="Describe the item in detail (colour, size, brand, etc.)"
+                />
+              </div>
 
               <div className="form-group">
                 <label className="required">Upload Photo of the item</label>
