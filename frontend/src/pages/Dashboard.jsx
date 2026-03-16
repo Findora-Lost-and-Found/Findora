@@ -1,10 +1,14 @@
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Navigate } from 'react-router-dom';
-import { getHomeRouteForUser } from '../utils/navigation';
-import StudentDashboard from './StudentDashboard';
+import { itemsAPI, claimsAPI } from '../services/api';
+import PostModal from '../components/PostModal';
+import FoundItemCard from '../components/FoundItemCard';
+import { normalizeCategory } from '../utils/categoryUtils';
+import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
 
 const ADMIN_PREVIEW_LIMIT = 5;
-const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
+const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
 
 const readFirst = (obj, keys, fallback = '') => {
   for (const key of keys) {
@@ -92,7 +96,7 @@ const Dashboard = () => {
             ...item,
             name: item.name || item.item_name,
             date_found: item.date_found || item.date || item.created_at,
-            image: item.image || (item.image_url ? `http://localhost:5000${item.image_url}` : 'https://via.placeholder.com/300x200?text=Item+Image'),
+            image: item.image || (item.image_url ? `http://localhost:8080${item.image_url}` : 'https://via.placeholder.com/300x200?text=Item+Image'),
             category: normalizeCategory(item.category, item.name || item.item_name),
             posted_by: item.posted_by || {
               id: item.user_id,
