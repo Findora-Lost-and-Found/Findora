@@ -2,7 +2,7 @@ import { normalizeCategory } from '../utils/categoryUtils';
 import SampleItemImage from './SampleItemImage';
 
 const ItemCard = ({ item, showActions = false, onDelete }) => {
-  const API_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+  const API_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8080';
   const normalizedCategory = normalizeCategory(item.category, item.item_name || item.name);
 
   return (

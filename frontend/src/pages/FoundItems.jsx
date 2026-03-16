@@ -1,15 +1,27 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
-import { itemsAPI } from '../services/api';
+import { toast } from 'react-toastify';
+import { itemsAPI, securityAPI } from '../services/api';
 import FoundItemCard from '../components/FoundItemCard';
+import Pagination from '../components/Pagination';
 import { normalizeCategory } from '../utils/categoryUtils';
-import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
+import { FOUND_ITEM_SORT } from '../utils/itemDisplayUtils';
+
+const PAGE_SIZE = 4;
 
 const FoundItems = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const [allItems, setAllItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({
+    totalPages: 0,
+    totalElements: 0,
+    pageNumber: 0,
+    pageSize: PAGE_SIZE
+  });
+  const [currentPage, setCurrentPage] = useState(0);
+  const [handoverLoadingById, setHandoverLoadingById] = useState({});
   const [filters, setFilters] = useState({
     category: '',
     search: '',
@@ -22,7 +34,7 @@ const FoundItems = () => {
     description: item.description || '',
     location: item.location || 'Unknown location',
     date_found: item.date_found || item.date || item.created_at,
-    image: item.image || (item.image_url ? `http://localhost:5000${item.image_url}` : 'https://via.placeholder.com/300x200?text=Item+Image'),
+    image: item.image || (item.image_url ? `http://localhost:8080${item.image_url}` : 'https://via.placeholder.com/300x200?text=Item+Image'),
     category: normalizeCategory(item.category, item.name || item.item_name),
     type: item.type || 'found',
     status: item.status || 'active',
@@ -34,46 +46,78 @@ const FoundItems = () => {
     }
   });
 
+  const sortParam = useMemo(() => {
+    if (filters.sortBy === FOUND_ITEM_SORT.NAME_ASC) {
+      return 'name,asc';
+    }
+    if (filters.sortBy === FOUND_ITEM_SORT.NAME_DESC) {
+      return 'name,desc';
+    }
+    return 'createdAt,desc';
+  }, [filters.sortBy]);
+
   useEffect(() => {
     loadItems();
-  }, [location.state?.refreshAt]);
+  }, [location.state?.refreshAt, currentPage, filters.category, filters.search, sortParam]);
 
   const loadItems = async () => {
     try {
-      // Fetch all found posts from all users; no user_id/status restriction here.
-      const response = await itemsAPI.getAll({ type: 'found' });
-      const apiItems = response.data?.items || [];
+      setLoading(true);
+
+      const response = await itemsAPI.getAll({
+        type: 'found',
+        page: currentPage,
+        size: PAGE_SIZE,
+        sort: sortParam,
+        category: filters.category || undefined,
+        keyword: filters.search || undefined
+      });
+
+      const apiItems = response.data?.content || [];
       console.log('FoundItems fetched from API:', apiItems);
       const normalizedItems = apiItems.map(normalizeItem);
       setAllItems(normalizedItems);
+
+      setPagination({
+        totalPages: response.data?.totalPages ?? 0,
+        totalElements: response.data?.totalElements ?? 0,
+        pageNumber: response.data?.pageNumber ?? currentPage,
+        pageSize: response.data?.pageSize ?? PAGE_SIZE
+      });
     } catch (error) {
       console.error('Error loading found items:', error.response?.data || error.message);
       setAllItems([]);
+      setPagination({
+        totalPages: 0,
+        totalElements: 0,
+        pageNumber: 0,
+        pageSize: PAGE_SIZE
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const displayedItems = useMemo(() => {
-    const searchTerm = filters.search.trim().toLowerCase();
+  const displayedItems = allItems;
 
-    const filteredItems = allItems.filter((item) => {
-      const matchesCategory = !filters.category || item.category === filters.category;
-      const matchesSearch = !searchTerm ||
-        item.name.toLowerCase().includes(searchTerm) ||
-        item.description.toLowerCase().includes(searchTerm) ||
-        item.location.toLowerCase().includes(searchTerm) ||
-        item.category.toLowerCase().includes(searchTerm);
-
-      return matchesCategory && matchesSearch;
-    });
-
-    // Keep sorting behavior consistent with Dashboard and apply it after filtering.
-    return sortFoundItems(filteredItems, filters.sortBy);
-  }, [allItems, filters]);
+  const handleHandoverRequest = async (itemId) => {
+    try {
+      setHandoverLoadingById((prev) => ({ ...prev, [itemId]: true }));
+      await securityAPI.handoverRequest(itemId);
+      setAllItems((prevItems) => prevItems.map((item) => (
+        item.id === itemId ? { ...item, status: 'handover_requested' } : item
+      )));
+      toast.success('Handover request submitted successfully');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to submit handover request');
+    } finally {
+      setHandoverLoadingById((prev) => ({ ...prev, [itemId]: false }));
+    }
+  };
 
   const handleFilterChange = (e) => {
     setFilters({ ...filters, [e.target.name]: e.target.value });
+    setCurrentPage(0);
   };
 
   useEffect(() => {
@@ -133,10 +177,18 @@ const FoundItems = () => {
             <FoundItemCard
               key={item.id}
               item={item}
+              onHandover={handleHandoverRequest}
+              handoverInProgress={!!handoverLoadingById[item.id]}
             />
           ))
         )}
       </div>
+
+      <Pagination
+        currentPage={pagination.pageNumber}
+        totalPages={pagination.totalPages}
+        onPageChange={setCurrentPage}
+      />
     </div>
   );
 };
