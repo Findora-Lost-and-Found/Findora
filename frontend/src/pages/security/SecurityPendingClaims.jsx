@@ -4,9 +4,10 @@ import { toast } from 'react-toastify';
 
 const SecurityPendingClaims = () => {
   const [claims, setClaims] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedClaim, setSelectedClaim] = useState(null);
-  const [otp, setOtp] = useState('');
+  const [claimsLoading, setClaimsLoading] = useState(true);
+  const [otpInputs, setOtpInputs] = useState({});
+  const [verifyingClaimId, setVerifyingClaimId] = useState(null);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
   useEffect(() => {
     loadClaims();
@@ -15,83 +16,157 @@ const SecurityPendingClaims = () => {
   const loadClaims = async () => {
     try {
       const response = await securityAPI.getPendingClaims();
-      setClaims(response.data.claims);
+      setClaims(response.data?.claims || []);
     } catch (error) {
-      console.error('Error loading claims:', error);
+      toast.error(error.response?.data?.message || 'Failed to load pending claims');
+      setClaims([]);
     } finally {
-      setLoading(false);
+      setClaimsLoading(false);
     }
   };
 
-  const handleVerify = async (e) => {
-    e.preventDefault();
+  const getClaimImageUrl = (claim) => {
+    const imagePath = claim.image_url || claim.imageUrl;
+    if (!imagePath) {
+      return 'https://via.placeholder.com/80x80?text=No+Photo';
+    }
+
+    return `http://localhost:8080/${String(imagePath).replace(/^\/+/, '')}`;
+  };
+
+  const handleOtpChange = (claimId, value) => {
+    const numericOtp = value.replace(/\D/g, '').slice(0, 6);
+    setOtpInputs((prev) => ({
+      ...prev,
+      [claimId]: numericOtp
+    }));
+  };
+
+  const formatClaimDate = (claim) => {
+    const dateValue = claim.claimed_at || claim.claimedAt;
+    if (!dateValue) {
+      return 'N/A';
+    }
+
+    const parsed = new Date(dateValue);
+    return Number.isNaN(parsed.getTime()) ? 'N/A' : parsed.toLocaleDateString();
+  };
+
+  const handleVerify = async (claim) => {
+    const enteredOtp = (otpInputs[claim.id] || '').trim();
+    if (!enteredOtp) {
+      return;
+    }
+
+    setVerifyingClaimId(claim.id);
     try {
-      await securityAPI.verifyClaim(selectedClaim.id, otp);
+      await securityAPI.verifyClaim(claim.id, claim.item_id || claim.itemId, enteredOtp);
+
+      setClaims((prevClaims) => prevClaims.filter((row) => row.id !== claim.id));
+      setOtpInputs((prev) => {
+        const next = { ...prev };
+        delete next[claim.id];
+        return next;
+      });
+
       toast.success('Item released successfully');
-      setSelectedClaim(null);
-      setOtp('');
-      loadClaims();
+      setShowSuccessPopup(true);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to verify claim');
+    } finally {
+      setVerifyingClaimId(null);
     }
   };
 
-  if (loading) {
+  if (claimsLoading) {
     return <div className="loading">Loading...</div>;
   }
 
   return (
     <div className="container">
-      <h1>Pending Claims</h1>
+      <h1>Security Dashboard</h1>
 
-      {claims.length === 0 ? (
-        <p>No pending claims.</p>
-      ) : (
-        <div className="claims-list">
-          {claims.map(claim => (
-            <div key={claim.id} className="claim-card">
-              <div className="claim-details">
-                <h3>{claim.item_name}</h3>
-                <p><strong>Category:</strong> {claim.category}</p>
-                <p><strong>Location:</strong> {claim.location}</p>
-                <p><strong>Claimer:</strong> {claim.full_name}</p>
-                <p><strong>Phone:</strong> {claim.phone}</p>
-                <p><strong>Claimed on:</strong> {new Date(claim.claimed_at).toLocaleString()}</p>
-                <button onClick={() => setSelectedClaim(claim)} className="btn-primary">
-                  Verify & Release
-                </button>
-              </div>
-            </div>
-          ))}
+      <div className="found-items-section">
+        <div className="section-header">
+          <h2>Pending Claims</h2>
+          <span>Total: {claims.length}</span>
         </div>
-      )}
 
-      {selectedClaim && (
-        <div className="modal-overlay" onClick={() => setSelectedClaim(null)}>
+        {claims.length === 0 ? (
+          <p>No pending claims.</p>
+        ) : (
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Photo</th>
+                <th>Claimant Name</th>
+                <th>Location</th>
+                <th>Date</th>
+                <th>OTP Input</th>
+                <th>Verify Button</th>
+              </tr>
+            </thead>
+            <tbody>
+              {claims.map((claim) => {
+                const enteredOtp = otpInputs[claim.id] || '';
+                const isSubmitting = verifyingClaimId === claim.id;
+                return (
+                  <tr key={claim.id}>
+                    <td>{claim.item_name || claim.itemName || 'Unnamed Item'}</td>
+                    <td>
+                      <img
+                        src={getClaimImageUrl(claim)}
+                        alt={claim.item_name || claim.itemName || 'Claim item'}
+                        style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '6px' }}
+                        onError={(e) => {
+                          e.target.src = 'https://via.placeholder.com/80x80?text=No+Photo';
+                        }}
+                      />
+                    </td>
+                    <td>{claim.full_name || claim.fullName || 'Unknown claimer'}</td>
+                    <td>{claim.location || 'Unknown location'}</td>
+                    <td>{formatClaimDate(claim)}</td>
+                    <td>
+                      <input
+                        type="text"
+                        placeholder="Enter OTP"
+                        value={enteredOtp}
+                        onChange={(e) => handleOtpChange(claim.id, e.target.value)}
+                        maxLength="6"
+                        style={{ minWidth: '120px' }}
+                      />
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="btn-primary btn-small"
+                        disabled={!enteredOtp || isSubmitting}
+                        onClick={() => handleVerify(claim)}
+                      >
+                        {isSubmitting ? 'Verifying...' : 'Verify OTP'}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        )}
+      </div>
+
+      {showSuccessPopup && (
+        <div className="modal-overlay" onClick={() => setShowSuccessPopup(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>Verify Claim</h2>
-            <p>Item: <strong>{selectedClaim.item_name}</strong></p>
-            <p>Claimer: <strong>{selectedClaim.full_name}</strong></p>
-            <form onSubmit={handleVerify}>
-              <div className="form-group">
-                <label>Enter OTP from Claimer</label>
-                <input
-                  type="text"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  placeholder="Enter 6-digit OTP"
-                  maxLength="6"
-                  required
-                  autoFocus
-                />
-              </div>
-              <div className="form-actions">
-                <button type="submit" className="btn-primary">Verify & Release</button>
-                <button type="button" onClick={() => setSelectedClaim(null)} className="btn-secondary">
-                  Cancel
-                </button>
-              </div>
-            </form>
+            <h2>Success</h2>
+            <p>OTP Verified. Item Released Successfully</p>
+            <div className="form-actions" style={{ marginTop: '1.5rem', justifyContent: 'center' }}>
+              <button type="button" className="btn-primary" onClick={() => setShowSuccessPopup(false)}>
+                OK
+              </button>
+            </div>
           </div>
         </div>
       )}

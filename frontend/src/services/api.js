@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const configuredApiUrl = import.meta.env.VITE_API_URL;
+const API_URL = configuredApiUrl?.includes('localhost:5000')
+  ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')
+  : configuredApiUrl || 'http://localhost:8080/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -66,9 +69,14 @@ export const claimsAPI = {
 
 // Security API
 export const securityAPI = {
-  verifyClaim: (claim_id, otp) => api.post('/security/verify-claim', { claim_id, otp }),
+  verifyClaim: (claimId, itemId, otp) => api.post('/security/verify-claim', { claimId, itemId, otp }),
+  handoverRequest: (itemId) => api.post('/security/handover-request', { itemId }),
+  getReceiveItems: () => api.get('/security/receive-items'),
+  getHeldItems: () => api.get('/items', { params: { type: 'found', status: 'held_by_security', page: 0, size: 50, sort: 'createdAt,desc' } }),
+  confirmReceive: (itemId) => api.post('/security/receive-item', { itemId }),
   receiveItem: (data) => api.post('/security/receive-item', data),
   getTransactions: (params) => api.get('/security/transactions', { params }),
+  getFoundItems: (params) => api.get('/security/found-items', { params }),
   getStats: () => api.get('/security/stats'),
   getPendingClaims: () => api.get('/security/pending-claims')
 };

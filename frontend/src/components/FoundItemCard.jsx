@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import './FoundItemCard.css';
 import ClaimModal from './ClaimModal';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { maskNicInText } from '../utils/itemDisplayUtils';
 
-const FoundItemCard = ({ item, onClaim }) => {
+const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }) => {
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
   const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
   const normalizedItem = {
     ...item,
@@ -16,6 +18,13 @@ const FoundItemCard = ({ item, onClaim }) => {
   const displayDescription = normalizedItem.category === 'NIC'
     ? maskNicInText(normalizedItem.description)
     : normalizedItem.description;
+  
+  // Check if current user owns this item
+  const isOwnItem = currentUser && (currentUser.id === normalizedItem?.posted_by?.id || currentUser.id === normalizedItem?.user_id);
+  const normalizedStatus = useMemo(() => String(normalizedItem?.status || '').toUpperCase(), [normalizedItem?.status]);
+  const isAlreadyHandedOver = normalizedStatus === 'HANDOVER_REQUESTED'
+    || normalizedStatus === 'HELD_BY_SECURITY'
+    || normalizedStatus === 'HANDED_TO_SECURITY';
   
   const formatDate = (dateString) => {
     const options = { month: 'short', day: 'numeric', year: 'numeric' };
@@ -61,12 +70,28 @@ const FoundItemCard = ({ item, onClaim }) => {
         </div>
 
         <div className="card-actions">
-          <button 
-            onClick={handleClaimClick}
-            className="btn btn-claim"
-          >
-            🏷️ Claim This Item
-          </button>
+          {isOwnItem ? (
+            isAlreadyHandedOver ? (
+              <button className="btn btn-secondary" disabled>
+                Handed Over to Security
+              </button>
+            ) : (
+              <button
+                onClick={() => onHandover && onHandover(normalizedItem.id)}
+                className="btn btn-claim"
+                disabled={handoverInProgress}
+              >
+                {handoverInProgress ? 'Submitting...' : 'Hand Over to Security'}
+              </button>
+            )
+          ) : (
+            <button 
+              onClick={handleClaimClick}
+              className="btn btn-claim"
+            >
+              🏷️ Claim This Item
+            </button>
+          )}
           <button 
             onClick={handleReportClick}
             className="btn btn-report"

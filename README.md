@@ -1,474 +1,573 @@
-# Findora - Lost and Found Management System
+# Findora
 
-A complete production-ready web application for managing lost and found items with automatic matching, claim system, and role-based access control.
+Findora is a lost and found management system with a Spring Boot backend, a React frontend, and a MySQL database. It supports lost and found item reporting, JWT-based authentication, email OTP workflows, item claiming, notifications, pagination, sorting, and role-based access control for students, staff, security officers, and administrators.
 
-## 🚀 Features
+## Overview
 
-### Authentication System
-- User registration with roles: Student, Staff, Security, Admin
-- Login using username or email
-- JWT authentication
-- Password hashing with bcrypt
-- OTP email verification
-- Forgot password with OTP reset
+Current architecture:
 
-### Lost and Found System
-- Report lost items
-- Report found items
-- Categories: NIC, Student ID, Bank Card, Wallet, Other
-- Upload images with items
-- Search and filter items by category, date, keyword
+- Backend: Spring Boot 3.x, Java 17, Spring Security, Spring Data JPA, MySQL
+- Frontend: React with Vite
+- Database: MySQL 8+
+- Authentication: JWT
+- Email: SMTP via Spring Mail
 
-### Intelligent Matching Algorithm
-- Automatically matches lost and found items
-- Matching factors: item name, description, location, date
-- ≥80% match → "Item Found" notification
-- ≥60% match → "Possible Match" notification
-- Email notifications for matches
+Main capabilities:
 
-### Claim System
-- Users can claim found items
-- System generates 6-digit OTP
-- OTP sent via email
-- Security officer verifies OTP to release item
-- 24-hour OTP expiry
+- User registration and login
+- Email verification and password reset with OTP
+- Lost item and found item reporting
+- Found item claiming workflow
+- Notifications and unread counts
+- Role-based access control
+- Paginated and sortable item listings
+- Admin and security operations
 
-### Security Dashboard
-- Receive items
-- Verify claims with OTP
-- Release items to rightful owners
-- View transaction history
-- Statistics dashboard
+## Project Structure
 
-### Admin Dashboard
-- View all lost and found items
-- View receive and release history
-- Approve security and admin signups
-- Ban or suspend users
-- Handle post reports
-- Comprehensive statistics
-- **Desktop-only access** (mobile devices blocked for security)
-
-### Mobile Responsive Design
-- ✅ **Fully responsive** for mobile phones and tablets
-- Touch-optimized buttons and interactive elements
-- Mobile-friendly navigation
-- Optimized layouts for small screens
-- Students, Staff, and Security can use mobile devices
-- **Admin access restricted to desktop only** for enhanced security and functionality
-
-### Notifications
-- In-app notification system
-- Email notifications for:
-  - Item matches
-  - OTP codes
-  - Account approvals
-  - Claims and releases
-
-## 🛠️ Tech Stack
-
-- **Frontend:** React 19 with Vite
-- **Backend:** Node.js with Express
-- **Database:** MySQL 8.0+
-- **Authentication:** JWT (jsonwebtoken)
-- **Password Hashing:** bcryptjs
-- **Email:** Nodemailer
-- **File Upload:** Multer
-- **Validation:** express-validator
-- **Matching Algorithm:** string-similarity
-
-## 📁 Project Structure
-
-```
+```text
 Findora/
 ├── backend/
-│   ├── config/
-│   │   ├── database.js
-│   │   └── schema.sql
-│   ├── controllers/
-│   │   ├── adminController.js
-│   │   ├── authController.js
-│   │   ├── claimController.js
-│   │   ├── itemController.js
-│   │   ├── notificationController.js
-│   │   ├── reportController.js
-│   │   └── securityController.js
-│   ├── middleware/
-│   │   ├── auth.js
-│   │   ├── upload.js
-│   │   └── validator.js
-│   ├── models/
-│   │   ├── Claim.js
-│   │   ├── Item.js
-│   │   ├── Match.js
-│   │   ├── Notification.js
-│   │   ├── Report.js
-│   │   ├── SecurityTransaction.js
-│   │   └── User.js
-│   ├── routes/
-│   │   ├── adminRoutes.js
-│   │   ├── authRoutes.js
-│   │   ├── claimRoutes.js
-│   │   ├── itemRoutes.js
-│   │   ├── notificationRoutes.js
-│   │   ├── reportRoutes.js
-│   │   └── securityRoutes.js
-│   ├── utils/
-│   │   ├── email.js
-│   │   ├── jwt.js
-│   │   └── matcher.js
-│   ├── .env.example
-│   ├── .gitignore
-│   ├── package.json
-│   └── server.js
-├── frontend/
-│   ├── public/
+│   ├── pom.xml
+│   ├── README.md
+│   ├── reset_admin.sql
 │   ├── src/
-│   │   ├── components/
-│   │   │   ├── ItemCard.jsx
-│   │   │   ├── Navbar.jsx
-│   │   │   └── PrivateRoute.jsx
-│   │   ├── context/
-│   │   │   └── AuthContext.jsx
-│   │   ├── pages/
-│   │   │   ├── admin/
-│   │   │   │   ├── AdminDashboard.jsx
-│   │   │   │   └── AdminUsers.jsx
-│   │   │   ├── security/
-│   │   │   │   └── SecurityPendingClaims.jsx
-│   │   │   ├── Dashboard.jsx
-│   │   │   ├── FoundItems.jsx
-│   │   │   ├── Login.jsx
-│   │   │   ├── LostItems.jsx
-│   │   │   ├── MyClaims.jsx
-│   │   │   ├── MyItems.jsx
-│   │   │   ├── Notifications.jsx
-│   │   │   ├── Profile.jsx
-│   │   │   ├── ReportFoundItem.jsx
-│   │   │   ├── ReportLostItem.jsx
-│   │   │   └── Signup.jsx
-│   │   ├── services/
-│   │   │   └── api.js
-│   │   ├── App.css
-│   │   ├── App.jsx
-│   │   ├── index.css
-│   │   └── main.jsx
-│   ├── .env.example
-│   ├── index.html
+│   │   ├── main/
+│   │   │   ├── java/com/findora/
+│   │   │   │   ├── config/
+│   │   │   │   ├── controller/
+│   │   │   │   ├── dto/
+│   │   │   │   ├── exception/
+│   │   │   │   ├── model/
+│   │   │   │   ├── repository/
+│   │   │   │   ├── security/
+│   │   │   │   ├── service/
+│   │   │   │   └── FindoraApplication.java
+│   │   │   └── resources/
+│   │   │       └── application.properties
+│   │   └── test/
+│   └── uploads/
+├── frontend/
 │   ├── package.json
-│   └── vite.config.js
+│   ├── vite.config.js
+│   ├── index.html
+│   └── src/
+│       ├── components/
+│       ├── context/
+│       ├── pages/
+│       ├── services/
+│       └── utils/
+├── EMAIL_SETUP.md
 └── README.md
 ```
 
-## 🔧 Installation & Setup
+## Feature Summary
 
-### Prerequisites
-- Node.js 16+ and npm
-- MySQL 8.0+
-- Git
+### Authentication and Account Security
 
-### 1. Clone the Repository
-```bash
-git clone <repository-url>
-cd Findora
+- Register with student, staff, security, or admin roles
+- Login with username, email, or identifier-based frontend payloads
+- JWT-based session handling
+- Email verification with OTP
+- Password reset with OTP
+- Account approval, suspension, and ban flags
+
+### Lost and Found Workflow
+
+- Report lost items
+- Report found items
+- Categories include NIC, Student ID, Bank Card, Wallet, and Other
+- Optional image upload for found items
+- Search, filter, sort, and paginate item listings
+- Dashboard and list pages consume paginated backend responses
+
+### Claim and Release Workflow
+
+- Users can claim found items
+- OTP-based verification flow is designed for item release
+- Security officers can verify claims and manage receipt/release operations
+
+### Notifications
+
+- In-app notifications
+- Unread count API support
+- Match, OTP, approval, claim, report, and system notification models are present
+
+### Roles and Permissions
+
+- Student and Staff: report items, browse items, claim items, manage their own posts and claims
+- Security: operational flows for claim verification and transaction handling
+- Admin: user approval, moderation, reports, and system oversight
+
+## Technology Stack
+
+| Layer | Technology |
+| --- | --- |
+| Backend | Spring Boot 3.2.x |
+| Language | Java 17 |
+| Build | Maven |
+| Database | MySQL 8+ |
+| ORM | Spring Data JPA / Hibernate |
+| Security | Spring Security + JWT |
+| Email | Spring Mail |
+| Frontend | React + Vite |
+| HTTP Client | Axios |
+
+## Prerequisites
+
+### Backend
+
+- Java 17 or newer
+- Maven 3.8 or newer
+- MySQL 8 or newer
+
+### Frontend
+
+- A current frontend toolchain capable of running the React Vite app
+- The frontend in this repository is managed through `frontend/package.json`
+
+## Backend Setup
+
+### 1. Create the MySQL database
+
+Create the database used by the backend:
+
+```sql
+CREATE DATABASE findora_db;
 ```
 
-### 2. Backend Setup
+### 2. Prepare the schema
 
-#### Install Dependencies
+The backend runs with:
+
+```properties
+spring.jpa.hibernate.ddl-auto=none
+```
+
+That means the application expects the schema to already exist in MySQL before startup.
+
+If your environment uses a `schema.sql`, import it before starting the backend. If you are continuing from an existing Findora database, reuse that schema directly.
+
+Example import command if you have a schema file:
+
+```bash
+mysql -u root -p findora_db < path/to/schema.sql
+```
+
+### 3. Configure backend properties
+
+The main backend configuration lives in:
+
+- `backend/src/main/resources/application.properties`
+
+Important values to review:
+
+- `server.port=8080`
+- `spring.datasource.url=jdbc:mysql://localhost:3306/findora_db?...`
+- `spring.datasource.username=root`
+- `spring.datasource.password=...`
+- `app.jwt.secret=...`
+- `spring.mail.host=smtp.gmail.com`
+- `spring.mail.username=...`
+- `spring.mail.password=...`
+- `app.upload.dir=uploads/`
+
+### 4. Build the backend
+
 ```bash
 cd backend
-npm install
+mvn clean install
 ```
 
-#### Configure Environment Variables
+### 5. Run the backend
+
+Run in development:
+
 ```bash
-# Copy example env file
-cp .env.example .env
-
-# Edit .env with your settings
+cd backend
+mvn spring-boot:run
 ```
 
-Edit `backend/.env`:
-```env
-PORT=5000
-NODE_ENV=development
+Or run the packaged jar:
 
-# Database Configuration
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=your_mysql_password
-DB_NAME=findora_db
-DB_PORT=3306
-
-# JWT Configuration
-JWT_SECRET=your_super_secret_jwt_key_change_in_production
-JWT_EXPIRE=7d
-
-# Email Configuration (Gmail example)
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USER=your_email@gmail.com
-EMAIL_PASSWORD=your_gmail_app_password
-
-# Upload Configuration
-MAX_FILE_SIZE=5242880
-UPLOAD_PATH=./uploads
-
-# Frontend URL
-FRONTEND_URL=http://localhost:5173
-```
-
-#### Setup Database
 ```bash
-# Login to MySQL
-mysql -u root -p
-
-# Run the schema.sql file
-source backend/config/schema.sql
+cd backend
+mvn clean package
+java -jar target/findora-backend-2.0.0.jar
 ```
 
-Or manually:
-```bash
-mysql -u root -p < backend/config/schema.sql
-```
+Backend default URL:
 
-#### Start Backend Server
-```bash
-# Development mode with auto-reload
-npm run dev
+- `http://localhost:8080`
 
-# Production mode
-npm start
-```
+## Frontend Setup
 
-Backend will run on `http://localhost:5000`
+The frontend remains a React application using Vite.
 
-### 3. Frontend Setup
+### 1. Install frontend dependencies
 
-#### Install Dependencies
 ```bash
 cd frontend
 npm install
 ```
 
-#### Configure Environment Variables
-```bash
-# Copy example env file
-cp .env.example .env
-```
+### 2. Configure frontend API base URL if needed
 
-Edit `frontend/.env`:
-```env
-VITE_API_URL=http://localhost:5000/api
-```
+The frontend expects the backend API at:
 
-#### Start Frontend Development Server
+- `http://localhost:8080/api`
+
+### 3. Start the frontend
+
 ```bash
+cd frontend
 npm run dev
 ```
 
-Frontend will run on `http://localhost:5173`
+Frontend default URL:
 
-## 📧 Email Configuration (Gmail)
+- `http://localhost:5173`
 
-To enable email notifications:
+## Email OTP Setup
 
-1. Go to your Google Account settings
-2. Enable 2-Factor Authentication
-3. Generate an App Password:
-   - Go to Security → 2-Step Verification → App passwords
-   - Select "Mail" and "Other (Custom name)"
-   - Copy the generated 16-character password
-4. Use this password in `EMAIL_PASSWORD` in `.env`
+OTP is sent by email, not by phone number.
 
-## 👤 Default Admin Account
+To configure Gmail SMTP for development:
 
-After running the database schema, a default admin account is created:
+1. Enable 2-factor authentication on the Gmail account.
+2. Generate an App Password.
+3. Set the following Spring Mail properties in `backend/src/main/resources/application.properties`:
 
-- **Username:** `admin`
-- **Email:** `admin@findora.com`
-- **Password:** `Admin@123`
-
-**Important:** Change this password immediately after first login!
-
-## 🎯 User Roles & Permissions
-
-### Student / Staff
-- Report lost items
-- Report found items
-- Browse all items
-- Claim found items
-- View their own items and claims
-- Receive match notifications
-
-### Security Officer
-- Receive found items
-- Verify and release claims using OTP
-- View transaction history
-- View statistics
-- Requires admin approval upon signup
-
-### Admin
-- All security officer permissions
-- Manage all users (ban, suspend)
-- Approve security/admin signups
-- View all items and transactions
-- Handle post reports
-- Access comprehensive statistics
-- Requires another admin's approval
-
-## 🔐 API Endpoints
-
-### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login user
-- `POST /api/auth/verify-email` - Verify email with OTP
-- `POST /api/auth/resend-otp` - Resend verification OTP
-- `POST /api/auth/forgot-password` - Request password reset
-- `POST /api/auth/reset-password` - Reset password with OTP
-- `GET /api/auth/me` - Get current user
-
-### Items
-- `POST /api/items` - Create lost/found item
-- `GET /api/items` - Get all items (with filters)
-- `GET /api/items/:id` - Get single item
-- `GET /api/items/my/items` - Get user's items
-- `PUT /api/items/:id/status` - Update item status
-- `DELETE /api/items/:id` - Delete item
-
-### Claims
-- `POST /api/claims` - Create a claim
-- `GET /api/claims/my` - Get user's claims
-- `GET /api/claims/:id` - Get claim details
-- `GET /api/claims/pending` - Get pending claims (Security)
-
-### Security
-- `POST /api/security/verify-claim` - Verify claim with OTP
-- `POST /api/security/receive-item` - Record received item
-- `GET /api/security/transactions` - Get transactions
-- `GET /api/security/stats` - Get statistics
-
-### Admin
-- `GET /api/admin/users` - Get all users
-- `GET /api/admin/pending-approvals` - Get pending approvals
-- `PUT /api/admin/approve-user/:id` - Approve user
-- `PUT /api/admin/ban-user/:id` - Ban/unban user
-- `PUT /api/admin/suspend-user/:id` - Suspend/unsuspend user
-- `GET /api/admin/reports` - Get all reports
-- `PUT /api/admin/reports/:id` - Handle report
-- `GET /api/admin/stats` - Get dashboard statistics
-
-### Notifications
-- `GET /api/notifications` - Get user's notifications
-- `GET /api/notifications/unread-count` - Get unread count
-- `PUT /api/notifications/:id/read` - Mark as read
-- `PUT /api/notifications/read-all` - Mark all as read
-- `DELETE /api/notifications/:id` - Delete notification
-
-### Reports
-- `POST /api/reports` - Report a post
-- `GET /api/reports/my` - Get user's reports
-
-## 🧪 Testing the Application
-
-### Test User Flow:
-1. Register as a student
-2. Verify email with OTP
-3. Report a lost item
-4. Report a found item
-5. System automatically matches items
-6. Receive match notification
-7. Claim a found item
-8. Receive OTP via email
-9. Security officer verifies OTP
-10. Item is released
-
-### Test Admin Flow:
-1. Login as admin
-2. Approve security officer signup
-3. View all items and users
-4. Handle reports
-5. Ban/suspend users
-6. View statistics
-
-## 🐛 Troubleshooting
-
-### Database Connection Error
-- Verify MySQL is running
-- Check database credentials in `.env`
-- Ensure database `findora_db` exists
-
-### Email Not Sending
-- Verify Gmail App Password is correct
-- Check EMAIL_USER and EMAIL_PASSWORD in `.env`
-- Ensure 2FA is enabled on Gmail account
-
-### Port Already in Use
-```bash
-# Change PORT in backend/.env
-PORT=5001
-
-# Or kill process using port 5000
-# Windows:
-netstat -ano | findstr :5000
-taskkill /PID <PID> /F
-
-# Linux/Mac:
-lsof -ti:5000 | xargs kill -9
+```properties
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=your-email@gmail.com
+spring.mail.password=your-app-password
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+spring.mail.properties.mail.smtp.starttls.required=true
 ```
 
-### CORS Errors
-- Verify FRONTEND_URL in backend `.env` matches your frontend URL
-- Check browser console for specific CORS error
+Detailed email guidance is available in:
 
-## 📝 Development Notes
+- `EMAIL_SETUP.md`
 
-### Adding New Features
-1. Create model in `backend/models/`
-2. Create controller in `backend/controllers/`
-3. Add routes in `backend/routes/`
-4. Update API service in `frontend/src/services/api.js`
-5. Create React components/pages
+## Default Admin Account
 
-### Database Schema Changes
-1. Update `backend/config/schema.sql`
-2. Create migration script if needed
-3. Update corresponding models
+The repository includes an admin reset script:
 
-### Matching Algorithm Tuning
-Edit weights in `backend/utils/matcher.js`:
-- Item name similarity: 40% weight
-- Description similarity: 30% weight
-- Location similarity: 20% weight
-- Date proximity: 10% weight
+- `backend/reset_admin.sql`
 
-## 🚀 Deployment
+It resets the admin record to:
 
-### Backend Deployment (e.g., Heroku, DigitalOcean)
-1. Set environment variables
-2. Use production database
-3. Set `NODE_ENV=production`
-4. Configure CORS for production frontend URL
+- Username: `admin`
+- Email: `admin@findora.com`
+- Role: `admin`
+- Verified: `true`
+- Approved: `true`
 
-### Frontend Deployment (e.g., Vercel, Netlify)
-1. Build the project: `npm run build`
-2. Deploy `dist` folder
-3. Update `VITE_API_URL` to production backend URL
+To apply it:
 
-### Database Deployment
-1. Use managed MySQL service (AWS RDS, DigitalOcean)
-2. Run schema.sql on production database
-3. Regular backups recommended
+```bash
+mysql -u root -p findora_db < backend/reset_admin.sql
+```
 
-## 📄 License
+The script sets a BCrypt-hashed password in the database. Use the project’s operational password for that hash in your environment, or update the hash if you need a different admin password.
 
-This project is created for educational purposes.
+## API Routes
 
-## 👥 Support
+The current Spring Boot controllers define these API route groups.
 
-For issues and questions, please create an issue in the repository.
+### Authentication
 
----
+Base route:
 
-**Built with ❤️ for managing lost and found items efficiently**
+- `POST /api/auth/login`
+- `POST /api/auth/register`
+- `POST /api/auth/verify-email`
+- `POST /api/auth/resend-otp`
+- `POST /api/auth/forgot-password`
+- `POST /api/auth/reset-password`
+- `GET /api/auth/me`
+
+### Items
+
+Base route: `/api/items`
+
+- `GET /api/items`
+- `GET /api/items/{id}`
+- `GET /api/items/my/items`
+- `POST /api/items`
+- `PUT /api/items/{id}/status`
+- `DELETE /api/items/{id}`
+
+Supported list query parameters:
+
+- `page`
+- `size`
+- `sort`
+- `category`
+- `keyword`
+- `type`
+- `status`
+
+Current paginated response fields used by the frontend:
+
+- `content`
+- `totalPages`
+- `totalElements`
+- `pageNumber`
+- `pageSize`
+
+Compatibility fields are also returned where needed for existing frontend pages.
+
+### Claims
+
+Base route: `/api/claims`
+
+- `POST /api/claims`
+- `GET /api/claims/my`
+- `GET /api/claims/{id}`
+- `GET /api/claims/pending`
+
+### Security
+
+Base route: `/api/security`
+
+- `POST /api/security/verify-claim`
+- `POST /api/security/receive-item`
+- `GET /api/security/transactions`
+- `GET /api/security/stats`
+
+### Admin
+
+Base route: `/api/admin`
+
+- `GET /api/admin/users`
+- `GET /api/admin/pending-approvals`
+- `PUT /api/admin/approve-user/{id}`
+- `PUT /api/admin/ban-user/{id}`
+- `PUT /api/admin/suspend-user/{id}`
+- `GET /api/admin/reports`
+- `PUT /api/admin/reports/{id}`
+- `GET /api/admin/stats`
+
+### Notifications
+
+Base route: `/api/notifications`
+
+- `GET /api/notifications`
+- `GET /api/notifications/unread-count`
+- `PUT /api/notifications/{id}/read`
+- `PUT /api/notifications/read-all`
+- `DELETE /api/notifications/{id}`
+
+### Reports
+
+Base route: `/api/reports`
+
+- `POST /api/reports`
+- `GET /api/reports/my`
+
+## Implementation Status
+
+The repository contains both active endpoints and scaffolded endpoints.
+
+Implemented and actively used parts include:
+
+- Authentication core flows
+- Item reporting and paginated item retrieval
+- JWT security configuration
+- DTO-based item responses compatible with the React frontend
+- Frontend pagination for found and lost item pages
+
+Some controller routes are currently placeholders or partial implementations and may return `501 Not Implemented` or TODO-style responses until their service logic is completed.
+
+## Pagination and Sorting
+
+The backend supports server-side pagination and sorting on item listings.
+
+Supported item list behavior includes:
+
+- `page` with zero-based indexing
+- `size` page size
+- `sort` values such as `createdAt,desc` and `name,asc`
+- filtering by type, category, keyword, and status
+
+This is used by the frontend for:
+
+- Found Items
+- Lost Items
+- Dashboard item previews
+
+## User Roles and Permissions
+
+### Student and Staff
+
+- Register and log in
+- Verify email
+- Report lost items
+- Report found items
+- Browse found items
+- Claim eligible items
+- View their own items and claims
+
+### Security
+
+- Access security operations
+- Verify claim OTPs
+- Manage receive and release workflows
+- View transaction and stats endpoints
+- Approval workflow is modeled in the backend
+
+### Admin
+
+- Review users and pending approvals
+- Moderate users through ban and suspend actions
+- Review reports and platform statistics
+- Manage higher-privilege workflows
+
+## Testing
+
+### Backend tests
+
+Run backend tests with Maven:
+
+```bash
+cd backend
+mvn test
+```
+
+Integration tests currently exist for:
+
+- authentication controller behavior
+- item controller pagination behavior
+
+### Frontend validation
+
+Build the frontend:
+
+```bash
+cd frontend
+npm run build
+```
+
+## Troubleshooting
+
+### Backend cannot connect to MySQL
+
+Check:
+
+- MySQL is running
+- `findora_db` exists
+- username and password in `application.properties` are correct
+- the required tables already exist because `ddl-auto=none`
+
+### JWT errors
+
+If tokens fail to validate:
+
+- ensure `app.jwt.secret` is set
+- ensure the secret is long enough for HS256
+- restart the backend after changing JWT properties
+
+### Email OTP is not sent
+
+Check:
+
+- Gmail App Password is used, not the normal account password
+- SMTP settings are correct
+- outbound mail is not blocked by firewall or provider restrictions
+
+### Port 8080 is already in use
+
+On Windows:
+
+```bash
+netstat -ano | findstr :8080
+taskkill /PID <PID> /F
+```
+
+Or change:
+
+```properties
+server.port=8081
+```
+
+### Frontend cannot reach backend
+
+Check:
+
+- backend is running on port 8080
+- frontend is calling `http://localhost:8080/api`
+- CORS configuration in Spring Boot includes the frontend origin
+
+### Backend starts but item APIs fail
+
+Check:
+
+- schema exists in MySQL
+- enum values in the database match the Java converters
+- upload directory is writable if image uploads are used
+
+## Deployment
+
+### Backend deployment
+
+For production deployment:
+
+1. Build the jar:
+
+```bash
+cd backend
+mvn clean package
+```
+
+2. Deploy the generated jar from:
+
+- `backend/target/findora-backend-2.0.0.jar`
+
+3. Configure production values for:
+
+- datasource URL, username, password
+- JWT secret
+- SMTP credentials
+- upload directory
+- server port
+
+4. Ensure the production MySQL schema is already created before startup.
+
+### Frontend deployment
+
+Build the frontend for production:
+
+```bash
+cd frontend
+npm run build
+```
+
+Deploy the generated frontend build according to your hosting platform.
+
+### Database deployment
+
+Recommended production practices:
+
+- use a managed MySQL instance where possible
+- import the schema before backend startup
+- back up the database regularly
+- restrict direct database access
+
+## Development Notes
+
+When adding new backend features:
+
+1. Add or update the entity in `backend/src/main/java/com/findora/model/`
+2. Add repository logic in `backend/src/main/java/com/findora/repository/`
+3. Add service logic in `backend/src/main/java/com/findora/service/`
+4. Expose routes in `backend/src/main/java/com/findora/controller/`
+5. Update frontend API usage in `frontend/src/services/api.js`
+6. Add or update React pages and components as needed
+
+## License
+
+This project is maintained for educational and application development purposes.
