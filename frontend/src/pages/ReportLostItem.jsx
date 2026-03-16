@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { itemsAPI } from '../services/api';
+import { isValidNicNumber, normalizeNicNumber } from '../utils/nicUtils';
+import { isValidStudentIdNumber, normalizeStudentIdNumber } from '../utils/studentIdUtils';
+
 import './ReportLostItem.css';
 
 const CATEGORY_OPTIONS = ['NIC', 'Student / Staff ID', 'Bank Card', 'Purse / Wallet', 'Others'];
@@ -70,7 +73,15 @@ const ReportLostItem = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const normalizedValue =
+      name === 'nicNumber'
+        ? normalizeNicNumber(value)
+        : name === 'studentOrStaffId' || name === 'purseIdNumber'
+          ? normalizeStudentIdNumber(value)
+          : name === 'cardLast4'
+            ? value.replace(/\D/g, '').slice(0, 4)
+          : value;
+    setFormData((prev) => ({ ...prev, [name]: normalizedValue }));
   };
 
   const handleFileChange = (name, file) => {
@@ -85,6 +96,9 @@ const ReportLostItem = () => {
     if (category === 'NIC') {
       if (!formData.nicName.trim()) nextErrors.nicName = 'Name is required.';
       if (!formData.nicNumber.trim()) nextErrors.nicNumber = 'NIC Number is required.';
+      if (formData.nicNumber.trim() && !isValidNicNumber(formData.nicNumber)) {
+        nextErrors.nicNumber = 'NIC must be 12 digits or 9 digits followed by V.';
+      }
       if (!formData.nicLocation1.trim()) nextErrors.nicLocation1 = 'Location is required.';
       if (!formData.nicDateLost) nextErrors.nicDateLost = 'Date is required.';
       if (!formData.nicFromTime) nextErrors.nicFromTime = 'From time is required.';
@@ -94,6 +108,9 @@ const ReportLostItem = () => {
     if (category === 'Student / Staff ID') {
       if (!formData.idName.trim()) nextErrors.idName = 'Name is required.';
       if (!formData.studentOrStaffId.trim()) nextErrors.studentOrStaffId = 'Student ID or Staff ID is required.';
+      if (formData.studentOrStaffId.trim() && !isValidStudentIdNumber(formData.studentOrStaffId)) {
+        nextErrors.studentOrStaffId = 'Student ID must be 6 digits followed by 1 letter.';
+      }
       if (!formData.idLocation1.trim()) nextErrors.idLocation1 = 'Location is required.';
       if (!formData.idDateLost) nextErrors.idDateLost = 'Date is required.';
       if (!formData.idFromTime) nextErrors.idFromTime = 'From time is required.';
@@ -103,8 +120,8 @@ const ReportLostItem = () => {
     if (category === 'Bank Card') {
       if (!formData.cardType) nextErrors.cardType = 'Card Type is required.';
       if (!formData.bankName.trim()) nextErrors.bankName = 'Name of the Bank is required.';
-      if (formData.cardLast4.trim() && !/^\d{4}$/.test(formData.cardLast4.trim())) {
-        nextErrors.cardLast4 = 'Last 4 digits must be exactly 4 numbers when provided.';
+      if (formData.cardLast4.trim() && !/^\d{4}$/.test(formData.cardLast4)) {
+        nextErrors.cardLast4 = 'Please enter the last 4 digits of the card number.';
       }
       if (!formData.bankLocation1.trim()) nextErrors.bankLocation1 = 'Field 1 is required.';
       if (!formData.bankDateLost) nextErrors.bankDateLost = 'Date is required.';
@@ -115,6 +132,13 @@ const ReportLostItem = () => {
     if (category === 'Purse / Wallet') {
       if (purseOption === 'with-id') {
         if (!formData.purseIdNumber.trim()) nextErrors.purseIdNumber = 'NIC number or Student/Staff ID is required.';
+        if (
+          formData.purseIdNumber.trim() &&
+          !isValidNicNumber(formData.purseIdNumber) &&
+          !isValidStudentIdNumber(formData.purseIdNumber)
+        ) {
+          nextErrors.purseIdNumber = 'Enter a valid NIC or Student ID (6 digits + 1 letter).';
+        }
         if (!formData.purseWithIdLocation1.trim()) nextErrors.purseWithIdLocation1 = 'Location is required.';
         if (!formData.purseWithIdDateLost) nextErrors.purseWithIdDateLost = 'Date is required.';
         if (!formData.purseWithIdFromTime) nextErrors.purseWithIdFromTime = 'From time is required.';
@@ -248,7 +272,13 @@ const ReportLostItem = () => {
               </div>
               <div className="report-lost-form-group">
                 <label className="required">NIC Number</label>
-                <input name="nicNumber" value={formData.nicNumber} onChange={handleInputChange} />
+                <input
+                  name="nicNumber"
+                  value={formData.nicNumber}
+                  onChange={handleInputChange}
+                  placeholder="e.g. 200012345678 or 901234567V"
+                  maxLength={12}
+                />
                 {errors.nicNumber && <p className="report-lost-error">{errors.nicNumber}</p>}
               </div>
               <div className="report-lost-private">
@@ -296,7 +326,13 @@ const ReportLostItem = () => {
               </div>
               <div className="report-lost-form-group">
                 <label className="required">Student ID or Staff ID</label>
-                <input name="studentOrStaffId" value={formData.studentOrStaffId} onChange={handleInputChange} />
+                <input
+                  name="studentOrStaffId"
+                  value={formData.studentOrStaffId}
+                  onChange={handleInputChange}
+                  placeholder="e.g. 123456A"
+                  maxLength={7}
+                />
                 {errors.studentOrStaffId && <p className="report-lost-error">{errors.studentOrStaffId}</p>}
               </div>
               <div className="report-lost-private">
@@ -349,12 +385,42 @@ const ReportLostItem = () => {
               </div>
               <div className="report-lost-form-group">
                 <label className="required">Name of the Bank</label>
-                <input name="bankName" value={formData.bankName} onChange={handleInputChange} />
+                <select name="bankName" value={formData.bankName} onChange={handleInputChange}>
+                  <option value="">-- Select Bank --</option>
+                  <option>Bank of Ceylon</option>
+                  <option>People's Bank</option>
+                  <option>Commercial Bank of Ceylon</option>
+                  <option>Hatton National Bank (HNB)</option>
+                  <option>Sampath Bank</option>
+                  <option>Seylan Bank</option>
+                  <option>Nations Trust Bank (NTB)</option>
+                  <option>National Savings Bank (NSB)</option>
+                  <option>Pan Asia Banking Corporation</option>
+                  <option>Union Bank of Colombo</option>
+                  <option>DFCC Bank</option>
+                  <option>Cargills Bank</option>
+                  <option>Amana Bank</option>
+                  <option>MCB Bank</option>
+                  <option>Citibank Sri Lanka</option>
+                  <option>Standard Chartered Bank</option>
+                  <option>HSBC Sri Lanka</option>
+                  <option>Other</option>
+                </select>
                 {errors.bankName && <p className="report-lost-error">{errors.bankName}</p>}
               </div>
               <div className="report-lost-form-group">
-                <label>Last 4 digits of the card number (optional)</label>
-                <input name="cardLast4" value={formData.cardLast4} onChange={handleInputChange} maxLength={4} />
+                <label>Card number (optional)</label>
+                <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #ccc', borderRadius: '6px', overflow: 'hidden', background: '#fff' }}>
+                  <span style={{ padding: '0 10px', color: '#aaa', letterSpacing: '2px', fontFamily: 'monospace', fontSize: '1rem', userSelect: 'none', whiteSpace: 'nowrap' }}>#### #### ####</span>
+                  <input
+                    name="cardLast4"
+                    value={formData.cardLast4}
+                    onChange={handleInputChange}
+                    placeholder="1234"
+                    maxLength={4}
+                    style={{ border: 'none', outline: 'none', width: '60px', padding: '10px 8px', fontFamily: 'monospace', fontSize: '1rem' }}
+                  />
+                </div>
                 {errors.cardLast4 && <p className="report-lost-error">{errors.cardLast4}</p>}
               </div>
 
@@ -449,7 +515,13 @@ const ReportLostItem = () => {
                 <div>
                   <div className="report-lost-form-group">
                     <label className="required">Enter NIC number or Student/Staff ID</label>
-                    <input name="purseIdNumber" value={formData.purseIdNumber} onChange={handleInputChange} />
+                    <input
+                      name="purseIdNumber"
+                      value={formData.purseIdNumber}
+                      onChange={handleInputChange}
+                      placeholder="NIC: 200012345678 / Student ID: 123456A"
+                      maxLength={12}
+                    />
                     {errors.purseIdNumber && <p className="report-lost-error">{errors.purseIdNumber}</p>}
                   </div>
                   <div className="report-lost-private">
