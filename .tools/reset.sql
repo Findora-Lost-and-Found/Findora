@@ -1,0 +1,1 @@
+UPDATE findora_db.users SET password='$2b$10$N.3J5mKcI.z9Typbfk6gFeQdW9B3ZIrPgT0UnPHHxg04ClXm0ZJfW', is_verified=1, is_approved=1 WHERE username='Isaiyalan';
