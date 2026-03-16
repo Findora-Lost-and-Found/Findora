@@ -55,6 +55,11 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
 
       <div className="card-content">
         <h3 className="card-title">{normalizedItem.name}</h3>
+        {isAlreadyHandedOver && (
+          <div className="handed-over-label" style={{ color: '#219653', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+            Handed Over to Security
+          </div>
+        )}
         
         <div className="card-meta">
           <div className="meta-item">

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { NIC_HELPER_TEXT, NIC_VALIDATION_MESSAGE, isValidNic, normalizeNic, sanitizeNicInput } from '../../utils/nicUtils';
 
 const NICClaim = ({ item, onSubmit, onCancel }) => {
   const [step, setStep] = useState('template'); // template, verify
@@ -9,15 +10,17 @@ const NICClaim = ({ item, onSubmit, onCancel }) => {
   };
 
   const handleVerify = () => {
-    if (!nicNumber.trim()) {
+    const normalizedNic = normalizeNic(nicNumber);
+
+    if (!normalizedNic) {
       alert('Please enter your NIC number');
       return;
     }
-    if (nicNumber.length < 9) {
-      alert('Please enter a valid NIC number');
+    if (!isValidNic(normalizedNic)) {
+      alert(NIC_VALIDATION_MESSAGE);
       return;
     }
-    onSubmit({ nicNumber, itemId: item.id });
+    onSubmit({ nicNumber: normalizedNic, itemId: item.id });
   };
 
   return (
@@ -59,13 +62,14 @@ const NICClaim = ({ item, onSubmit, onCancel }) => {
             <input
               id="nic"
               type="text"
-              placeholder="Enter your NIC number"
+              placeholder="123456789V or 199001234567"
               value={nicNumber}
-              onChange={(e) => setNicNumber(e.target.value.toUpperCase())}
+              onChange={(e) => setNicNumber(sanitizeNicInput(e.target.value))}
               maxLength="12"
+              autoComplete="off"
             />
             <small style={{ color: '#9CA3AF' }}>
-              Format: XXXXXXXXX123 (9 digits + 3 characters)
+              {NIC_HELPER_TEXT}
             </small>
           </div>
 

@@ -39,7 +39,7 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
         itemsAPI.getMy(),
         claimsAPI.getMy(),
         // Reuse the same found-items feed for any role that shares the dashboard UI.
-        itemsAPI.getAll({ type: 'found', status: 'active' })
+        itemsAPI.getAll({ type: 'found' })
       ]);
 
       setStats({

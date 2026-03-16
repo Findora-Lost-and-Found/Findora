@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
 import { itemsAPI } from '../services/api';
 import ItemCard from '../components/ItemCard';
 import Pagination from '../components/Pagination';
+import MatchCard from '../components/MatchCard';
+import matchesAPI from '../services/matchesAPI';
 
 const PAGE_SIZE = 4;
 
@@ -15,6 +18,8 @@ const LostItems = () => {
     pageSize: PAGE_SIZE
   });
   const [currentPage, setCurrentPage] = useState(0);
+  const [matchesByLostId, setMatchesByLostId] = useState({});
+  const [otpInputs, setOtpInputs] = useState({});
   const [filters, setFilters] = useState({
     category: '',
     search: ''
@@ -44,6 +49,8 @@ const LostItems = () => {
         pageNumber: response.data?.pageNumber ?? currentPage,
         pageSize: response.data?.pageSize ?? PAGE_SIZE
       });
+
+      await loadMatches();
     } catch (error) {
       console.error('Error loading items:', error);
       setItems([]);
@@ -55,6 +62,74 @@ const LostItems = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMatches = async () => {
+    try {
+      const response = await matchesAPI.getMyMatches();
+      const matches = response.data?.matches || [];
+
+      const grouped = matches.reduce((acc, match) => {
+        const lostItemId = match.lostItemId;
+        if (!lostItemId) {
+          return acc;
+        }
+
+        if (!acc[lostItemId]) {
+          acc[lostItemId] = [];
+        }
+        acc[lostItemId].push(match);
+        return acc;
+      }, {});
+
+      setMatchesByLostId(grouped);
+    } catch (error) {
+      console.error('Error loading matches:', error);
+      setMatchesByLostId({});
+    }
+  };
+
+  const handleClaimExistingFlow = async (match) => {
+    try {
+      const response = await matchesAPI.claimUsingExistingFlow(match);
+      const otp = response.data?.otp || response.data?.claim?.otp;
+      toast.success(otp ? `Claim created. OTP: ${otp}` : 'Claim created successfully');
+      await loadMatches();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to create claim');
+    }
+  };
+
+  const handleOtpInput = (matchId, value) => {
+    setOtpInputs((prev) => ({ ...prev, [matchId]: value }));
+  };
+
+  const handleClaimViaOtp = async (matchId) => {
+    try {
+      const otp = String(otpInputs[matchId] || '').trim();
+      if (!otp) {
+        toast.error('Enter OTP first');
+        return;
+      }
+
+      const response = await matchesAPI.claimMatch(matchId, otp);
+      const claimId = response.data?.claim?.id;
+      toast.success(claimId ? `Claim created (#${claimId})` : 'Claim created');
+      setOtpInputs((prev) => ({ ...prev, [matchId]: '' }));
+      await loadMatches();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to claim via OTP');
+    }
+  };
+
+  const handleResendOtp = async (matchId) => {
+    try {
+      await matchesAPI.resendOtp(matchId);
+      toast.success('OTP sent');
+      await loadMatches();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to resend OTP');
     }
   };
 
@@ -94,7 +169,28 @@ const LostItems = () => {
         {items.length === 0 ? (
           <p>You have not posted any lost items yet.</p>
         ) : (
-          items.map(item => <ItemCard key={item.id} item={item} />)
+          items.map(item => (
+            <div key={item.id}>
+              <ItemCard item={item} />
+
+              {(matchesByLostId[item.id] || []).length > 0 && (
+                <div className="suggested-matches-block">
+                  <h3>Suggested Matches</h3>
+                  {(matchesByLostId[item.id] || []).map((match) => (
+                    <MatchCard
+                      key={match.matchId}
+                      match={match}
+                      otpValue={otpInputs[match.matchId]}
+                      onOtpChange={handleOtpInput}
+                      onClaimExisting={handleClaimExistingFlow}
+                      onClaimViaOtp={handleClaimViaOtp}
+                      onResendOtp={handleResendOtp}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          ))
         )}
       </div>
 

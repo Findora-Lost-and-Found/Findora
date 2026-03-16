@@ -61,7 +61,7 @@ export const itemsAPI = {
 
 // Claims API
 export const claimsAPI = {
-  create: (item_id) => api.post('/claims', { item_id }),
+  create: (item_id, meta = undefined) => api.post('/claims', { item_id, ...(meta || {}) }),
   getMy: () => api.get('/claims/my'),
   getById: (id) => api.get(`/claims/${id}`),
   getPending: () => api.get('/claims/pending')
