@@ -3,7 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { itemsAPI } from '../services/api';
 import { isValidNicNumber, normalizeNicNumber } from '../utils/nicUtils';
-import { isValidStudentIdNumber, normalizeStudentIdNumber } from '../utils/studentIdUtils';
+import { isValidStudentIdNumber, normalizeStudentIdNumber, validateStudentID } from '../utils/studentIdUtils';
+import { isValidCardLast4, normalizeCardLast4 } from '../utils/cardUtils';
+import { validateLostTimeWithDate } from '../utils/timeUtils';
+import { BANK_OPTIONS } from '../data/bankOptions';
 
 import './ReportLostItem.css';
 
@@ -73,13 +76,17 @@ const ReportLostItem = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    const normalizePurseId = (rawValue) => String(rawValue).trim().toUpperCase();
+
     const normalizedValue =
       name === 'nicNumber'
         ? normalizeNicNumber(value)
-        : name === 'studentOrStaffId' || name === 'purseIdNumber'
+        : name === 'studentOrStaffId'
           ? normalizeStudentIdNumber(value)
+          : name === 'purseIdNumber'
+            ? normalizePurseId(value)
           : name === 'cardLast4'
-            ? value.replace(/\D/g, '').slice(0, 4)
+            ? normalizeCardLast4(value)
           : value;
     setFormData((prev) => ({ ...prev, [name]: normalizedValue }));
   };
@@ -90,6 +97,23 @@ const ReportLostItem = () => {
 
   const validate = () => {
     const nextErrors = {};
+    const isFutureDate = (dateValue) => {
+      if (!dateValue) return false;
+      const selectedDate = new Date(`${dateValue}T00:00:00`);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return selectedDate > today;
+    };
+    const assignInvalidTimeError = (fieldName, dateValue, timeValue) => {
+      if (!timeValue) {
+        return;
+      }
+
+      const validationResult = validateLostTimeWithDate(dateValue, timeValue);
+      if (validationResult !== true) {
+        nextErrors[fieldName] = validationResult;
+      }
+    };
 
     if (!category) nextErrors.category = 'Please select a category.';
 
@@ -101,32 +125,50 @@ const ReportLostItem = () => {
       }
       if (!formData.nicLocation1.trim()) nextErrors.nicLocation1 = 'Location is required.';
       if (!formData.nicDateLost) nextErrors.nicDateLost = 'Date is required.';
+      if (formData.nicDateLost && isFutureDate(formData.nicDateLost)) {
+        nextErrors.nicDateLost = 'Invalid date. Please select today or a past date.';
+      }
       if (!formData.nicFromTime) nextErrors.nicFromTime = 'From time is required.';
       if (!formData.nicToTime) nextErrors.nicToTime = 'To time is required.';
+      assignInvalidTimeError('nicFromTime', formData.nicDateLost, formData.nicFromTime);
+      assignInvalidTimeError('nicToTime', formData.nicDateLost, formData.nicToTime);
     }
 
     if (category === 'Student / Staff ID') {
       if (!formData.idName.trim()) nextErrors.idName = 'Name is required.';
       if (!formData.studentOrStaffId.trim()) nextErrors.studentOrStaffId = 'Student ID or Staff ID is required.';
-      if (formData.studentOrStaffId.trim() && !isValidStudentIdNumber(formData.studentOrStaffId)) {
-        nextErrors.studentOrStaffId = 'Student ID must be 6 digits followed by 1 letter.';
+      if (formData.studentOrStaffId.trim()) {
+        const validationResult = validateStudentID(formData.studentOrStaffId);
+        if (validationResult !== true) {
+          nextErrors.studentOrStaffId = validationResult;
+        }
       }
       if (!formData.idLocation1.trim()) nextErrors.idLocation1 = 'Location is required.';
       if (!formData.idDateLost) nextErrors.idDateLost = 'Date is required.';
+      if (formData.idDateLost && isFutureDate(formData.idDateLost)) {
+        nextErrors.idDateLost = 'Invalid date. Please select today or a past date.';
+      }
       if (!formData.idFromTime) nextErrors.idFromTime = 'From time is required.';
       if (!formData.idToTime) nextErrors.idToTime = 'To time is required.';
+      assignInvalidTimeError('idFromTime', formData.idDateLost, formData.idFromTime);
+      assignInvalidTimeError('idToTime', formData.idDateLost, formData.idToTime);
     }
 
     if (category === 'Bank Card') {
       if (!formData.cardType) nextErrors.cardType = 'Card Type is required.';
       if (!formData.bankName.trim()) nextErrors.bankName = 'Name of the Bank is required.';
-      if (formData.cardLast4.trim() && !/^\d{4}$/.test(formData.cardLast4)) {
-        nextErrors.cardLast4 = 'Please enter the last 4 digits of the card number.';
+      if (formData.cardLast4.trim() && !isValidCardLast4(formData.cardLast4)) {
+        nextErrors.cardLast4 = 'Please enter the last 4 characters of the card number.';
       }
       if (!formData.bankLocation1.trim()) nextErrors.bankLocation1 = 'Field 1 is required.';
       if (!formData.bankDateLost) nextErrors.bankDateLost = 'Date is required.';
+      if (formData.bankDateLost && isFutureDate(formData.bankDateLost)) {
+        nextErrors.bankDateLost = 'Invalid date. Please select today or a past date.';
+      }
       if (!formData.bankFromTime) nextErrors.bankFromTime = 'From time is required.';
       if (!formData.bankToTime) nextErrors.bankToTime = 'To time is required.';
+      assignInvalidTimeError('bankFromTime', formData.bankDateLost, formData.bankFromTime);
+      assignInvalidTimeError('bankToTime', formData.bankDateLost, formData.bankToTime);
     }
 
     if (category === 'Purse / Wallet') {
@@ -141,15 +183,25 @@ const ReportLostItem = () => {
         }
         if (!formData.purseWithIdLocation1.trim()) nextErrors.purseWithIdLocation1 = 'Location is required.';
         if (!formData.purseWithIdDateLost) nextErrors.purseWithIdDateLost = 'Date is required.';
+        if (formData.purseWithIdDateLost && isFutureDate(formData.purseWithIdDateLost)) {
+          nextErrors.purseWithIdDateLost = 'Invalid date. Please select today or a past date.';
+        }
         if (!formData.purseWithIdFromTime) nextErrors.purseWithIdFromTime = 'From time is required.';
         if (!formData.purseWithIdToTime) nextErrors.purseWithIdToTime = 'To time is required.';
+        assignInvalidTimeError('purseWithIdFromTime', formData.purseWithIdDateLost, formData.purseWithIdFromTime);
+        assignInvalidTimeError('purseWithIdToTime', formData.purseWithIdDateLost, formData.purseWithIdToTime);
       }
 
       if (purseOption === 'without-id') {
         if (!formData.purseLocation1.trim()) nextErrors.purseLocation1 = 'Field 1 is required.';
         if (!formData.purseDateLost) nextErrors.purseDateLost = 'Date is required.';
+        if (formData.purseDateLost && isFutureDate(formData.purseDateLost)) {
+          nextErrors.purseDateLost = 'Invalid date. Please select today or a past date.';
+        }
         if (!formData.purseFromTime) nextErrors.purseFromTime = 'From time is required.';
         if (!formData.purseToTime) nextErrors.purseToTime = 'To time is required.';
+        assignInvalidTimeError('purseFromTime', formData.purseDateLost, formData.purseFromTime);
+        assignInvalidTimeError('purseToTime', formData.purseDateLost, formData.purseToTime);
         if (!formData.purseItems1.trim()) nextErrors.purseItems1 = 'At least one item is required.';
       }
     }
@@ -157,8 +209,13 @@ const ReportLostItem = () => {
     if (category === 'Others') {
       if (!formData.otherLocation1.trim()) nextErrors.otherLocation1 = 'Field 1 is required.';
       if (!formData.otherDateLost) nextErrors.otherDateLost = 'Date is required.';
+      if (formData.otherDateLost && isFutureDate(formData.otherDateLost)) {
+        nextErrors.otherDateLost = 'Invalid date. Please select today or a past date.';
+      }
       if (!formData.otherFromTime) nextErrors.otherFromTime = 'From time is required.';
       if (!formData.otherToTime) nextErrors.otherToTime = 'To time is required.';
+      assignInvalidTimeError('otherFromTime', formData.otherDateLost, formData.otherFromTime);
+      assignInvalidTimeError('otherToTime', formData.otherDateLost, formData.otherToTime);
     }
 
     setErrors(nextErrors);
@@ -195,7 +252,7 @@ const ReportLostItem = () => {
       image = null;
     } else if (category === 'Bank Card') {
       item_name = `${formData.cardType} Card - ${formData.bankName}`;
-      description = formData.cardLast4 ? `Last 4 digits: ${formData.cardLast4}` : '';
+      description = formData.cardLast4 ? `Last 4 characters: ${formData.cardLast4}` : '';
       location = [formData.bankLocation1, formData.bankLocation2, formData.bankLocation3].filter(Boolean).join(', ');
       date = formData.bankDateLost;
       time = formData.bankFromTime;
@@ -277,7 +334,6 @@ const ReportLostItem = () => {
                   value={formData.nicNumber}
                   onChange={handleInputChange}
                   placeholder="e.g. 200012345678 or 901234567V"
-                  maxLength={12}
                 />
                 {errors.nicNumber && <p className="report-lost-error">{errors.nicNumber}</p>}
               </div>
@@ -331,7 +387,6 @@ const ReportLostItem = () => {
                   value={formData.studentOrStaffId}
                   onChange={handleInputChange}
                   placeholder="e.g. 123456A"
-                  maxLength={7}
                 />
                 {errors.studentOrStaffId && <p className="report-lost-error">{errors.studentOrStaffId}</p>}
               </div>
@@ -387,24 +442,9 @@ const ReportLostItem = () => {
                 <label className="required">Name of the Bank</label>
                 <select name="bankName" value={formData.bankName} onChange={handleInputChange}>
                   <option value="">-- Select Bank --</option>
-                  <option>Bank of Ceylon</option>
-                  <option>People's Bank</option>
-                  <option>Commercial Bank of Ceylon</option>
-                  <option>Hatton National Bank (HNB)</option>
-                  <option>Sampath Bank</option>
-                  <option>Seylan Bank</option>
-                  <option>Nations Trust Bank (NTB)</option>
-                  <option>National Savings Bank (NSB)</option>
-                  <option>Pan Asia Banking Corporation</option>
-                  <option>Union Bank of Colombo</option>
-                  <option>DFCC Bank</option>
-                  <option>Cargills Bank</option>
-                  <option>Amana Bank</option>
-                  <option>MCB Bank</option>
-                  <option>Citibank Sri Lanka</option>
-                  <option>Standard Chartered Bank</option>
-                  <option>HSBC Sri Lanka</option>
-                  <option>Other</option>
+                  {BANK_OPTIONS.map((bank) => (
+                    <option key={bank} value={bank}>{bank}</option>
+                  ))}
                 </select>
                 {errors.bankName && <p className="report-lost-error">{errors.bankName}</p>}
               </div>
@@ -421,6 +461,7 @@ const ReportLostItem = () => {
                     style={{ border: 'none', outline: 'none', width: '60px', padding: '10px 8px', fontFamily: 'monospace', fontSize: '1rem' }}
                   />
                 </div>
+                <small className="report-lost-helper">Shown as #### #### #### 1234. You can enter letters or numbers in the last 4 characters.</small>
                 {errors.cardLast4 && <p className="report-lost-error">{errors.cardLast4}</p>}
               </div>
 
@@ -520,7 +561,6 @@ const ReportLostItem = () => {
                       value={formData.purseIdNumber}
                       onChange={handleInputChange}
                       placeholder="NIC: 200012345678 / Student ID: 123456A"
-                      maxLength={12}
                     />
                     {errors.purseIdNumber && <p className="report-lost-error">{errors.purseIdNumber}</p>}
                   </div>

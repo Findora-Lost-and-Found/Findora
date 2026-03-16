@@ -1,0 +1,20 @@
+export const BANK_OPTIONS = [
+  'Bank of Ceylon',
+  "People's Bank",
+  'Commercial Bank of Ceylon',
+  'Hatton National Bank (HNB)',
+  'Sampath Bank',
+  'Seylan Bank',
+  'Nations Trust Bank (NTB)',
+  'National Savings Bank (NSB)',
+  'Pan Asia Banking Corporation',
+  'Union Bank of Colombo',
+  'DFCC Bank',
+  'Cargills Bank',
+  'Amana Bank',
+  'MCB Bank',
+  'Citibank Sri Lanka',
+  'Standard Chartered Bank',
+  'HSBC Sri Lanka',
+  'Other'
+];
