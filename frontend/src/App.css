@@ -357,130 +357,6 @@ button:disabled {
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
-<<<<<<< HEAD
-.dashboard-stats-grid {
-  margin-bottom: 2rem;
-}
-
-.dashboard-stat-card {
-  text-align: center;
-}
-
-.dashboard-stat-value {
-  font-size: 2rem;
-  font-weight: 700;
-}
-
-.dashboard-stat-label {
-  color: #6B7280;
-  margin-top: 0.25rem;
-}
-
-.dashboard-stat-link {
-  display: block;
-  margin-top: 0.5rem;
-  font-size: 0.85rem;
-  text-decoration: none;
-}
-
-.dashboard-stat-link:hover {
-  text-decoration: underline;
-}
-
-.dashboard-accent-green {
-  color: #16A34A;
-}
-
-.dashboard-accent-blue {
-  color: #3B82F6;
-}
-
-.dashboard-accent-amber {
-  color: #F59E0B;
-}
-
-.dashboard-actions-row {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-}
-
-.dashboard-action-card {
-  flex: 1;
-  min-width: 200px;
-  padding: 1rem;
-  border-radius: 8px;
-  border: 1px solid transparent;
-  text-decoration: none;
-  font-weight: 500;
-  transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.2s;
-}
-
-.dashboard-action-card:hover {
-  transform: translateY(-1px);
-}
-
-.dashboard-action-danger {
-  background: #FEF2F2;
-  border-color: #FECACA;
-  color: #DC2626;
-}
-
-.dashboard-action-success {
-  background: #F0FDF4;
-  border-color: #BBF7D0;
-  color: #16A34A;
-}
-
-.dashboard-action-info {
-  background: #EFF6FF;
-  border-color: #BFDBFE;
-  color: #3B82F6;
-}
-
-.dashboard-action-warning {
-  background: #FFF7ED;
-  border-color: #FED7AA;
-  color: #EA580C;
-}
-
-.dashboard-action-violet {
-  background: #F5F3FF;
-  border-color: #DDD6FE;
-  color: #7C3AED;
-}
-
-.dashboard-empty-state {
-  text-align: center;
-  padding: 3rem;
-  background: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  color: #6B7280;
-}
-
-.dashboard-empty-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-}
-
-.dashboard-empty-title {
-  color: #374151;
-  margin-bottom: 0.5rem;
-}
-
-.dashboard-empty-link {
-  display: inline-block;
-  margin-top: 1rem;
-  color: #16A34A;
-  font-weight: 500;
-  text-decoration: none;
-}
-
-.dashboard-empty-link:hover {
-  text-decoration: underline;
-=======
 .stat-card-link {
   text-decoration: none;
   color: inherit;
@@ -491,7 +367,6 @@ button:disabled {
 .stat-card-link:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 18px rgba(22, 163, 74, 0.14);
->>>>>>> origin/develop
 }
 
 .dashboard-card h3, .stat-card h3 {
@@ -840,7 +715,6 @@ body.dark-mode .form-container,
 body.dark-mode .item-card,
 body.dark-mode .found-item-card,
 body.dark-mode .found-items-section,
-body.dark-mode .stat-card,
 body.dark-mode table,
 body.dark-mode .report-card,
 body.dark-mode .report-lost-card {
@@ -895,50 +769,8 @@ body.dark-mode .report-lost-form-group textarea::placeholder {
 body.dark-mode .card-description,
 body.dark-mode .meta-text,
 body.dark-mode .category-desc,
-body.dark-mode .report-lost-section h4,
-body.dark-mode .dashboard-stat-label,
-body.dark-mode .dashboard-empty-state p {
+body.dark-mode .report-lost-section h4 {
   color: #d1d5db;
-}
-
-body.dark-mode .dashboard-empty-title {
-  color: #f3f4f6;
-}
-
-body.dark-mode .dashboard-action-danger {
-  background: #3b1218;
-  border-color: #7f1d1d;
-  color: #fca5a5;
-}
-
-body.dark-mode .dashboard-action-success {
-  background: #0f2f1f;
-  border-color: #166534;
-  color: #86efac;
-}
-
-body.dark-mode .dashboard-action-info {
-  background: #12243d;
-  border-color: #1d4ed8;
-  color: #93c5fd;
-}
-
-body.dark-mode .dashboard-action-warning {
-  background: #3a2412;
-  border-color: #c2410c;
-  color: #fdba74;
-}
-
-body.dark-mode .dashboard-action-violet {
-  background: #2e1a47;
-  border-color: #6d28d9;
-  color: #c4b5fd;
-}
-
-body.dark-mode .dashboard-empty-state {
-  background: #111827;
-  border: 1px solid #374151;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
 }
 
 body.dark-mode .category-badge {
@@ -946,31 +778,6 @@ body.dark-mode .category-badge {
   color: #dcfce7;
 }
 
-<<<<<<< HEAD
-body.dark-mode .type-badge.lost {
-  background: #3b1218;
-  color: #fca5a5;
-}
-
-body.dark-mode .type-badge.found {
-  background: #0f2f1f;
-  color: #86efac;
-}
-
-body.dark-mode .status-badge.active {
-  background: #0f2f1f;
-  color: #86efac;
-}
-
-body.dark-mode .status-badge.claimed {
-  background: #3a2412;
-  color: #fdba74;
-}
-
-body.dark-mode .status-badge.closed {
-  background: #1f2937;
-  color: #d1d5db;
-=======
 body.dark-mode .quick-link-card {
   background: #111827;
   border-color: #374151;
@@ -983,7 +790,6 @@ body.dark-mode .quick-link-card h3 {
 
 body.dark-mode .quick-link-card p {
   color: #D1D5DB;
->>>>>>> origin/develop
 }
 
 body.dark-mode .card-badge {

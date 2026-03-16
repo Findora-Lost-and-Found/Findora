@@ -1,10 +1,14 @@
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Navigate } from 'react-router-dom';
-import { getHomeRouteForUser } from '../utils/navigation';
-import StudentDashboard from './StudentDashboard';
+import FoundItemCard from '../components/FoundItemCard';
+import PostModal from '../components/PostModal';
+import { claimsAPI, itemsAPI } from '../services/api';
+import { normalizeCategory } from '../utils/categoryUtils';
+import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
 
 const ADMIN_PREVIEW_LIMIT = 5;
-const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
+const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
 
 const readFirst = (obj, keys, fallback = '') => {
   for (const key of keys) {
@@ -92,10 +96,10 @@ const Dashboard = () => {
             ...item,
             name: item.name || item.item_name,
             date_found: item.date_found || item.date || item.created_at,
-            image: item.image || (item.image_url ? `http://localhost:5000${item.image_url}` : 'https://via.placeholder.com/300x200?text=Item+Image'),
+            image: toImageUrl(readFirst(item, ['image', 'image_url', 'imageUrl'])),
             category: normalizeCategory(item.category, item.name || item.item_name),
             posted_by: item.posted_by || {
-              id: item.user_id,
+              id: item.userId || item.user_id,
               full_name: item.full_name || item.username || 'Unknown User'
             }
           }));
@@ -176,63 +180,6 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Stats Cards */}
-        {(user?.role === 'student' || user?.role === 'staff') && (
-          <div className="stats-grid dashboard-stats-grid">
-            <div className="stat-card dashboard-stat-card">
-              <div className="dashboard-stat-value dashboard-accent-green">{stats.myItems}</div>
-              <div className="dashboard-stat-label">My Posted Items</div>
-              <Link to="/lost-items" className="dashboard-stat-link dashboard-accent-green">View →</Link>
-            </div>
-            <div className="stat-card dashboard-stat-card">
-              <div className="dashboard-stat-value dashboard-accent-blue">{stats.myClaims}</div>
-              <div className="dashboard-stat-label">My Claims</div>
-              <Link to="/my-claims" className="dashboard-stat-link dashboard-accent-blue">View →</Link>
-            </div>
-            <div className="stat-card dashboard-stat-card">
-              <div className="dashboard-stat-value dashboard-accent-amber">{foundItems.length}</div>
-              <div className="dashboard-stat-label">Found Items Available</div>
-              <Link to="/found-items" className="dashboard-stat-link dashboard-accent-amber">Browse →</Link>
-            </div>
-          </div>
-        )}
-
-        {/* Quick Actions */}
-        {(user?.role === 'student' || user?.role === 'staff') && (
-          <div className="dashboard-actions-row">
-            <Link to="/report-lost" className="dashboard-action-card dashboard-action-danger">
-              🔍 Report Lost Item
-            </Link>
-            <Link to="/report-found" className="dashboard-action-card dashboard-action-success">
-              📦 Report Found Item
-            </Link>
-            <Link to="/found-items" className="dashboard-action-card dashboard-action-info">
-              🗂️ Browse Found Items
-            </Link>
-          </div>
-        )}
-
-        {/* Security quick links */}
-        {user?.role === 'security' && (
-          <div className="dashboard-actions-row">
-            <Link to="/security/pending-claims" className="dashboard-action-card dashboard-action-warning">
-              📋 Pending Claims
-            </Link>
-          </div>
-        )}
-
-        {/* Admin quick links */}
-        {user?.role === 'admin' && (
-          <div className="dashboard-actions-row">
-            <Link to="/admin/dashboard" className="dashboard-action-card dashboard-action-violet">
-              🛡️ Admin Dashboard
-            </Link>
-            <Link to="/admin/users" className="dashboard-action-card dashboard-action-success">
-              👥 Manage Users
-            </Link>
-          </div>
-        )}
-
         {/* Found Items Feed Section */}
         {(user?.role === 'student' || user?.role === 'staff') && foundItems.length > 0 && (
           <div className="found-items-section">
@@ -258,15 +205,6 @@ const Dashboard = () => {
           </div>
         )}
 
-<<<<<<< HEAD
-        {(user?.role === 'student' || user?.role === 'staff') && foundItems.length === 0 && (
-          <div className="dashboard-empty-state">
-            <div className="dashboard-empty-icon">📭</div>
-            <h3 className="dashboard-empty-title">No found items yet</h3>
-            <p>When someone reports a found item, it will appear here.</p>
-            <Link to="/report-found" className="dashboard-empty-link">Be the first to report a found item →</Link>
-          </div>
-=======
         {user?.role === 'admin' && (
           <>
             <div className="section" style={{ marginTop: '2rem' }}>
@@ -384,7 +322,6 @@ const Dashboard = () => {
               </div>
             </div>
           </>
->>>>>>> origin/develop
         )}
       </div>
 
