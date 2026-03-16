@@ -38,7 +38,7 @@ const MyClaims = () => {
           {claims.map(claim => (
             <div key={claim.id} className="claim-card">
               {claim.image_url && (
-                <img src={`http://localhost:5000${claim.image_url}`} alt={claim.item_name} />
+                <img src={`http://localhost:8080${claim.image_url}`} alt={claim.item_name} />
               )}
               <div className="claim-details">
                 <h3>{claim.item_name || 'Unknown Item'}</h3>

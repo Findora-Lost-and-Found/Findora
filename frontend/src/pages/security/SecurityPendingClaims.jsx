@@ -4,12 +4,19 @@ import { toast } from 'react-toastify';
 
 const SecurityPendingClaims = () => {
   const [claims, setClaims] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [claimsLoading, setClaimsLoading] = useState(true);
+  const [heldItems, setHeldItems] = useState([]);
+  const [heldItemsLoading, setHeldItemsLoading] = useState(true);
+  const [heldItemsError, setHeldItemsError] = useState('');
   const [selectedClaim, setSelectedClaim] = useState(null);
   const [otp, setOtp] = useState('');
 
   useEffect(() => {
     loadClaims();
+  }, []);
+
+  useEffect(() => {
+    loadHeldItems();
   }, []);
 
   const loadClaims = async () => {
@@ -19,8 +26,50 @@ const SecurityPendingClaims = () => {
     } catch (error) {
       console.error('Error loading claims:', error);
     } finally {
-      setLoading(false);
+      setClaimsLoading(false);
     }
+  };
+
+  const loadHeldItems = async () => {
+    try {
+      setHeldItemsLoading(true);
+      setHeldItemsError('');
+
+      const response = await securityAPI.getHeldItems();
+
+      const apiItems = response.data?.content || response.data?.items || [];
+      setHeldItems(apiItems);
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to load pending handover items';
+      setHeldItems([]);
+      setHeldItemsError(message);
+      toast.error(message);
+    } finally {
+      setHeldItemsLoading(false);
+    }
+  };
+
+  const getImageUrl = (item) => {
+    const imagePath = item.imageUrl || item.image_url;
+    if (imagePath) {
+      return `http://localhost:8080/${String(imagePath).replace(/^\/+/, '')}`;
+    }
+
+    if (item.image_url) {
+      return `http://localhost:8080/${item.image_url}`;
+    }
+    if (item.imageUrl) {
+      return `http://localhost:8080/${item.imageUrl}`;
+    }
+    return 'https://via.placeholder.com/80x80?text=No+Photo';
+  };
+
+  const formatDate = (item) => {
+    const dateValue = item.date || item.created_at || item.createdAt;
+    if (!dateValue) {
+      return 'N/A';
+    }
+    return new Date(dateValue).toLocaleDateString();
   };
 
   const handleVerify = async (e) => {
@@ -36,15 +85,70 @@ const SecurityPendingClaims = () => {
     }
   };
 
-  if (loading) {
+  if (claimsLoading && heldItemsLoading) {
     return <div className="loading">Loading...</div>;
   }
 
   return (
     <div className="container">
+      <h1>Security Dashboard</h1>
+
+      <div className="found-items-section">
+        <div className="section-header">
+          <h2>Pending Handover Items</h2>
+          <span>Total: {heldItems.length}</span>
+        </div>
+
+        {heldItemsLoading ? (
+          <p>Loading pending handover items...</p>
+        ) : heldItemsError ? (
+          <div className="alert alert-warning">{heldItemsError}</div>
+        ) : heldItems.length === 0 ? (
+          <p>No pending handover items available.</p>
+        ) : (
+          <>
+            <div className="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Photo</th>
+                    <th>Owner Name</th>
+                    <th>Location</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {heldItems.map((item) => (
+                    <tr key={item.id}>
+                      <td>{item.itemName || item.name || item.item_name || 'Unnamed Item'}</td>
+                      <td>
+                        <img
+                          src={getImageUrl(item)}
+                          alt={item.itemName || item.name || item.item_name || 'Found item'}
+                          style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '6px' }}
+                          onError={(e) => {
+                            e.target.src = 'https://via.placeholder.com/80x80?text=No+Photo';
+                          }}
+                        />
+                      </td>
+                      <td>{item.full_name || item.fullName || item.username || 'Unknown User'}</td>
+                      <td>{item.location || 'Unknown location'}</td>
+                      <td>{formatDate(item)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
+
       <h1>Pending Claims</h1>
 
-      {claims.length === 0 ? (
+      {claimsLoading ? (
+        <p>Loading pending claims...</p>
+      ) : claims.length === 0 ? (
         <p>No pending claims.</p>
       ) : (
         <div className="claims-list">

@@ -1102,7 +1102,6 @@ th {
   .found-items-grid {
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   }
-  }
 
   .container {
     max-width: 1400px;
