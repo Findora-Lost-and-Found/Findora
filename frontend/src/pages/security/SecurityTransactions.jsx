@@ -27,7 +27,7 @@ const parsePendingClaims = (payload) => {
     itemName: row.item_name || row.itemName || 'Unnamed Item',
     claimer: row.full_name || row.fullName || row.username || 'Unknown claimer',
     location: row.location || 'Unknown location',
-    date: row.claimed_at || row.created_at || row.createdAt || null
+    date: row.claimedAt || row.claimed_at || row.created_at || row.createdAt || null
   }));
 };
 
@@ -65,21 +65,16 @@ const SecurityTransactions = () => {
       setLoading(true);
 
       try {
-        const response = await securityAPI.getTransactions({ page: 0, size: 100 });
-        const normalized = parseTransactions(response?.data);
+        const [pendingResponse, transactionsResponse] = await Promise.all([
+          securityAPI.getPendingClaims(),
+          securityAPI.getTransactions({ page: 0, size: 100 })
+        ]);
 
-        const pending = normalized.filter((tx) => tx.status === 'REQUESTED');
+        const normalized = parseTransactions(transactionsResponse?.data);
+
         const received = normalized.filter((tx) => tx.status === 'RECEIVED');
 
-        setPendingClaims(
-          pending.map((tx) => ({
-            id: tx.id,
-            itemName: tx.itemName,
-            claimer: tx.owner,
-            location: tx.location,
-            date: tx.date
-          }))
-        );
+        setPendingClaims(parsePendingClaims(pendingResponse?.data));
 
         setReceivedClaims(
           received.map((tx) => ({

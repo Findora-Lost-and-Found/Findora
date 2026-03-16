@@ -23,4 +23,5 @@ public interface SecurityTransactionRepository extends JpaRepository<SecurityTra
 
     @Query("SELECT st FROM SecurityTransaction st WHERE st.status = :status ORDER BY st.createdAt DESC")
     List<SecurityTransaction> findByStatusOrderByCreatedAtDesc(@Param("status") SecurityTransaction.TransactionStatus status);
+    long countByTransactionType(SecurityTransaction.TransactionType type);
 }

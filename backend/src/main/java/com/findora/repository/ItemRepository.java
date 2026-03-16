@@ -63,4 +63,10 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                                      Pageable pageable);
 
     Optional<Item> findByIdAndUserId(Long id, Long userId);
+
+    long countByType(ItemType type);
+
+    long countByTypeAndStatus(ItemType type, ItemStatus status);
+
+    long countByStatus(ItemStatus status);
 }
