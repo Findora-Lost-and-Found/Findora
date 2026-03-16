@@ -6,6 +6,7 @@ com\findora\service\SecurityService.class
 com\findora\dto\AuthResponse.class
 com\findora\security\JwtAuthenticationFilter.class
 com\findora\model\SecurityTransactionStatusConverter.class
+com\findora\model\ClaimStatusConverter.class
 com\findora\repository\ItemRepository.class
 com\findora\security\JwtTokenProvider.class
 com\findora\model\ItemCategory.class

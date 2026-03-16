@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import { itemsAPI, securityAPI } from '../services/api';
 import FoundItemCard from '../components/FoundItemCard';
 import Pagination from '../components/Pagination';
+import { sampleFoundItems } from '../data/sampleFoundItems';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT } from '../utils/itemDisplayUtils';
 
@@ -28,23 +29,27 @@ const FoundItems = () => {
     sortBy: FOUND_ITEM_SORT.LATEST
   });
 
-  const normalizeItem = (item) => ({
-    id: item.id,
-    name: item.name || item.item_name || 'Unnamed Item',
-    description: item.description || '',
-    location: item.location || 'Unknown location',
-    date_found: item.date_found || item.date || item.created_at,
-    image: item.image || (item.image_url ? `http://localhost:8080${item.image_url}` : 'https://via.placeholder.com/300x200?text=Item+Image'),
-    category: normalizeCategory(item.category, item.name || item.item_name),
-    type: item.type || 'found',
-    status: item.status || 'active',
-    created_at: item.created_at || null,
-    posted_time: item.posted_time || item.created_at || item.date_found || item.date || null,
-    posted_by: item.posted_by || {
-      id: item.user_id,
-      full_name: item.full_name || item.username || 'Unknown User'
-    }
-  });
+  const normalizeItem = (item) => {
+    const normalizedCategory = normalizeCategory(item.category, item.name || item.item_name);
+
+    return {
+      id: item.id,
+      name: item.name || item.item_name || 'Unnamed Item',
+      description: item.description || '',
+      location: item.location || 'Unknown location',
+      date_found: item.date_found || item.date || item.created_at,
+      image: item.image || (item.image_url ? `http://localhost:8080${item.image_url}` : null),
+      category: normalizedCategory,
+      type: item.type || 'found',
+      status: item.status || 'active',
+      created_at: item.created_at || null,
+      posted_time: item.posted_time || item.created_at || item.date_found || item.date || null,
+      posted_by: item.posted_by || {
+        id: item.user_id,
+        full_name: item.full_name || item.username || 'Unknown User'
+      }
+    };
+  };
 
   const sortParam = useMemo(() => {
     if (filters.sortBy === FOUND_ITEM_SORT.NAME_ASC) {
@@ -76,22 +81,32 @@ const FoundItems = () => {
       const apiItems = response.data?.content || [];
       console.log('FoundItems fetched from API:', apiItems);
       const normalizedItems = apiItems.map(normalizeItem);
-      setAllItems(normalizedItems);
 
-      setPagination({
-        totalPages: response.data?.totalPages ?? 0,
-        totalElements: response.data?.totalElements ?? 0,
-        pageNumber: response.data?.pageNumber ?? currentPage,
-        pageSize: response.data?.pageSize ?? PAGE_SIZE
-      });
+      if (normalizedItems.length > 0) {
+        setAllItems(normalizedItems);
+        setPagination({
+          totalPages: response.data?.totalPages ?? 0,
+          totalElements: response.data?.totalElements ?? 0,
+          pageNumber: response.data?.pageNumber ?? currentPage,
+          pageSize: response.data?.pageSize ?? PAGE_SIZE
+        });
+      } else {
+        setAllItems(sampleFoundItems);
+        setPagination({
+          totalPages: 1,
+          totalElements: sampleFoundItems.length,
+          pageNumber: 0,
+          pageSize: sampleFoundItems.length
+        });
+      }
     } catch (error) {
       console.error('Error loading found items:', error.response?.data || error.message);
-      setAllItems([]);
+      setAllItems(sampleFoundItems);
       setPagination({
-        totalPages: 0,
-        totalElements: 0,
+        totalPages: 1,
+        totalElements: sampleFoundItems.length,
         pageNumber: 0,
-        pageSize: PAGE_SIZE
+        pageSize: sampleFoundItems.length
       });
     } finally {
       setLoading(false);

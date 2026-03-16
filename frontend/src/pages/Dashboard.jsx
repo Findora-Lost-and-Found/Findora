@@ -6,6 +6,7 @@ import PostModal from '../components/PostModal';
 import FoundItemCard from '../components/FoundItemCard';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
+import { sampleFoundItems } from '../data/sampleFoundItems';
 
 const ADMIN_PREVIEW_LIMIT = 5;
 const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
@@ -104,10 +105,10 @@ const Dashboard = () => {
             }
           }));
           const sortedFoundItems = sortFoundItems(apiItems, FOUND_ITEM_SORT.LATEST);
-          setFoundItems(sortedFoundItems.slice(0, 6));
+          setFoundItems(sortedFoundItems.length > 0 ? sortedFoundItems.slice(0, 6) : sampleFoundItems);
         } else {
           console.error('Dashboard found items fetch failed:', foundRes.reason?.response?.data || foundRes.reason?.message);
-          setFoundItems([]);
+          setFoundItems(sampleFoundItems);
         }
       } else if (user.role === 'admin') {
         const [foundRes, receivedRes, releasedRes] = await Promise.allSettled([
@@ -181,7 +182,7 @@ const Dashboard = () => {
         )}
 
         {/* Found Items Feed Section */}
-        {(user?.role === 'student' || user?.role === 'staff') && foundItems.length > 0 && (
+        {(user?.role === 'student' || user?.role === 'staff') && foundItems.length > 0 && foundItems.some(i => i) && (
           <div className="found-items-section">
             <div className="section-header">
               <h2>Recently Found Items</h2>

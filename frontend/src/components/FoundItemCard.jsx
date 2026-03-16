@@ -5,6 +5,22 @@ import './FoundItemCard.css';
 import ClaimModal from './ClaimModal';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { maskNicInText } from '../utils/itemDisplayUtils';
+import { buildIdentityPreviewImage } from '../utils/cardPreviewUtils';
+
+const CATEGORY_FALLBACK_IMAGE = {
+  'Bank Card': '/assets/card-commercial.svg',
+  NIC: '/assets/nic-card.svg',
+  'Student ID': '/assets/student-id.svg',
+  Wallet: '/assets/card-peoples.svg',
+  Other: '/assets/card-boc.svg'
+};
+
+const getIdentityBadgeLabel = (normalizedCategory, item) => {
+  if (normalizedCategory !== 'Student ID') return normalizedCategory;
+
+  const combinedText = `${item?.name || item?.item_name || ''} ${item?.description || ''}`;
+  return /id\s*type\s*:\s*staff|staff\s*id/i.test(combinedText) ? 'STAFF ID' : 'STUDENT ID';
+};
 
 const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }) => {
   const navigate = useNavigate();
@@ -25,6 +41,25 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
   const isAlreadyHandedOver = normalizedStatus === 'HANDOVER_REQUESTED'
     || normalizedStatus === 'HELD_BY_SECURITY'
     || normalizedStatus === 'HANDED_TO_SECURITY';
+  const fallbackImage = CATEGORY_FALLBACK_IMAGE[normalizedItem.category] || CATEGORY_FALLBACK_IMAGE.Other;
+  const generatedPreviewImage = useMemo(() => buildIdentityPreviewImage(normalizedItem), [normalizedItem]);
+  const badgeLabel = useMemo(
+    () => getIdentityBadgeLabel(normalizedItem.category, normalizedItem),
+    [normalizedItem.category, normalizedItem.name, normalizedItem.item_name, normalizedItem.description]
+  );
+  const resolvedImage = useMemo(() => {
+    if (generatedPreviewImage) {
+      return generatedPreviewImage;
+    }
+
+    const source = normalizedItem.image;
+
+    if (!source || source.includes('via.placeholder.com')) {
+      return fallbackImage;
+    }
+
+    return source;
+  }, [normalizedItem.image, generatedPreviewImage, fallbackImage]);
   
   const formatDate = (dateString) => {
     const options = { month: 'short', day: 'numeric', year: 'numeric' };
@@ -43,14 +78,16 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
     <div className="found-item-card" id={`found-item-${normalizedItem.id}`}>
       <div className="card-image-container">
         <img 
-          src={normalizedItem.image} 
+          src={resolvedImage} 
           alt={normalizedItem.name} 
           className="card-image"
           onError={(e) => {
-            e.target.src = 'https://via.placeholder.com/300x200?text=Item+Image';
+            if (e.target.dataset.fallbackApplied === 'true') return;
+            e.target.dataset.fallbackApplied = 'true';
+            e.target.src = fallbackImage;
           }}
         />
-        <div className="card-badge">{normalizedItem.category}</div>
+        <div className="card-badge">{badgeLabel}</div>
       </div>
 
       <div className="card-content">

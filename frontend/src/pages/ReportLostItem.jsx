@@ -14,6 +14,7 @@ const ReportLostItem = () => {
   const [formData, setFormData] = useState({
     nicName: '',
     nicNumber: '',
+    idHolderType: '',
     idName: '',
     studentOrStaffId: '',
     cardType: '',
@@ -92,8 +93,9 @@ const ReportLostItem = () => {
     }
 
     if (category === 'Student / Staff ID') {
+      if (!formData.idHolderType) nextErrors.idHolderType = 'Please choose Student or Staff.';
       if (!formData.idName.trim()) nextErrors.idName = 'Name is required.';
-      if (!formData.studentOrStaffId.trim()) nextErrors.studentOrStaffId = 'Student ID or Staff ID is required.';
+      if (!formData.studentOrStaffId.trim()) nextErrors.studentOrStaffId = 'ID Number is required.';
       if (!formData.idLocation1.trim()) nextErrors.idLocation1 = 'Location is required.';
       if (!formData.idDateLost) nextErrors.idDateLost = 'Date is required.';
       if (!formData.idFromTime) nextErrors.idFromTime = 'From time is required.';
@@ -163,8 +165,9 @@ const ReportLostItem = () => {
       time = formData.nicFromTime;
       image = null;
     } else if (category === 'Student / Staff ID') {
-      item_name = `Student/Staff ID - ${formData.idName}`;
-      description = `ID: ${formData.studentOrStaffId}`;
+      const idType = formData.idHolderType || 'Student';
+      item_name = `${idType} ID - ${formData.idName}`;
+      description = `ID Type: ${idType} | Name: ${formData.idName || 'Unknown'} | ID Number: ${formData.studentOrStaffId}`;
       location = [formData.idLocation1, formData.idLocation2].filter(Boolean).join(', ');
       date = formData.idDateLost;
       time = formData.idFromTime;
@@ -290,12 +293,21 @@ const ReportLostItem = () => {
             <div className="report-lost-section">
               <h3>Student / Staff ID</h3>
               <div className="report-lost-form-group">
+                <label className="required">Student or Staff</label>
+                <select name="idHolderType" value={formData.idHolderType} onChange={handleInputChange}>
+                  <option value="">Select one</option>
+                  <option value="Student">Student</option>
+                  <option value="Staff">Staff</option>
+                </select>
+                {errors.idHolderType && <p className="report-lost-error">{errors.idHolderType}</p>}
+              </div>
+              <div className="report-lost-form-group">
                 <label className="required">Name</label>
                 <input name="idName" value={formData.idName} onChange={handleInputChange} />
                 {errors.idName && <p className="report-lost-error">{errors.idName}</p>}
               </div>
               <div className="report-lost-form-group">
-                <label className="required">Student ID or Staff ID</label>
+                <label className="required">ID Number</label>
                 <input name="studentOrStaffId" value={formData.studentOrStaffId} onChange={handleInputChange} />
                 {errors.studentOrStaffId && <p className="report-lost-error">{errors.studentOrStaffId}</p>}
               </div>

@@ -22,6 +22,7 @@ const ReportFoundItem = () => {
   const [formData, setFormData] = useState({
     nicName: '',
     nicNumber: '',
+    idHolderType: '',
     idName: '',
     studentOrStaffId: '',
     cardType: '',
@@ -70,8 +71,9 @@ const ReportFoundItem = () => {
     }
 
     if (category === 'Student / Staff ID') {
+      if (!formData.idHolderType) nextErrors.idHolderType = 'Please choose Student or Staff.';
       if (!formData.idName.trim()) nextErrors.idName = 'Name is required.';
-      if (!formData.studentOrStaffId.trim()) nextErrors.studentOrStaffId = 'Student ID or Staff ID is required.';
+      if (!formData.studentOrStaffId.trim()) nextErrors.studentOrStaffId = 'ID Number is required.';
     }
 
     if (category === 'Bank Card') {
@@ -138,17 +140,18 @@ const ReportFoundItem = () => {
 
     if (category === 'NIC') {
       item_name = `NIC - ${formData.nicName || 'Unknown'}`;
-      description = `NIC Number: ${formData.nicNumber}`;
+      description = `Name: ${formData.nicName || 'Unknown'} | NIC Number: ${formData.nicNumber}`;
     }
 
     if (category === 'Student / Staff ID') {
-      item_name = `Student/Staff ID - ${formData.idName || 'Unknown'}`;
-      description = `ID Number: ${formData.studentOrStaffId}`;
+      const idType = formData.idHolderType || 'Student';
+      item_name = `${idType} ID - ${formData.idName || 'Unknown'}`;
+      description = `ID Type: ${idType} | Name: ${formData.idName || 'Unknown'} | ID Number: ${formData.studentOrStaffId}`;
     }
 
     if (category === 'Bank Card') {
       item_name = `${formData.bankName} ${formData.cardType} Card`;
-      description = `Last 4 digits: ${formData.cardLast4 || 'N/A'}${formData.cardCvv ? ` | CVV (provided): ${formData.cardCvv}` : ''}`;
+      description = `Bank Name: ${formData.bankName} | Card Type: ${formData.cardType} | Last 4 digits: ${formData.cardLast4 || 'N/A'}${formData.cardCvv ? ` | CVV (provided): ${formData.cardCvv}` : ''}`;
       location = formData.bankPrivateLocation || location;
       date = formData.bankPrivateDate || date;
       time = formData.bankPrivateTime || time;
@@ -251,12 +254,21 @@ const ReportFoundItem = () => {
             <div className="category-section">
               <h3>Student / Staff ID Details</h3>
               <div className="form-group">
+                <label className="required">Student or Staff</label>
+                <select name="idHolderType" value={formData.idHolderType} onChange={handleInputChange}>
+                  <option value="">Select one</option>
+                  <option value="Student">Student</option>
+                  <option value="Staff">Staff</option>
+                </select>
+                {errors.idHolderType && <p className="error-text">{errors.idHolderType}</p>}
+              </div>
+              <div className="form-group">
                 <label className="required">Name</label>
                 <input name="idName" value={formData.idName} onChange={handleInputChange} />
                 {errors.idName && <p className="error-text">{errors.idName}</p>}
               </div>
               <div className="form-group">
-                <label className="required">Student ID or Staff ID</label>
+                <label className="required">ID Number</label>
                 <input name="studentOrStaffId" value={formData.studentOrStaffId} onChange={handleInputChange} />
                 {errors.studentOrStaffId && <p className="error-text">{errors.studentOrStaffId}</p>}
               </div>
