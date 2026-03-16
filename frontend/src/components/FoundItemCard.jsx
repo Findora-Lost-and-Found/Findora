@@ -5,6 +5,7 @@ import './FoundItemCard.css';
 import ClaimModal from './ClaimModal';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { maskNicInText } from '../utils/itemDisplayUtils';
+import SampleItemImage from './SampleItemImage';
 
 const FoundItemCard = ({ item, onClaim }) => {
   const navigate = useNavigate();
@@ -21,6 +22,12 @@ const FoundItemCard = ({ item, onClaim }) => {
   
   // Check if current user owns this item
   const isOwnItem = currentUser && (currentUser.id === normalizedItem?.posted_by?.id || currentUser.id === normalizedItem?.user_id);
+
+    // Determine whether there is a real uploaded photo
+    const hasRealImage =
+      normalizedItem.image &&
+      !normalizedItem.image.includes('placeholder.com') &&
+      !normalizedItem.image.includes('via.placeholder');
   
   const formatDate = (dateString) => {
     const options = { month: 'short', day: 'numeric', year: 'numeric' };
@@ -38,14 +45,18 @@ const FoundItemCard = ({ item, onClaim }) => {
   return (
     <div className="found-item-card" id={`found-item-${normalizedItem.id}`}>
       <div className="card-image-container">
-        <img 
-          src={normalizedItem.image} 
-          alt={normalizedItem.name} 
-          className="card-image"
-          onError={(e) => {
-            e.target.src = 'https://via.placeholder.com/300x200?text=Item+Image';
-          }}
-        />
+        {hasRealImage ? (
+          <img
+            src={normalizedItem.image}
+            alt={normalizedItem.name}
+            className="card-image"
+            onError={(e) => {
+              e.target.style.display = 'none';
+            }}
+          />
+        ) : (
+          <SampleItemImage category={normalizedItem.category} item={normalizedItem} />
+        )}
         <div className="card-badge">{normalizedItem.category}</div>
       </div>
 

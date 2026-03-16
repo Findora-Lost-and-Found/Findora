@@ -1,4 +1,5 @@
 import { normalizeCategory } from '../utils/categoryUtils';
+import SampleItemImage from './SampleItemImage';
 
 const ItemCard = ({ item, showActions = false, onDelete }) => {
   const API_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
@@ -6,9 +7,13 @@ const ItemCard = ({ item, showActions = false, onDelete }) => {
 
   return (
     <div className="item-card">
-      {item.image_url && (
-        <img src={`${API_URL}${item.image_url}`} alt={item.item_name} className="item-image" />
-      )}
+      <div className="item-image-container">
+        {item.image_url ? (
+          <img src={`${API_URL}${item.image_url}`} alt={item.item_name} className="item-image" />
+        ) : (
+          <SampleItemImage category={normalizedCategory} item={item} />
+        )}
+      </div>
       <div className="item-details">
         <span className={`category-badge ${item.type}`}>{normalizedCategory}</span>
         <span className={`type-badge ${item.type}`}>{item.type}</span>
