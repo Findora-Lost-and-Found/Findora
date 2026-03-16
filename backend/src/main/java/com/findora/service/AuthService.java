@@ -94,9 +94,12 @@ public class AuthService {
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
         user.setFullName(fullName);
-        user.setRole(User.UserRole.valueOf(role.toUpperCase()));
+        User.UserRole userRole = User.UserRole.valueOf(role.toUpperCase());
+        user.setRole(userRole);
         user.setIsVerified(false);
-        user.setIsApproved(false); // Requires admin approval for staff/security roles
+        // Students are auto-approved; staff/security/admin roles require admin approval
+        boolean autoApproved = (userRole == User.UserRole.STUDENT);
+        user.setIsApproved(autoApproved);
         user.setVerificationOtp(generateOtp());
         user.setOtpExpiry(LocalDateTime.now().plusHours(24));
 
