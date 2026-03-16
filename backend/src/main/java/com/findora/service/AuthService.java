@@ -26,13 +26,19 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final EmailService emailService;
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private static final Random RANDOM = new Random();
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtTokenProvider jwtTokenProvider) {
+    public AuthService(
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            JwtTokenProvider jwtTokenProvider,
+            EmailService emailService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.emailService = emailService;
     }
 
     /**
@@ -49,6 +55,15 @@ public class AuthService {
         User user = userRepository.findByUsername(usernameOrEmail)
             .or(() -> userRepository.findByEmail(usernameOrEmail))
             .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (Boolean.FALSE.equals(user.getIsVerified())
+                && (user.getRole() == User.UserRole.STUDENT || user.getRole() == User.UserRole.STAFF)) {
+            throw new RuntimeException("Please verify your email with OTP before login");
+        }
+
+        if (Boolean.FALSE.equals(user.getIsApproved())) {
+            throw new RuntimeException("Your account is pending admin approval");
+        }
 
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new RuntimeException("Invalid password");
@@ -94,13 +109,21 @@ public class AuthService {
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
         user.setFullName(fullName);
-        user.setRole(User.UserRole.valueOf(role.toUpperCase()));
+        User.UserRole userRole = User.UserRole.valueOf(role.toUpperCase());
+        if (userRole != User.UserRole.STUDENT && userRole != User.UserRole.STAFF) {
+            throw new RuntimeException("Signup is only available for Student and Staff roles");
+        }
+        user.setRole(userRole);
         user.setIsVerified(false);
-        user.setIsApproved(false); // Requires admin approval for staff/security roles
+        // Students are auto-approved; staff/security/admin roles require admin approval
+        boolean autoApproved = (userRole == User.UserRole.STUDENT);
+        user.setIsApproved(autoApproved);
         user.setVerificationOtp(generateOtp());
         user.setOtpExpiry(LocalDateTime.now().plusHours(24));
 
         User savedUser = userRepository.save(user);
+
+        emailService.sendVerificationOtp(savedUser.getEmail(), savedUser.getFullName(), savedUser.getVerificationOtp());
 
         String token = jwtTokenProvider.generateToken(
             savedUser.getUsername(),
@@ -112,7 +135,7 @@ public class AuthService {
 
         log.info("User {} registered successfully", username);
 
-        return new AuthResponse(token, userDTO, "User registered successfully, email verification pending");
+        return new AuthResponse(token, userDTO, "Signup successful. Please verify your email with OTP");
     }
 
     /**
@@ -162,6 +185,8 @@ public class AuthService {
         user.setOtpExpiry(LocalDateTime.now().plusHours(24));
         userRepository.save(user);
 
+        emailService.sendVerificationOtp(user.getEmail(), user.getFullName(), user.getVerificationOtp());
+
         log.info("Verification OTP regenerated for user {}", user.getUsername());
     }
 
@@ -178,8 +203,9 @@ public class AuthService {
         user.setOtpExpiry(LocalDateTime.now().plusHours(24));
         userRepository.save(user);
 
+        emailService.sendPasswordResetOtp(user.getEmail(), user.getFullName(), otp);
+
         log.info("Password reset OTP generated for user {}", user.getUsername());
-        // TODO: Send OTP via email
     }
 
     /**
