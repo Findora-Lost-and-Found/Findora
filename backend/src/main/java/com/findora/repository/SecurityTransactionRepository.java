@@ -13,4 +13,5 @@ import org.springframework.stereotype.Repository;
 public interface SecurityTransactionRepository extends JpaRepository<SecurityTransaction, Long> {
     Page<SecurityTransaction> findBySecurityOfficerId(Long officerId, Pageable pageable);
     Page<SecurityTransaction> findByTransactionType(SecurityTransaction.TransactionType type, Pageable pageable);
+    long countByTransactionType(SecurityTransaction.TransactionType type);
 }
