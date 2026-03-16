@@ -17,11 +17,13 @@ public class ItemDTO {
     private String status;             // e.g., "active", "claimed"
     private String imageUrl;           // Maps from image_url in DB
     private String createdAt;          // ISO 8601 timestamp string
+    private Long userId;
+    private String fullName;
 
     public ItemDTO() {
     }
 
-    public ItemDTO(Long id, String name, String category, String type, String description, String location, String status, String imageUrl, String createdAt) {
+    public ItemDTO(Long id, String name, String category, String type, String description, String location, String status, String imageUrl, String createdAt, Long userId, String fullName) {
         this.id = id;
         this.name = name;
         this.category = category;
@@ -31,6 +33,8 @@ public class ItemDTO {
         this.status = status;
         this.imageUrl = imageUrl;
         this.createdAt = createdAt;
+        this.userId = userId;
+        this.fullName = fullName;
     }
 
     public Long getId() {
@@ -105,6 +109,22 @@ public class ItemDTO {
         this.createdAt = createdAt;
     }
 
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
     // Frontend legacy aliases kept for compatibility.
     @JsonProperty("item_name")
     public String getItemName() {
@@ -119,5 +139,15 @@ public class ItemDTO {
     @JsonProperty("created_at")
     public String getCreatedAtLegacy() {
         return createdAt;
+    }
+
+    @JsonProperty("user_id")
+    public Long getUserIdLegacy() {
+        return userId;
+    }
+
+    @JsonProperty("full_name")
+    public String getFullNameLegacy() {
+        return fullName;
     }
 }

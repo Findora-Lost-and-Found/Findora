@@ -33,6 +33,8 @@ const AdminPendingApprovals = lazy(() => import('./pages/admin/AdminPendingAppro
 const AdminItemsByStatus = lazy(() => import('./pages/admin/AdminItemsByStatus'));
 
 const SecurityPendingClaims = lazy(() => import('./pages/security/SecurityPendingClaims'));
+const SecurityReceiveItems = lazy(() => import('./pages/security/SecurityReceiveItems'));
+const SecurityTransactions = lazy(() => import('./pages/security/SecurityTransactions'));
 
 function App() {
   useEffect(() => {
@@ -74,7 +76,9 @@ function App() {
               {/* Security Routes */}
               <Route path="/security" element={<PrivateRoute roles={['security', 'admin']}><SecurityDashboard /></PrivateRoute>} />
               <Route path="/security/dashboard" element={<PrivateRoute roles={['security', 'admin']}><SecurityDashboard /></PrivateRoute>} />
+              <Route path="/security/receive" element={<PrivateRoute roles={['security', 'admin']}><SecurityReceiveItems /></PrivateRoute>} />
               <Route path="/security/pending-claims" element={<PrivateRoute roles={['security', 'admin']}><SecurityPendingClaims /></PrivateRoute>} />
+              <Route path="/security/transactions" element={<PrivateRoute roles={['security', 'admin']}><SecurityTransactions /></PrivateRoute>} />
 
               {/* Admin Routes */}
               <Route path="/admin/dashboard" element={<PrivateRoute roles={['admin']}><Navigate to="/admin-panel" replace /></PrivateRoute>} />
