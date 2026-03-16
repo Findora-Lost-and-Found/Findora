@@ -4,6 +4,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -34,6 +36,8 @@ import com.findora.service.SecurityService;
 @RequestMapping("/api/security")
 public class SecurityController {
 
+    private static final Logger log = LoggerFactory.getLogger(SecurityController.class);
+
     private final ItemService itemService;
     private final SecurityService securityService;
     private final UserRepository userRepository;
@@ -46,21 +50,36 @@ public class SecurityController {
 
     @PostMapping("/verify-claim")
     @PreAuthorize("hasAnyRole('SECURITY', 'ADMIN')")
-    public ResponseEntity<?> verifyClaim(@RequestBody Map<String, String> verifyData) {
+    public ResponseEntity<?> verifyClaim(@RequestBody Map<String, Object> verifyData) {
         try {
             String claimIdRaw = verifyData != null
-                ? (verifyData.getOrDefault("claim_id", verifyData.get("claimId")))
+                ? String.valueOf(verifyData.getOrDefault("claim_id", verifyData.get("claimId")))
                 : null;
-            String otp = verifyData != null ? verifyData.get("otp") : null;
+            String itemIdRaw = verifyData != null
+                ? String.valueOf(verifyData.getOrDefault("item_id", verifyData.get("itemId")))
+                : null;
+            String otp = verifyData != null && verifyData.get("otp") != null
+                ? String.valueOf(verifyData.get("otp"))
+                : null;
 
-            if (claimIdRaw == null || claimIdRaw.isBlank() || otp == null || otp.isBlank()) {
-                return ResponseEntity.badRequest()
-                    .body(Map.of("success", false, "message", "claim_id and otp are required"));
+            if ("null".equalsIgnoreCase(claimIdRaw)) {
+                claimIdRaw = null;
+            }
+            if ("null".equalsIgnoreCase(itemIdRaw)) {
+                itemIdRaw = null;
             }
 
-                Long claimId = Long.valueOf(claimIdRaw);
+            if (claimIdRaw == null || claimIdRaw.isBlank()
+                    || itemIdRaw == null || itemIdRaw.isBlank()
+                    || otp == null || otp.isBlank()) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "claimId, itemId and otp are required"));
+            }
+
+            Long claimId = Long.valueOf(claimIdRaw);
+            Long itemId = Long.valueOf(itemIdRaw);
             Long userId = getCurrentUserId();
-            securityService.verifyClaim(claimId, otp, userId);
+            securityService.verifyClaim(claimId, itemId, otp, userId);
 
             return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -68,7 +87,7 @@ public class SecurityController {
             ));
         } catch (NumberFormatException e) {
             return ResponseEntity.badRequest()
-                .body(Map.of("success", false, "message", "Invalid claim_id"));
+                .body(Map.of("success", false, "message", "Invalid claimId or itemId"));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
                 .body(Map.of("success", false, "message", e.getMessage()));
@@ -149,8 +168,9 @@ public class SecurityController {
                 "count", claims.size()
             ));
         } catch (Exception e) {
+            log.error("Failed to fetch pending claims", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("success", false, "message", "Server error"));
+                .body(Map.of("success", false, "message", "Server error: " + e.getMessage()));
         }
     }
 
