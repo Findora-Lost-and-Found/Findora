@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { itemsAPI } from '../services/api';
 import { toast } from 'react-toastify';
+import { isValidNicNumber, normalizeNicNumber } from '../utils/nicUtils';
+import { isValidStudentIdNumber, normalizeStudentIdNumber } from '../utils/studentIdUtils';
+
 import './ReportFoundItem.css';
 
 const CATEGORY_OPTIONS = [
@@ -52,7 +55,15 @@ const ReportFoundItem = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const normalizedValue =
+      name === 'nicNumber'
+        ? normalizeNicNumber(value)
+        : name === 'studentOrStaffId' || name === 'purseIdNumber'
+          ? normalizeStudentIdNumber(value)
+          : name === 'cardLast4'
+            ? value.replace(/\D/g, '').slice(0, 4)
+          : value;
+    setFormData((prev) => ({ ...prev, [name]: normalizedValue }));
   };
 
   const handleFileChange = (e) => {
@@ -67,17 +78,23 @@ const ReportFoundItem = () => {
     if (category === 'NIC') {
       if (!formData.nicName.trim()) nextErrors.nicName = 'Name is required.';
       if (!formData.nicNumber.trim()) nextErrors.nicNumber = 'NIC Number is required.';
+      if (formData.nicNumber.trim() && !isValidNicNumber(formData.nicNumber)) {
+        nextErrors.nicNumber = 'NIC must be 12 digits or 9 digits followed by V.';
+      }
     }
 
     if (category === 'Student / Staff ID') {
       if (!formData.idName.trim()) nextErrors.idName = 'Name is required.';
       if (!formData.studentOrStaffId.trim()) nextErrors.studentOrStaffId = 'Student ID or Staff ID is required.';
+      if (formData.studentOrStaffId.trim() && !isValidStudentIdNumber(formData.studentOrStaffId)) {
+        nextErrors.studentOrStaffId = 'Student ID must be 6 digits followed by 1 letter.';
+      }
     }
 
     if (category === 'Bank Card') {
       if (!formData.cardType) nextErrors.cardType = 'Card Type is required.';
       if (!formData.bankName.trim()) nextErrors.bankName = 'Name of the Bank is required.';
-      if (!/^\d{4}$/.test(formData.cardLast4.trim())) nextErrors.cardLast4 = 'Last 4 digits must be exactly 4 numbers.';
+      if (!/^\d{4}$/.test(formData.cardLast4)) nextErrors.cardLast4 = 'Last 4 digits of the card are required.';
       if (!formData.bankPrivateLocation.trim()) nextErrors.bankPrivateLocation = 'Location is required.';
       if (!formData.bankPrivateDate) nextErrors.bankPrivateDate = 'Date is required.';
       if (!formData.bankPrivateTime) nextErrors.bankPrivateTime = 'Time is required.';
@@ -87,6 +104,13 @@ const ReportFoundItem = () => {
       if (purseOption === 'with-id') {
         if (!formData.purseName.trim()) nextErrors.purseName = 'Name is required.';
         if (!formData.purseIdNumber.trim()) nextErrors.purseIdNumber = 'Student ID or NIC number is required.';
+        if (
+          formData.purseIdNumber.trim() &&
+          !isValidNicNumber(formData.purseIdNumber) &&
+          !isValidStudentIdNumber(formData.purseIdNumber)
+        ) {
+          nextErrors.purseIdNumber = 'Enter a valid NIC or Student ID (6 digits + 1 letter).';
+        }
       }
 
       if (purseOption === 'without-id') {
@@ -241,7 +265,13 @@ const ReportFoundItem = () => {
               </div>
               <div className="form-group">
                 <label className="required">NIC Number</label>
-                <input name="nicNumber" value={formData.nicNumber} onChange={handleInputChange} />
+                <input
+                  name="nicNumber"
+                  value={formData.nicNumber}
+                  onChange={handleInputChange}
+                  placeholder="e.g. 200012345678 or 901234567V"
+                  maxLength={12}
+                />
                 {errors.nicNumber && <p className="error-text">{errors.nicNumber}</p>}
               </div>
             </div>
@@ -257,7 +287,13 @@ const ReportFoundItem = () => {
               </div>
               <div className="form-group">
                 <label className="required">Student ID or Staff ID</label>
-                <input name="studentOrStaffId" value={formData.studentOrStaffId} onChange={handleInputChange} />
+                <input
+                  name="studentOrStaffId"
+                  value={formData.studentOrStaffId}
+                  onChange={handleInputChange}
+                  placeholder="e.g. 123456A"
+                  maxLength={7}
+                />
                 {errors.studentOrStaffId && <p className="error-text">{errors.studentOrStaffId}</p>}
               </div>
             </div>
@@ -278,12 +314,42 @@ const ReportFoundItem = () => {
               </div>
               <div className="form-group">
                 <label className="required">Name of the Bank</label>
-                <input name="bankName" value={formData.bankName} onChange={handleInputChange} />
+                <select name="bankName" value={formData.bankName} onChange={handleInputChange}>
+                  <option value="">-- Select Bank --</option>
+                  <option>Bank of Ceylon</option>
+                  <option>People's Bank</option>
+                  <option>Commercial Bank of Ceylon</option>
+                  <option>Hatton National Bank (HNB)</option>
+                  <option>Sampath Bank</option>
+                  <option>Seylan Bank</option>
+                  <option>Nations Trust Bank (NTB)</option>
+                  <option>National Savings Bank (NSB)</option>
+                  <option>Pan Asia Banking Corporation</option>
+                  <option>Union Bank of Colombo</option>
+                  <option>DFCC Bank</option>
+                  <option>Cargills Bank</option>
+                  <option>Amana Bank</option>
+                  <option>MCB Bank</option>
+                  <option>Citibank Sri Lanka</option>
+                  <option>Standard Chartered Bank</option>
+                  <option>HSBC Sri Lanka</option>
+                  <option>Other</option>
+                </select>
                 {errors.bankName && <p className="error-text">{errors.bankName}</p>}
               </div>
               <div className="form-group">
-                <label className="required">Last 4 digits of the card number</label>
-                <input name="cardLast4" value={formData.cardLast4} onChange={handleInputChange} maxLength={4} />
+                <label className="required">Card number</label>
+                <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #ccc', borderRadius: '6px', overflow: 'hidden', background: '#fff' }}>
+                  <span style={{ padding: '0 10px', color: '#aaa', letterSpacing: '2px', fontFamily: 'monospace', fontSize: '1rem', userSelect: 'none', whiteSpace: 'nowrap' }}>#### #### ####</span>
+                  <input
+                    name="cardLast4"
+                    value={formData.cardLast4}
+                    onChange={handleInputChange}
+                    placeholder="1234"
+                    maxLength={4}
+                    style={{ border: 'none', outline: 'none', width: '60px', padding: '10px 8px', fontFamily: 'monospace', fontSize: '1rem' }}
+                  />
+                </div>
                 {errors.cardLast4 && <p className="error-text">{errors.cardLast4}</p>}
               </div>
 
@@ -350,7 +416,13 @@ const ReportFoundItem = () => {
                   </div>
                   <div className="form-group">
                     <label className="required">Student ID or NIC number</label>
-                    <input name="purseIdNumber" value={formData.purseIdNumber} onChange={handleInputChange} />
+                    <input
+                      name="purseIdNumber"
+                      value={formData.purseIdNumber}
+                      onChange={handleInputChange}
+                      placeholder="NIC: 200012345678 / Student ID: 123456A"
+                      maxLength={12}
+                    />
                     {errors.purseIdNumber && <p className="error-text">{errors.purseIdNumber}</p>}
                   </div>
                 </>

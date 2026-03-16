@@ -83,7 +83,7 @@ const VerifyEmail = () => {
               }}
             />
             <small style={{ color: '#6B7280', display: 'block', marginTop: '0.5rem' }}>
-              OTP expires in 10 minutes
+              OTP expires in 24 hours
             </small>
           </div>
 
