@@ -9,15 +9,6 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
 
-  useEffect(() => {
-    if (user) {
-      fetchUnreadCount();
-      // Keep badge fresh so match notifications appear quickly after a found post.
-      const interval = setInterval(fetchUnreadCount, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [user]);
-
   const fetchUnreadCount = async () => {
     try {
       const response = await notificationsAPI.getUnreadCount();
@@ -26,6 +17,15 @@ const Navbar = () => {
       console.error('Error fetching unread count:', error);
     }
   };
+
+  useEffect(() => {
+    if (user) {
+      fetchUnreadCount();
+      // Keep badge fresh so match notifications appear quickly after a found post.
+      const interval = setInterval(fetchUnreadCount, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
 
   const handleLogout = () => {
     logout();

@@ -36,9 +36,11 @@ const ClaimModal = ({ isOpen, onClose, item }) => {
       return;
     }
 
+    const { itemId: _itemId, ...claimMeta } = userData || {};
+
     setSubmitting(true);
     try {
-      const response = await claimsAPI.create(itemId);
+      const response = await claimsAPI.create(itemId, Object.keys(claimMeta).length > 0 ? claimMeta : undefined);
       const apiOtp = response.data?.otp || response.data?.claim?.otp;
 
       if (!apiOtp) {

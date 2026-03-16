@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { itemsAPI, claimsAPI } from '../services/api';
+import { itemsAPI, claimsAPI, securityAPI } from '../services/api';
+import { toast } from 'react-toastify';
 import PostModal from '../components/PostModal';
 import FoundItemCard from '../components/FoundItemCard';
 import { normalizeCategory } from '../utils/categoryUtils';
@@ -68,6 +69,7 @@ const Dashboard = () => {
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [foundItems, setFoundItems] = useState([]);
   const [adminSections, setAdminSections] = useState({ found: [], received: [], released: [] });
+  const [handoverLoadingById, setHandoverLoadingById] = useState({});
 
   useEffect(() => {
     if (user) {
@@ -82,7 +84,7 @@ const Dashboard = () => {
           itemsAPI.getMy(),
           claimsAPI.getMy(),
           // Dashboard keeps a latest preview, while Found Items page shows complete list.
-          itemsAPI.getAll({ type: 'found', status: 'active' })
+          itemsAPI.getAll({ type: 'found' })
         ]);
 
         setStats({
@@ -146,6 +148,23 @@ const Dashboard = () => {
     }
   };
 
+  const handleHandoverRequest = async (itemId) => {
+    try {
+      setHandoverLoadingById((prev) => ({ ...prev, [itemId]: true }));
+      await securityAPI.handoverRequest(itemId);
+      setFoundItems((prev) =>
+        prev.map((item) =>
+          item.id === itemId ? { ...item, status: 'handover_requested' } : item
+        )
+      );
+      toast.success('Handover request submitted successfully');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to submit handover request');
+    } finally {
+      setHandoverLoadingById((prev) => ({ ...prev, [itemId]: false }));
+    }
+  };
+
   if (loading) {
     return <div className="loading">Loading...</div>;
   }
@@ -199,6 +218,8 @@ const Dashboard = () => {
                       console.error('Claim error:', err);
                     });
                   }}
+                  onHandover={handleHandoverRequest}
+                  handoverInProgress={!!handoverLoadingById[item.id]}
                 />
               ))}
             </div>

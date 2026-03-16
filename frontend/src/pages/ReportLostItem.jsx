@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { itemsAPI } from '../services/api';
+import { NIC_HELPER_TEXT, NIC_VALIDATION_MESSAGE, isValidNic, normalizeNic, sanitizeNicInput } from '../utils/nicUtils';
 import './ReportLostItem.css';
 
 const CATEGORY_OPTIONS = ['NIC', 'Student / Staff ID', 'Bank Card', 'Purse / Wallet', 'Others'];
@@ -70,7 +71,8 @@ const ReportLostItem = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const nextValue = name === 'nicNumber' ? sanitizeNicInput(value) : value;
+    setFormData((prev) => ({ ...prev, [name]: nextValue }));
   };
 
   const handleFileChange = (name, file) => {
@@ -85,6 +87,7 @@ const ReportLostItem = () => {
     if (category === 'NIC') {
       if (!formData.nicName.trim()) nextErrors.nicName = 'Name is required.';
       if (!formData.nicNumber.trim()) nextErrors.nicNumber = 'NIC Number is required.';
+      else if (!isValidNic(formData.nicNumber)) nextErrors.nicNumber = NIC_VALIDATION_MESSAGE;
       if (!formData.nicLocation1.trim()) nextErrors.nicLocation1 = 'Location is required.';
       if (!formData.nicDateLost) nextErrors.nicDateLost = 'Date is required.';
       if (!formData.nicFromTime) nextErrors.nicFromTime = 'From time is required.';
@@ -157,7 +160,7 @@ const ReportLostItem = () => {
 
     if (category === 'NIC') {
       item_name = `NIC - ${formData.nicName}`;
-      description = `NIC Number: ${formData.nicNumber}`;
+      description = `NIC Number: ${normalizeNic(formData.nicNumber)}`;
       location = [formData.nicLocation1, formData.nicLocation2].filter(Boolean).join(', ');
       date = formData.nicDateLost;
       time = formData.nicFromTime;
@@ -248,7 +251,15 @@ const ReportLostItem = () => {
               </div>
               <div className="report-lost-form-group">
                 <label className="required">NIC Number</label>
-                <input name="nicNumber" value={formData.nicNumber} onChange={handleInputChange} />
+                <input
+                  name="nicNumber"
+                  value={formData.nicNumber}
+                  onChange={handleInputChange}
+                  maxLength={12}
+                  autoComplete="off"
+                  placeholder="123456789V or 199001234567"
+                />
+                <small style={{ color: '#6B7280' }}>{NIC_HELPER_TEXT}</small>
                 {errors.nicNumber && <p className="report-lost-error">{errors.nicNumber}</p>}
               </div>
               <div className="report-lost-private">

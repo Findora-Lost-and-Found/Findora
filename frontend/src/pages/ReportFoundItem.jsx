@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { itemsAPI } from '../services/api';
 import { toast } from 'react-toastify';
+import { NIC_HELPER_TEXT, NIC_VALIDATION_MESSAGE, isValidNic, normalizeNic, sanitizeNicInput } from '../utils/nicUtils';
 import './ReportFoundItem.css';
 
 const CATEGORY_OPTIONS = [
@@ -52,7 +53,8 @@ const ReportFoundItem = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const nextValue = name === 'nicNumber' ? sanitizeNicInput(value) : value;
+    setFormData((prev) => ({ ...prev, [name]: nextValue }));
   };
 
   const handleFileChange = (e) => {
@@ -67,6 +69,7 @@ const ReportFoundItem = () => {
     if (category === 'NIC') {
       if (!formData.nicName.trim()) nextErrors.nicName = 'Name is required.';
       if (!formData.nicNumber.trim()) nextErrors.nicNumber = 'NIC Number is required.';
+      else if (!isValidNic(formData.nicNumber)) nextErrors.nicNumber = NIC_VALIDATION_MESSAGE;
     }
 
     if (category === 'Student / Staff ID') {
@@ -138,7 +141,7 @@ const ReportFoundItem = () => {
 
     if (category === 'NIC') {
       item_name = `NIC - ${formData.nicName || 'Unknown'}`;
-      description = `NIC Number: ${formData.nicNumber}`;
+      description = `NIC Number: ${normalizeNic(formData.nicNumber)}`;
     }
 
     if (category === 'Student / Staff ID') {
@@ -241,7 +244,15 @@ const ReportFoundItem = () => {
               </div>
               <div className="form-group">
                 <label className="required">NIC Number</label>
-                <input name="nicNumber" value={formData.nicNumber} onChange={handleInputChange} />
+                <input
+                  name="nicNumber"
+                  value={formData.nicNumber}
+                  onChange={handleInputChange}
+                  maxLength={12}
+                  autoComplete="off"
+                  placeholder="123456789V or 199001234567"
+                />
+                <small style={{ color: '#6B7280' }}>{NIC_HELPER_TEXT}</small>
                 {errors.nicNumber && <p className="error-text">{errors.nicNumber}</p>}
               </div>
             </div>
