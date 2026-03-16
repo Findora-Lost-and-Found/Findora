@@ -1,12 +1,18 @@
 package com.findora.controller;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -15,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,13 +32,17 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.findora.model.Claim;
 import com.findora.model.Item;
+import com.findora.model.ItemStatus;
 import com.findora.model.ItemType;
+import com.findora.model.Notification;
+import com.findora.model.User;
 import com.findora.repository.ClaimRepository;
 import com.findora.repository.ItemRepository;
+import com.findora.repository.NotificationRepository;
 import com.findora.repository.UserRepository;
 
 /**
- * ClaimController - Claim management endpoints (TODO: Full implementation).
+ * ClaimController - Claim management endpoints.
  */
 @RestController
 @RequestMapping("/api/claims")
@@ -42,32 +53,48 @@ public class ClaimController {
         Claim.ClaimStatus.APPROVED
     );
 
-    private final ClaimRepository claimRepository;
-    private final ItemRepository itemRepository;
-    private final UserRepository userRepository;
+    @Autowired
+    private ClaimRepository claimRepository;
 
-    public ClaimController(ClaimRepository claimRepository, ItemRepository itemRepository, UserRepository userRepository) {
-        this.claimRepository = claimRepository;
-        this.itemRepository = itemRepository;
-        this.userRepository = userRepository;
-    }
+    @Autowired
+    private ItemRepository itemRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private NotificationRepository notificationRepository;
 
     @PostMapping
     @PreAuthorize("hasAnyRole('STUDENT', 'STAFF', 'SECURITY', 'ADMIN')")
+    @Transactional
     public ResponseEntity<?> createClaim(@RequestBody Map<String, Object> claimData) {
         try {
-            String itemIdRaw = claimData != null
-                ? String.valueOf(claimData.getOrDefault("item_id", claimData.get("itemId")))
-                : null;
+            if (claimData == null) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Request body is required"
+                ));
+            }
 
-            if (itemIdRaw == null || itemIdRaw.isBlank() || "null".equalsIgnoreCase(itemIdRaw)) {
+            Object itemIdRaw = claimData.getOrDefault("item_id", claimData.get("itemId"));
+            if (itemIdRaw == null) {
                 return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "message", "item_id is required"
                 ));
             }
 
-            Long itemId = Long.valueOf(itemIdRaw);
+            Long itemId;
+            try {
+                itemId = Long.valueOf(String.valueOf(itemIdRaw));
+            } catch (NumberFormatException e) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Invalid item_id"
+                ));
+            }
+
             Long currentUserId = getCurrentUserId();
 
             Item item = itemRepository.findById(itemId)
@@ -77,15 +104,24 @@ public class ClaimController {
                 throw new IllegalArgumentException("Only found items can be claimed");
             }
 
-            if (item.getUserId() != null && item.getUserId().equals(currentUserId)) {
+            if (Objects.equals(item.getUserId(), currentUserId)) {
                 throw new IllegalArgumentException("You cannot claim your own item");
             }
 
-            claimRepository
-                .findFirstByItemIdAndClaimerIdAndStatusInOrderByClaimedAtDesc(itemId, currentUserId, OPEN_STATUSES)
-                .ifPresent(existingClaim -> {
-                    throw new IllegalArgumentException("You already have an active claim for this item");
-                });
+            if (item.getStatus() == ItemStatus.CLAIMED || item.getStatus() == ItemStatus.CLOSED) {
+                throw new IllegalArgumentException("This item is no longer claimable");
+            }
+
+            List<Claim> existingClaims = claimRepository.findByItemIdAndClaimerId(itemId, currentUserId);
+            boolean hasOpenClaim = existingClaims.stream().anyMatch(c -> EnumSet.of(
+                Claim.ClaimStatus.PENDING,
+                Claim.ClaimStatus.APPROVED,
+                Claim.ClaimStatus.COLLECTED
+            ).contains(c.getStatus()));
+
+            if (hasOpenClaim) {
+                throw new IllegalArgumentException("You already have an active claim for this item");
+            }
 
             String otp = String.format("%06d", ThreadLocalRandom.current().nextInt(0, 1_000_000));
             LocalDateTime otpExpiry = LocalDateTime.now().plusHours(24);
@@ -98,24 +134,43 @@ public class ClaimController {
             claim.setStatus(Claim.ClaimStatus.PENDING);
             claim = claimRepository.save(claim);
 
+            Notification claimerNotification = new Notification();
+            claimerNotification.setUserId(currentUserId);
+            claimerNotification.setType(Notification.NotificationType.CLAIM);
+            claimerNotification.setTitle("Claim Submitted");
+            claimerNotification.setMessage("Your claim was submitted. Keep your OTP ready for security verification.");
+            claimerNotification.setRelatedId(claim.getId());
+            notificationRepository.save(claimerNotification);
+
+            List<User> securityUsers = userRepository.findByRole(User.UserRole.SECURITY);
+            List<Notification> securityNotifications = new ArrayList<>();
+            for (User securityUser : securityUsers) {
+                Notification notification = new Notification();
+                notification.setUserId(securityUser.getId());
+                notification.setType(Notification.NotificationType.CLAIM);
+                notification.setTitle("New Claim Submitted");
+                notification.setMessage("A new claim is waiting for verification.");
+                notification.setRelatedId(claim.getId());
+                securityNotifications.add(notification);
+            }
+            if (!securityNotifications.isEmpty()) {
+                notificationRepository.saveAll(securityNotifications);
+            }
+
             Map<String, Object> claimPayload = new LinkedHashMap<>();
             claimPayload.put("id", claim.getId());
             claimPayload.put("item_id", claim.getItemId());
+            claimPayload.put("claimer_id", claim.getClaimerId());
             claimPayload.put("otp", claim.getOtp());
-            claimPayload.put("otp_expiry", claim.getOtpExpiry());
+            claimPayload.put("otp_expiry", claim.getOtpExpiry() != null ? claim.getOtpExpiry().toString() : null);
             claimPayload.put("status", claim.getStatus().name().toLowerCase());
-            claimPayload.put("claimed_at", claim.getClaimedAt());
+            claimPayload.put("claimed_at", claim.getClaimedAt() != null ? claim.getClaimedAt().toString() : null);
 
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                 "success", true,
                 "message", "Claim submitted successfully",
                 "otp", otp,
                 "claim", claimPayload
-            ));
-        } catch (NumberFormatException e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                "success", false,
-                "message", "Invalid item_id"
             ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of(
@@ -132,6 +187,7 @@ public class ClaimController {
 
     @GetMapping("/my")
     @PreAuthorize("hasAnyRole('STUDENT', 'STAFF', 'SECURITY', 'ADMIN')")
+    @Transactional(readOnly = true)
     public ResponseEntity<?> getMyClaims(
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "10") Integer size) {
@@ -139,31 +195,44 @@ public class ClaimController {
             Long currentUserId = getCurrentUserId();
             Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "claimedAt"));
 
-            List<Map<String, Object>> claims = claimRepository.findByClaimerId(currentUserId, pageable)
-                .getContent()
-                .stream()
-                .map(claim -> {
-                    Item item = itemRepository.findById(claim.getItemId()).orElse(null);
+            Page<Claim> claimsPage = claimRepository.findByClaimerId(currentUserId, pageable);
 
+            List<Map<String, Object>> claims = claimsPage.getContent().stream()
+                .map(claim -> {
                     Map<String, Object> row = new LinkedHashMap<>();
                     row.put("id", claim.getId());
                     row.put("item_id", claim.getItemId());
-                    row.put("item_name", item != null ? item.getItemName() : "Unknown Item");
-                    row.put("category", item != null && item.getCategory() != null ? item.getCategory().name() : null);
-                    row.put("image_url", item != null ? item.getImageUrl() : null);
-                    row.put("status", claim.getStatus() != null ? claim.getStatus().name().toLowerCase() : null);
+                    row.put("status", claim.getStatus() != null ? claim.getStatus().name().toLowerCase() : "pending");
                     row.put("otp", claim.getOtp());
-                    row.put("otp_expiry", claim.getOtpExpiry());
-                    row.put("claimed_at", claim.getClaimedAt());
-                    row.put("collected_at", claim.getCollectedAt());
+                    row.put("otp_expiry", claim.getOtpExpiry() != null ? claim.getOtpExpiry().toString() : null);
+                    row.put("claimed_at", claim.getClaimedAt() != null ? claim.getClaimedAt().toString() : null);
+                    row.put("collected_at", claim.getCollectedAt() != null ? claim.getCollectedAt().toString() : null);
+
+                    Item item = claim.getItem();
+                    if (item == null && claim.getItemId() != null) {
+                        item = itemRepository.findById(claim.getItemId()).orElse(null);
+                    }
+
+                    if (item != null) {
+                        row.put("item_name", item.getItemName());
+                        row.put("category", item.getCategory() != null ? item.getCategory().name() : null);
+                        row.put("image_url", item.getImageUrl());
+                    } else {
+                        row.put("item_name", null);
+                        row.put("category", null);
+                        row.put("image_url", null);
+                    }
+
                     return row;
                 })
-                .toList();
+                .collect(Collectors.toList());
 
             return ResponseEntity.ok(Map.of(
                 "success", true,
                 "claims", claims,
-                "count", claims.size()
+                "count", claimsPage.getTotalElements(),
+                "page", page,
+                "size", size
             ));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

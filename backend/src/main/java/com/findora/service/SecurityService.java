@@ -139,9 +139,9 @@ public class SecurityService {
         Notification notification = new Notification();
         notification.setUserId(claim.getClaimerId());
         notification.setType(Notification.NotificationType.CLAIM);
-        notification.setTitle("Claim Verified");
-        notification.setMessage("Your item has been released by Security");
-        notification.setRelatedId(item.getId());
+        notification.setTitle("Claim Update: Collected");
+        notification.setMessage("Your claim was verified and marked as collected by Security.");
+        notification.setRelatedId(claim.getId());
         notificationRepository.save(notification);
     }
 
