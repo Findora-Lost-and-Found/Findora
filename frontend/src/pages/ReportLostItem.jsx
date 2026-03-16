@@ -7,15 +7,8 @@ import './ReportLostItem.css';
 const CATEGORY_OPTIONS = ['NIC', 'Student / Staff ID', 'Bank Card', 'Purse / Wallet', 'Others'];
 
 const ReportLostItem = () => {
-  const navigate = useNavigate();
   const [category, setCategory] = useState('');
   const [purseOption, setPurseOption] = useState('with-id');
-<<<<<<< HEAD
-  const [submitted, setSubmitted] = useState(false);
-  const [verified, setVerified] = useState(false);
-  const [otp, setOtp] = useState('');
-=======
->>>>>>> origin/develop
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
@@ -45,8 +38,6 @@ const ReportLostItem = () => {
     purseItems2: '',
     purseItems3: '',
     otherPhoto: null,
-    otherItemName: '',
-    otherDescription: '',
     otherLocation1: '',
     otherLocation2: '',
     otherLocation3: '',
@@ -140,7 +131,6 @@ const ReportLostItem = () => {
     }
 
     if (category === 'Others') {
-      if (!formData.otherItemName.trim()) nextErrors.otherItemName = 'Item name is required.';
       if (!formData.otherLocation1.trim()) nextErrors.otherLocation1 = 'Field 1 is required.';
       if (!formData.otherDateLost) nextErrors.otherDateLost = 'Date is required.';
       if (!formData.otherFromTime) nextErrors.otherFromTime = 'From time is required.';
@@ -153,114 +143,7 @@ const ReportLostItem = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    submitLostItem();
-  };
-
-  const mapCategoryToApi = (value) => {
-    switch (value) {
-      case 'NIC':
-        return 'NIC';
-      case 'Student / Staff ID':
-        return 'Student ID';
-      case 'Bank Card':
-        return 'Bank Card';
-      case 'Purse / Wallet':
-        return 'Wallet';
-      default:
-        return 'Other';
-    }
-  };
-
-  const getDefaultDate = () => new Date().toISOString().slice(0, 10);
-  const getDefaultTime = () => new Date().toTimeString().slice(0, 5);
-
-  const buildLostItemPayload = () => {
-    const apiCategory = mapCategoryToApi(category);
-    let item_name = 'Lost Item';
-    let description = '';
-    let location = 'Campus';
-    let date = getDefaultDate();
-    let time = getDefaultTime();
-    let image = null;
-
-    if (category === 'NIC') {
-      item_name = `NIC - ${formData.nicName || 'Unknown'}`;
-      description = `NIC Number: ${formData.nicNumber}`;
-    }
-
-    if (category === 'Student / Staff ID') {
-      item_name = `Student/Staff ID - ${formData.idName || 'Unknown'}`;
-      description = `ID Number: ${formData.studentOrStaffId}`;
-    }
-
-    if (category === 'Bank Card') {
-      item_name = `${formData.bankName} ${formData.cardType} Card`;
-      description = `Last 4 digits: ${formData.cardLast4 || 'N/A'}${formData.cvv ? ` | CVV (remembered): ${formData.cvv}` : ''}`;
-      location = formData.bankLocation1 || location;
-      date = formData.bankDateLost || date;
-      time = formData.bankFromTime || time;
-    }
-
-    if (category === 'Purse / Wallet') {
-      item_name = 'Purse / Wallet';
-      if (purseOption === 'with-id') {
-        description = `Claim with ID: ${formData.purseIdNumber}`;
-      } else {
-        description = `Items inside: ${formData.purseItems1 || ''}${formData.purseItems2 ? `, ${formData.purseItems2}` : ''}${formData.purseItems3 ? `, ${formData.purseItems3}` : ''}`;
-        location = formData.purseLocation1 || location;
-        date = formData.purseDateLost || date;
-        time = formData.purseFromTime || time;
-      }
-      image = formData.pursePhoto;
-    }
-
-    if (category === 'Others') {
-      item_name = formData.otherItemName || 'Other Lost Item';
-      description = formData.otherDescription || 'General lost item report';
-      location = formData.otherLocation1 || location;
-      date = formData.otherDateLost || date;
-      time = formData.otherFromTime || time;
-      image = formData.otherPhoto;
-    }
-
-    return {
-      type: 'lost',
-      category: apiCategory,
-      item_name,
-      description,
-      location,
-      date,
-      time,
-      image
-    };
-  };
-
-  const submitLostItem = async () => {
     if (!validate()) return;
-<<<<<<< HEAD
-
-    const payload = buildLostItemPayload();
-
-    try {
-      setLoading(true);
-      await itemsAPI.create(payload);
-      setSubmitted(true);
-      setVerified(false);
-      setOtp('');
-      toast.success('Lost item reported successfully');
-
-      setTimeout(() => {
-        navigate('/lost-items', { state: { refreshAt: Date.now() } });
-      }, 500);
-    } catch (error) {
-      console.error('Failed to create lost item:', error.response?.data || error.message);
-      toast.error(error.response?.data?.message || 'Failed to report lost item');
-    } finally {
-      setLoading(false);
-    }
-  };
-=======
->>>>>>> origin/develop
 
     const categoryMap = {
       'NIC': 'NIC',
@@ -525,6 +408,20 @@ const ReportLostItem = () => {
             <div className="report-lost-section">
               <h3>Purse / Wallet</h3>
 
+              <div className="report-lost-form-group">
+                <label>Item Photo (optional)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleFileChange('pursePhoto', e.target.files?.[0])}
+                />
+              </div>
+
+              <div className="report-lost-photo-box">
+                <div className="report-lost-photo-emoji">👛</div>
+                <p>Open purse preview</p>
+              </div>
+
               <div className="report-lost-options">
                 <label>
                   <input
@@ -651,28 +548,6 @@ const ReportLostItem = () => {
           {category === 'Others' && (
             <div className="report-lost-section">
               <h3>Others</h3>
-
-              <div className="report-lost-form-group">
-                <label className="required">Item Name</label>
-                <input
-                  name="otherItemName"
-                  value={formData.otherItemName}
-                  onChange={handleInputChange}
-                  placeholder="e.g. Black backpack, Umbrella, Keys..."
-                />
-                {errors.otherItemName && <p className="report-lost-error">{errors.otherItemName}</p>}
-              </div>
-
-              <div className="report-lost-form-group">
-                <label>Description (optional)</label>
-                <textarea
-                  name="otherDescription"
-                  value={formData.otherDescription}
-                  onChange={handleInputChange}
-                  rows={3}
-                  placeholder="Describe the item in detail (colour, size, brand, etc.)"
-                />
-              </div>
 
               <div className="report-lost-form-group">
                 <label>Item Photo (optional)</label>

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
 import { itemsAPI } from '../services/api';
 import ItemCard from '../components/ItemCard';
 import Pagination from '../components/Pagination';
@@ -7,7 +6,6 @@ import Pagination from '../components/Pagination';
 const PAGE_SIZE = 4;
 
 const LostItems = () => {
-  const location = useLocation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({
@@ -24,33 +22,11 @@ const LostItems = () => {
 
   useEffect(() => {
     loadItems();
-<<<<<<< HEAD
-  }, [filters, location.state?.refreshAt]);
-
-  const loadItems = async () => {
-    try {
-      // My Lost Items shows only the logged-in user's lost posts.
-      const response = await itemsAPI.getMy({ type: 'lost' });
-      const rawItems = Array.isArray(response.data?.items) ? response.data.items : [];
-      const myLostItems = rawItems
-        .filter((item) => item && item.type === 'lost')
-        .map((item) => ({
-          ...item,
-          item_name: item.item_name || item.name || 'Unnamed Item',
-          description: item.description || '',
-          location: item.location || 'Unknown location',
-          category: item.category || 'Other',
-          date: item.date || item.created_at || null,
-          time: item.time || '--:--'
-        }));
-      const searchTerm = filters.search.trim().toLowerCase();
-=======
   }, [currentPage, filters.category, filters.search]);
 
   const loadItems = async () => {
     try {
       setLoading(true);
->>>>>>> origin/develop
 
       const response = await itemsAPI.getMy({
         type: 'lost',
@@ -71,15 +47,12 @@ const LostItems = () => {
     } catch (error) {
       console.error('Error loading items:', error);
       setItems([]);
-<<<<<<< HEAD
-=======
       setPagination({
         totalPages: 0,
         totalElements: 0,
         pageNumber: 0,
         pageSize: PAGE_SIZE
       });
->>>>>>> origin/develop
     } finally {
       setLoading(false);
     }

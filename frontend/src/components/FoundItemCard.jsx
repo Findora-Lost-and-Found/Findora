@@ -5,24 +5,16 @@ import './FoundItemCard.css';
 import ClaimModal from './ClaimModal';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { maskNicInText } from '../utils/itemDisplayUtils';
-import { useAuth } from '../context/AuthContext';
 
 const FoundItemCard = ({ item, onClaim }) => {
   const navigate = useNavigate();
-<<<<<<< HEAD
-  const { user } = useAuth();
-=======
   const { user: currentUser } = useAuth();
->>>>>>> origin/develop
   const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
   const normalizedItem = {
     ...item,
     category: normalizeCategory(item.category, item.name || item.item_name)
   };
   const postedByName = normalizedItem?.posted_by?.full_name || normalizedItem?.full_name || normalizedItem?.username || 'Unknown User';
-  const ownerId = Number(normalizedItem?.posted_by?.id || normalizedItem?.user_id);
-  const currentUserId = Number(user?.id);
-  const isOwnPost = Number.isFinite(ownerId) && Number.isFinite(currentUserId) && ownerId === currentUserId;
   const displayDescription = normalizedItem.category === 'NIC'
     ? maskNicInText(normalizedItem.description)
     : normalizedItem.description;
@@ -73,17 +65,8 @@ const FoundItemCard = ({ item, onClaim }) => {
           <small>Posted by <strong>{postedByName}</strong></small>
         </div>
 
-<<<<<<< HEAD
-        <div className={`card-actions ${isOwnPost ? 'single-action' : ''}`}>
-          {!isOwnPost && (
-=======
-        <div className="card-actions">
-          {isOwnItem ? (
-            <div className="own-item-notice">
-              <p>ℹ️ This is your item</p>
-            </div>
-          ) : (
->>>>>>> origin/develop
+        <div className={`card-actions${isOwnItem ? ' single-action' : ''}`}>
+          {!isOwnItem && (
             <button 
               onClick={handleClaimClick}
               className="btn btn-claim"
@@ -94,6 +77,7 @@ const FoundItemCard = ({ item, onClaim }) => {
           <button 
             onClick={handleReportClick}
             className="btn btn-report"
+            aria-label="Report item"
           >
             🚩 Report
           </button>

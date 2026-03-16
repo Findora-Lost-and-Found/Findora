@@ -7,6 +7,35 @@ import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT } from '../utils/itemDisplayUtils';
 
 const PAGE_SIZE = 4;
+const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
+
+const readFirst = (obj, keys, fallback = '') => {
+  for (const key of keys) {
+    const value = obj?.[key];
+    if (value !== undefined && value !== null && String(value).trim() !== '') {
+      return value;
+    }
+  }
+  return fallback;
+};
+
+const toImageUrl = (rawImage) => {
+  if (!rawImage) {
+    return 'https://via.placeholder.com/300x200?text=Item+Image';
+  }
+
+  const normalized = String(rawImage).trim().replace(/\\/g, '/');
+
+  if (!normalized || normalized === 'null' || normalized === 'undefined') {
+    return 'https://via.placeholder.com/300x200?text=Item+Image';
+  }
+
+  if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+    return normalized;
+  }
+
+  return `${API_ORIGIN}${normalized.startsWith('/') ? normalized : `/${normalized}`}`;
+};
 
 const FoundItems = () => {
   const location = useLocation();
@@ -32,14 +61,14 @@ const FoundItems = () => {
     description: item.description || '',
     location: item.location || 'Unknown location',
     date_found: item.date_found || item.date || item.created_at,
-    image: item.image || (item.image_url ? `http://localhost:5000${item.image_url}` : 'https://via.placeholder.com/300x200?text=Item+Image'),
+    image: toImageUrl(readFirst(item, ['image', 'imageUrl', 'image_url'])),
     category: normalizeCategory(item.category, item.name || item.item_name),
     type: item.type || 'found',
     status: item.status || 'active',
     created_at: item.created_at || null,
     posted_time: item.posted_time || item.created_at || item.date_found || item.date || null,
     posted_by: item.posted_by || {
-      id: item.user_id,
+      id: item.userId || item.user_id,
       full_name: item.full_name || item.username || 'Unknown User'
     }
   });
