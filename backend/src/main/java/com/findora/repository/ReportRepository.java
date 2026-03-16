@@ -13,4 +13,5 @@ import org.springframework.stereotype.Repository;
 public interface ReportRepository extends JpaRepository<Report, Long> {
     Page<Report> findByStatus(Report.ReportStatus status, Pageable pageable);
     Page<Report> findByReporterId(Long reporterId, Pageable pageable);
+    long countByStatus(Report.ReportStatus status);
 }
