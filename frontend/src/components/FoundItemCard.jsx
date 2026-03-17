@@ -74,6 +74,8 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
           <small>Posted by <strong>{postedByName}</strong></small>
         </div>
 
+        <div className={`card-actions${isOwnItem ? ' single-action' : ''}`}>
+          {!isOwnItem && (
         <div className="card-actions">
           {isOwnItem ? (
             isAlreadyHandedOver ? (
@@ -100,6 +102,7 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
           <button 
             onClick={handleReportClick}
             className="btn btn-report"
+            aria-label="Report item"
           >
             🚩 Report
           </button>

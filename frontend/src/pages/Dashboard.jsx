@@ -5,6 +5,8 @@ import { itemsAPI, claimsAPI, securityAPI } from '../services/api';
 import { toast } from 'react-toastify';
 import PostModal from '../components/PostModal';
 import FoundItemCard from '../components/FoundItemCard';
+import PostModal from '../components/PostModal';
+import { claimsAPI, itemsAPI } from '../services/api';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
 
@@ -101,7 +103,7 @@ const Dashboard = () => {
             image: item.image || (item.image_url ? `http://localhost:8080${item.image_url}` : 'https://via.placeholder.com/300x200?text=Item+Image'),
             category: normalizeCategory(item.category, item.name || item.item_name),
             posted_by: item.posted_by || {
-              id: item.user_id,
+              id: item.userId || item.user_id,
               full_name: item.full_name || item.username || 'Unknown User'
             }
           }));

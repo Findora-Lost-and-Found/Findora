@@ -9,6 +9,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class ItemDTO {
     private Long id;
+    private Long userId;               // Owner's user ID
     private String name;               // Maps from itemName in DB
     private String category;           // e.g., "NIC", "Wallet"
     private String type;               // e.g., "lost", "found"
@@ -43,6 +44,15 @@ public class ItemDTO {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    @JsonProperty("user_id")
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
     public String getName() {

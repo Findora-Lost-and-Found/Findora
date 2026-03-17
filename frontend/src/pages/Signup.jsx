@@ -35,7 +35,11 @@ const Signup = () => {
     const result = await register(registrationData);
 
     if (result.success) {
-      navigate(getHomeRouteForUser(result.user));
+      if (result.requiresVerification) {
+        navigate('/verify-email');
+      } else {
+        navigate(getHomeRouteForUser(result.user));
+      }
     }
 
     setLoading(false);
@@ -99,8 +103,6 @@ const Signup = () => {
             <select name="role" value={formData.role} onChange={handleChange} required>
               <option value="student">Student</option>
               <option value="staff">Staff</option>
-              <option value="security">Security Officer</option>
-              <option value="admin">Admin</option>
             </select>
           </div>
 

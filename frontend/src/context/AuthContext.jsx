@@ -51,7 +51,10 @@ export const AuthProvider = ({ children }) => {
       setToken(token);
       setUser(user);
       toast.success(response.data.message);
-      return { success: true, user };
+      const role = String(user?.role || '').toLowerCase();
+      const isVerified = Boolean(user?.is_verified ?? user?.isVerified);
+      const requiresVerification = (role === 'student' || role === 'staff') && !isVerified;
+      return { success: true, user, requiresVerification };
     } catch (error) {
       const message = getApiErrorMessage(error, 'Registration failed');
       toast.error(message);
@@ -84,7 +87,12 @@ export const AuthProvider = ({ children }) => {
 
   const verifyEmail = async (otp) => {
     try {
-      const response = await authAPI.verifyEmail(otp);
+      const response = await authAPI.verifyEmail({
+        otp,
+        username: user?.username,
+        email: user?.email,
+        userId: user?.id
+      });
       toast.success(response.data.message);
       await loadUser();
       return { success: true };
@@ -97,7 +105,10 @@ export const AuthProvider = ({ children }) => {
 
   const resendOTP = async () => {
     try {
-      const response = await authAPI.resendOTP();
+      const response = await authAPI.resendOTP({
+        username: user?.username,
+        email: user?.email
+      });
       toast.success(response.data.message);
       return { success: true };
     } catch (error) {
