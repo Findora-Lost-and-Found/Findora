@@ -42,10 +42,15 @@ const Navbar = () => {
           <div className="nav-menu">
             <Link to="/dashboard" className="nav-link">Dashboard</Link>
             
-            {(user.role === 'student' || user.role === 'staff') && (
+            {(user.role === 'student' || user.role === 'staff' || user.role === 'security') && (
               <>
                 <Link to="/lost-items" className="nav-link">My Lost Items</Link>
                 <Link to="/found-items" className="nav-link">Found Items</Link>
+              </>
+            )}
+
+            {(user.role === 'student' || user.role === 'staff') && (
+              <>
                 <Link to="/my-claims" className="nav-link">My Claims</Link>
               </>
             )}

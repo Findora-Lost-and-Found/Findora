@@ -4,6 +4,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,6 +25,8 @@ import com.findora.service.MatchService;
 @RestController
 @RequestMapping("/api/matches")
 public class MatchController {
+
+    private static final Logger log = LoggerFactory.getLogger(MatchController.class);
 
     private final MatchService matchService;
     private final UserRepository userRepository;
@@ -110,6 +114,9 @@ public class MatchController {
             claimPayload.put("status", claim.getStatus() != null ? claim.getStatus().name().toLowerCase() : null);
             claimPayload.put("claimed_at", claim.getClaimedAt());
 
+            // Keep match-claim logging here so OTP-protected claim traffic is easy to audit.
+            log.info("match claim created matchId={} userId={} claimId={}", matchId, currentUserId, claim.getId());
+
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                 "success", true,
                 "message", "Claim submitted successfully",
@@ -117,6 +124,7 @@ public class MatchController {
                 "claim", claimPayload
             ));
         } catch (IllegalArgumentException e) {
+            log.info("match claim rejected matchId={} reason={}", matchId, e.getMessage());
             return ResponseEntity.badRequest().body(Map.of(
                 "success", false,
                 "message", e.getMessage()
