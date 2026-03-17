@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
+import { getHomeRouteForUser } from '../utils/navigation';
 
 const VerifyEmail = () => {
   const [otp, setOtp] = useState('');
@@ -19,11 +20,11 @@ const VerifyEmail = () => {
 
     setLoading(true);
     try {
-      await verifyEmail(otp);
-      toast.success('Email verified successfully!');
-      navigate('/dashboard');
+      const result = await verifyEmail(otp);
+      toast.success(result?.message || 'Email verified successfully!');
+      navigate(getHomeRouteForUser(user));
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Invalid OTP');
+      toast.error(error.message || 'Invalid OTP');
     } finally {
       setLoading(false);
     }
@@ -82,7 +83,7 @@ const VerifyEmail = () => {
               }}
             />
             <small style={{ color: '#6B7280', display: 'block', marginTop: '0.5rem' }}>
-              OTP expires in 10 minutes
+              OTP expires in 24 hours
             </small>
           </div>
 

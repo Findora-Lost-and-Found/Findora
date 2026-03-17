@@ -8,7 +8,9 @@ const BankCardClaim = ({ item, onSubmit, onCancel }) => {
     location3: '',
     fromTime: '',
     toTime: '',
-    cvv: ''
+    cvv: '',
+    foundFromDate: '',
+    foundToDate: ''
   });
 
   const handleCollectClick = () => {
@@ -23,6 +25,10 @@ const BankCardClaim = ({ item, onSubmit, onCancel }) => {
   const handleSubmit = () => {
     if (!formData.location1.trim() || !formData.fromTime || !formData.toTime) {
       alert('Please fill in all required fields');
+      return;
+    }
+    if (!formData.foundFromDate) {
+      alert('Please enter the date you lost the item');
       return;
     }
     onSubmit({ ...formData, itemId: item.id });
@@ -104,6 +110,30 @@ const BankCardClaim = ({ item, onSubmit, onCancel }) => {
                   type="time"
                   name="toTime"
                   value={formData.toTime}
+                  onChange={handleInputChange}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label className="required">When was the item found? (approximate date range)</label>
+            <div className="form-row">
+              <div>
+                <label style={{ fontSize: '0.9rem' }}>From Date</label>
+                <input
+                  type="date"
+                  name="foundFromDate"
+                  value={formData.foundFromDate}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.9rem' }}>To Date</label>
+                <input
+                  type="date"
+                  name="foundToDate"
+                  value={formData.foundToDate}
                   onChange={handleInputChange}
                 />
               </div>

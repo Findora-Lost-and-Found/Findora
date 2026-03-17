@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { toast } from 'react-toastify';
+import { claimsAPI } from '../services/api';
 import './ClaimModal.css';
 import NICClaim from './claims/NICClaim';
 import IDClaim from './claims/IDClaim';
@@ -13,23 +15,7 @@ const ClaimModal = ({ isOpen, onClose, item }) => {
   const [currentStep, setCurrentStep] = useState('select'); // select, form, otp
   const [generatedOTP, setGeneratedOTP] = useState('');
   const [claimData, setClaimData] = useState(null);
-  const [claimError, setClaimError] = useState('');
-  const [claimLoading, setClaimLoading] = useState(false);
-
-  const submitClaim = async (userData) => {
-    setClaimError('');
-    setClaimLoading(true);
-    try {
-      const response = await claimsAPI.create(item.id);
-      setClaimData(userData);
-      setGeneratedOTP(response.data.otp);
-      setCurrentStep('otp');
-    } catch (error) {
-      setClaimError(error.response?.data?.message || 'Failed to submit claim. Please try again.');
-    } finally {
-      setClaimLoading(false);
-    }
-  };
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -44,13 +30,42 @@ const ClaimModal = ({ isOpen, onClose, item }) => {
 
   if (!isOpen || !item) return null;
 
+  const handleClaimSubmit = async (userData) => {
+    const itemId = userData?.itemId || item?.id;
+    if (!itemId) {
+      toast.error('Unable to submit claim. Missing item ID.');
+      return;
+    }
+
+    const { itemId: _itemId, ...claimMeta } = userData || {};
+
+    setSubmitting(true);
+    try {
+      const response = await claimsAPI.create(itemId, Object.keys(claimMeta).length > 0 ? claimMeta : undefined);
+      const apiOtp = response.data?.otp || response.data?.claim?.otp;
+
+      if (!apiOtp) {
+        throw new Error('OTP not returned by server');
+      }
+
+      setClaimData(userData);
+      setGeneratedOTP(String(apiOtp));
+      setCurrentStep('otp');
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to submit claim';
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const getCategoryComponent = () => {
     switch (item.category?.toLowerCase()) {
       case 'nic':
         return (
           <NICClaim
             item={item}
-            onSubmit={submitClaim}
+            onSubmit={handleClaimSubmit}
             onCancel={() => setCurrentStep('select')}
           />
         );
@@ -60,7 +75,7 @@ const ClaimModal = ({ isOpen, onClose, item }) => {
           <IDClaim
             item={item}
             idType={item.category}
-            onSubmit={submitClaim}
+            onSubmit={handleClaimSubmit}
             onCancel={() => setCurrentStep('select')}
           />
         );
@@ -69,7 +84,7 @@ const ClaimModal = ({ isOpen, onClose, item }) => {
         return (
           <BankCardClaim
             item={item}
-            onSubmit={submitClaim}
+            onSubmit={handleClaimSubmit}
             onCancel={() => setCurrentStep('select')}
           />
         );
@@ -79,7 +94,7 @@ const ClaimModal = ({ isOpen, onClose, item }) => {
         return (
           <PurseClaim
             item={item}
-            onSubmit={submitClaim}
+            onSubmit={handleClaimSubmit}
             onCancel={() => setCurrentStep('select')}
           />
         );
@@ -87,7 +102,7 @@ const ClaimModal = ({ isOpen, onClose, item }) => {
         return (
           <OtherItemClaim
             item={item}
-            onSubmit={submitClaim}
+            onSubmit={handleClaimSubmit}
             onCancel={() => setCurrentStep('select')}
           />
         );
@@ -112,8 +127,9 @@ const ClaimModal = ({ isOpen, onClose, item }) => {
               <button
                 onClick={() => setCurrentStep('form')}
                 className="btn btn-primary"
+                disabled={submitting}
               >
-                Continue to Claim
+                {submitting ? 'Submitting...' : 'Continue to Claim'}
               </button>
             </div>
           )}

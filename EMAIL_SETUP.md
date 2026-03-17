@@ -23,29 +23,38 @@ The phone number field during signup is **optional** and only used for contact i
 6. Click **Generate**
 7. **Copy the 16-character password** (format: xxxx xxxx xxxx xxxx)
 
-### Step 3: Update .env File
+### Step 3: Set Mail Credentials via Environment Variables
 
-Open `backend/.env` and update:
+The app now reads SMTP credentials from environment variables.
 
-```env
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USER=your_actual_gmail@gmail.com
-EMAIL_PASSWORD=xxxx xxxx xxxx xxxx
+Set these before starting backend:
+
+```powershell
+$env:MAIL_USERNAME="your_actual_gmail@gmail.com"
+$env:MAIL_PASSWORD="your_16_char_app_password"
 ```
 
-**Replace:**
-- `your_actual_gmail@gmail.com` with your Gmail address
-- `xxxx xxxx xxxx xxxx` with the app password from Step 2
+In [backend/src/main/resources/application.properties](backend/src/main/resources/application.properties), mail settings are:
+
+```properties
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=${MAIL_USERNAME:}
+spring.mail.password=${MAIL_PASSWORD:}
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+spring.mail.properties.mail.smtp.starttls.required=true
+```
+
+Do not hardcode real credentials in source files.
 
 ### Step 4: Restart Backend Server
 
-After updating .env, restart the backend:
+After setting environment variables, restart the backend:
 
-```powershell
-# Stop the current server (Ctrl+C)
-# Then restart:
-npm run dev
+```bash
+cd backend
+mvn spring-boot:run
 ```
 
 ## Testing Email OTP
@@ -59,7 +68,7 @@ npm run dev
 ## Common Issues
 
 ### "Error sending email"
-- Check if EMAIL_USER and EMAIL_PASSWORD are correct
+- Check if `spring.mail.username` and `spring.mail.password` are correct
 - Make sure you used an App Password, not your regular password
 - Verify 2FA is enabled on your Google account
 
@@ -70,7 +79,7 @@ npm run dev
 - Verify the email address is correct
 
 ### "Invalid OTP"
-- OTP expires after 10 minutes
+- OTP expires after 24 hours
 - Make sure you're entering the most recent OTP
 - Try requesting a new OTP
 
@@ -84,18 +93,18 @@ For development/testing, you can use services like:
 
 1. Sign up at https://mailtrap.io
 2. Get SMTP credentials from your inbox
-3. Update .env:
+3. Update `backend/src/main/resources/application.properties`:
 
-```env
-EMAIL_HOST=smtp.mailtrap.io
-EMAIL_PORT=2525
-EMAIL_USER=your_mailtrap_username
-EMAIL_PASSWORD=your_mailtrap_password
+```properties
+spring.mail.host=smtp.mailtrap.io
+spring.mail.port=2525
+spring.mail.username=your_mailtrap_username
+spring.mail.password=your_mailtrap_password
 ```
 
 ## Security Notes
 
-- Never commit your .env file to Git
+- Do not commit real mail credentials or secrets to version control
 - App passwords are safer than regular passwords
 - Change app passwords regularly
 - Revoke unused app passwords

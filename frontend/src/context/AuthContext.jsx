@@ -24,6 +24,12 @@ export const AuthProvider = ({ children }) => {
     }
   });
 
+  const getApiErrorMessage = (error, fallbackMessage) => {
+    const apiError = error.response?.data;
+    const validationMessage = apiError?.errors?.[0]?.msg;
+    return validationMessage || apiError?.message || fallbackMessage;
+  };
+
   useEffect(() => {
     if (token) {
       loadUser();
@@ -56,9 +62,12 @@ export const AuthProvider = ({ children }) => {
       setToken(token);
       setUser(user);
       toast.success(response.data.message);
-      return { success: true };
+      const role = String(user?.role || '').toLowerCase();
+      const isVerified = Boolean(user?.is_verified ?? user?.isVerified);
+      const requiresVerification = (role === 'student' || role === 'staff') && !isVerified;
+      return { success: true, user, requiresVerification };
     } catch (error) {
-      const message = error.response?.data?.message || 'Registration failed';
+      const message = getApiErrorMessage(error, 'Registration failed');
       toast.error(message);
       return { success: false, message };
     }
@@ -76,9 +85,9 @@ export const AuthProvider = ({ children }) => {
       setToken(token);
       setUser(user);
       toast.success('Login successful');
-      return { success: true };
+      return { success: true, user };
     } catch (error) {
-      const message = error.response?.data?.message || 'Login failed';
+      const message = getApiErrorMessage(error, 'Login failed');
       toast.error(message);
       return { success: false, message };
     }
@@ -97,20 +106,27 @@ export const AuthProvider = ({ children }) => {
 
   const verifyEmail = async (otp) => {
     try {
-      const response = await authAPI.verifyEmail(otp);
-      toast.success(response.data.message);
+      const response = await authAPI.verifyEmail({
+        otp,
+        username: user?.username,
+        email: user?.email,
+        userId: user?.id
+      });
       await loadUser();
-      return { success: true };
+      return { success: true, message: response.data?.message || 'Email verified successfully' };
     } catch (error) {
       const message = error.response?.data?.message || 'Verification failed';
-      toast.error(message);
-      return { success: false, message };
+      // Reject so callers can render the correct failure UI instead of assuming success.
+      throw new Error(message);
     }
   };
 
   const resendOTP = async () => {
     try {
-      const response = await authAPI.resendOTP();
+      const response = await authAPI.resendOTP({
+        username: user?.username,
+        email: user?.email
+      });
       toast.success(response.data.message);
       return { success: true };
     } catch (error) {
