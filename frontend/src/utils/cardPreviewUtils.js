@@ -254,6 +254,7 @@ export const buildIdentityPreviewImage = (item = {}) => {
     const isExplicitStaff = /staff\s*id\s*:/i.test(description)
       || /\bstaff\s+id\b/i.test(itemName)
       || /\bstaff\s*-/.test(itemName.toLowerCase())
+      || /^sf[-\s]?\d+/i.test(idNumber)
       || /staff/i.test(idTypeFromDescription);
     const idType = isExplicitStaff ? 'STAFF ID' : 'STUDENT ID';
     return buildStudentIdSvg({ name, idNumber, faculty, idType });

@@ -14,7 +14,7 @@ const getIdentityBadgeLabel = (normalizedCategory, item) => {
   if (normalizedCategory !== 'Student ID') return normalizedCategory;
 
   const combinedText = `${item?.name || item?.item_name || ''} ${item?.description || ''}`;
-  return /id\s*type\s*:\s*staff|staff\s*id/i.test(combinedText) ? 'STAFF ID' : 'STUDENT ID';
+  return /id\s*type\s*:\s*staff|staff\s*id|\bsf[-\s]?\d+/i.test(combinedText) ? 'STAFF ID' : 'STUDENT ID';
 };
 
 const ItemCard = ({ item, showActions = false, onDelete }) => {

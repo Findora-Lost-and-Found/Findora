@@ -45,3 +45,7 @@ pnpm-debug.log*
 # Uploaded/generated local files
 backend/uploads/*
 !backend/uploads/.gitkeep
+
+# Local developer tools and runtimes
+.tools/
+.tools/**
