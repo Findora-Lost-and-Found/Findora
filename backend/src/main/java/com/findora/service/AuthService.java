@@ -275,7 +275,8 @@ public class AuthService {
             user.getIsVerified(),
             user.getIsApproved(),
             user.getIsBanned(),
-            user.getIsSuspended()
+            user.getIsSuspended(),
+            user.getCreatedAt() == null ? null : user.getCreatedAt().toString()
         );
     }
 }

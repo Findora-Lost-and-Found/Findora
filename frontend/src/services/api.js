@@ -86,6 +86,7 @@ export const adminAPI = {
   getUsers: (params) => api.get('/admin/users', { params }),
   getPendingApprovals: (params) => api.get('/admin/pending-approvals', { params }),
   approveUser: (id) => api.put(`/admin/approve-user/${id}`),
+  declineUser: (id) => api.put(`/admin/decline-user/${id}`),
   banUser: (id, banned) => api.put(`/admin/ban-user/${id}`, { banned }),
   suspendUser: (id, suspended) => api.put(`/admin/suspend-user/${id}`, { suspended }),
   getReports: (params) => api.get('/admin/reports', { params }),

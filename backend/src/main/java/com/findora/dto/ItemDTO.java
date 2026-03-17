@@ -102,6 +102,7 @@ public class ItemDTO {
         this.status = status;
     }
 
+    @JsonProperty("image_url")
     public String getImageUrl() {
         return imageUrl;
     }
@@ -132,19 +133,9 @@ public class ItemDTO {
         return name;
     }
 
-    @JsonProperty("image_url")
-    public String getImageUrlLegacy() {
-        return imageUrl;
-    }
-
     @JsonProperty("created_at")
     public String getCreatedAtLegacy() {
         return createdAt;
-    }
-
-    @JsonProperty("user_id")
-    public Long getUserIdLegacy() {
-        return userId;
     }
 
     @JsonProperty("full_name")

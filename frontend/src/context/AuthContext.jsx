@@ -93,13 +93,12 @@ export const AuthProvider = ({ children }) => {
         email: user?.email,
         userId: user?.id
       });
-      toast.success(response.data.message);
       await loadUser();
-      return { success: true };
+      return { success: true, message: response.data?.message || 'Email verified successfully' };
     } catch (error) {
       const message = error.response?.data?.message || 'Verification failed';
-      toast.error(message);
-      return { success: false, message };
+      // Reject so callers can render the correct failure UI instead of assuming success.
+      throw new Error(message);
     }
   };
 
