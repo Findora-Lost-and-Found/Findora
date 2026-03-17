@@ -1,9 +1,9 @@
-import React from 'react';
+import { Component, StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
 
-class RootErrorBoundary extends React.Component {
+class RootErrorBoundary extends Component {
   constructor(props) {
     super(props);
     this.state = { hasError: false, message: '' };
@@ -39,9 +39,9 @@ if (!container) {
 }
 
 createRoot(container).render(
-  <React.StrictMode>
+  <StrictMode>
     <RootErrorBoundary>
       <App />
     </RootErrorBoundary>
-  </React.StrictMode>
+  </StrictMode>
 );

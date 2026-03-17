@@ -5,24 +5,23 @@ export const STUDENT_STAFF_ID_HELPER_TEXT = 'Allowed format: 6 digits + 1 letter
 
 export const sanitizeStudentStaffIdInput = (value = '') => {
   const raw = String(value).toUpperCase().replace(/\s+/g, '');
-  let sanitized = '';
+  let digits = '';
+  let letter = '';
 
+  // Extract digits and letter, limiting to max 6 digits and 1 letter
   for (const char of raw) {
-    if (sanitized.length < 6 && /\d/.test(char)) {
-      sanitized += char;
-      continue;
-    }
-
-    if (sanitized.length === 6 && /[A-Z]/.test(char)) {
-      sanitized += char;
-      break;
+    if (/\d/.test(char) && digits.length < 6) {
+      digits += char;
+    } else if (/[A-Z]/.test(char) && letter.length === 0) {
+      letter = char;
     }
   }
 
-  return sanitized;
+  // Combine: digits first, then letter
+  return digits + letter;
 };
 
-export const normalizeStudentStaffId = (value = '') => sanitizeStudentStaffIdInput(value);
+export const normalizeStudentStaffId = (value = '') => String(value).toUpperCase().replace(/\s+/g, '');
 
 export const isValidStudentStaffId = (value = '') => {
   return STUDENT_STAFF_ID_REGEX.test(normalizeStudentStaffId(value));

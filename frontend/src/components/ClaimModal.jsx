@@ -9,7 +9,6 @@ import BankCardClaim from './claims/BankCardClaim';
 import PurseClaim from './claims/PurseClaim';
 import OtherItemClaim from './claims/OtherItemClaim';
 import OTPDisplay from './OTPDisplay';
-import { claimsAPI } from '../services/api';
 
 const ClaimModal = ({ isOpen, onClose, item }) => {
   const [currentStep, setCurrentStep] = useState('select'); // select, form, otp
