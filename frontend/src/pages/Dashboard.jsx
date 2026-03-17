@@ -5,6 +5,7 @@ import { itemsAPI, claimsAPI, securityAPI } from '../services/api';
 import { toast } from 'react-toastify';
 import PostModal from '../components/PostModal';
 import FoundItemCard from '../components/FoundItemCard';
+import SecurityDashboard from './SecurityDashboard';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
 
@@ -73,6 +74,11 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (user) {
+      if (user.role === 'security') {
+        setLoading(false);
+        return;
+      }
+
       loadDashboardData();
     }
   }, [user]);
@@ -167,6 +173,10 @@ const Dashboard = () => {
 
   if (loading) {
     return <div className="loading">Loading...</div>;
+  }
+
+  if (user?.role === 'security') {
+    return <SecurityDashboard />;
   }
 
   return (

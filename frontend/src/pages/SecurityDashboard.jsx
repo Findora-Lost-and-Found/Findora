@@ -1,7 +1,7 @@
 import StudentDashboard from './StudentDashboard';
 
 const SecurityDashboard = () => {
-  return <StudentDashboard />;
+  return <StudentDashboard postRoles={['student', 'staff', 'security']} />;
 };
 
 export default SecurityDashboard;

@@ -90,24 +90,13 @@ const LostItems = () => {
     }
   };
 
-  const handleClaimExistingFlow = async (match) => {
-    try {
-      const response = await matchesAPI.claimUsingExistingFlow(match);
-      const otp = response.data?.otp || response.data?.claim?.otp;
-      toast.success(otp ? `Claim created. OTP: ${otp}` : 'Claim created successfully');
-      await loadMatches();
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to create claim');
-    }
-  };
-
   const handleOtpInput = (matchId, value) => {
     setOtpInputs((prev) => ({ ...prev, [matchId]: value }));
   };
 
-  const handleClaimViaOtp = async (matchId) => {
+  const handleClaimViaOtp = async (matchId, providedOtp) => {
     try {
-      const otp = String(otpInputs[matchId] || '').trim();
+      const otp = String(providedOtp ?? otpInputs[matchId] ?? '').trim();
       if (!otp) {
         toast.error('Enter OTP first');
         return;
@@ -182,7 +171,6 @@ const LostItems = () => {
                       match={match}
                       otpValue={otpInputs[match.matchId]}
                       onOtpChange={handleOtpInput}
-                      onClaimExisting={handleClaimExistingFlow}
                       onClaimViaOtp={handleClaimViaOtp}
                       onResendOtp={handleResendOtp}
                     />

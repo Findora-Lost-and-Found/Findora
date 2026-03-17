@@ -1,7 +1,7 @@
 export const getHomeRouteForRole = (role) => {
   switch (role) {
     case 'security':
-      return '/security';
+      return '/dashboard';
     case 'admin':
       return '/admin/dashboard';
     case 'student':
