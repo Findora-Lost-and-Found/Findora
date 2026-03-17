@@ -46,6 +46,6 @@ pnpm-debug.log*
 backend/uploads/*
 !backend/uploads/.gitkeep
 
-# Local tool runtimes (too large for GitHub)
-.tools/runtime/
-.tools/runtime/**
+# Local developer tools (keep local only)
+.tools/
+.tools/**
