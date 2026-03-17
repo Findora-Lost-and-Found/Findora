@@ -28,6 +28,7 @@ const FoundItems = lazy(() => import('./pages/FoundItems'));
 const MyClaims = lazy(() => import('./pages/MyClaims'));
 
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const AdminReports = lazy(() => import('./pages/admin/AdminReports'));
 const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'));
 const AdminPendingApprovals = lazy(() => import('./pages/admin/AdminPendingApprovals'));
 const AdminItemsByStatus = lazy(() => import('./pages/admin/AdminItemsByStatus'));
@@ -68,13 +69,13 @@ function App() {
               {/* Item Routes */}
               <Route path="/report-lost" element={<PrivateRoute roles={['student', 'staff', 'security']}><ReportLostItem /></PrivateRoute>} />
               <Route path="/report-found" element={<PrivateRoute roles={['student', 'staff', 'security']}><ReportFoundItem /></PrivateRoute>} />
-              <Route path="/report-post/:itemId" element={<PrivateRoute roles={['student', 'staff', 'security']}><ReportPost /></PrivateRoute>} />
+              <Route path="/report-post/:itemId" element={<PrivateRoute roles={['student', 'staff']}><ReportPost /></PrivateRoute>} />
               <Route path="/lost-items" element={<PrivateRoute roles={['student', 'staff', 'security']}><LostItems /></PrivateRoute>} />
               <Route path="/found-items" element={<PrivateRoute roles={['student', 'staff', 'security']}><FoundItems /></PrivateRoute>} />
               <Route path="/my-claims" element={<PrivateRoute roles={['student', 'staff']}><MyClaims /></PrivateRoute>} />
 
               {/* Security Routes */}
-              <Route path="/security" element={<PrivateRoute roles={['security', 'admin']}><SecurityDashboard /></PrivateRoute>} />
+              <Route path="/security" element={<PrivateRoute roles={['security', 'admin']}><Navigate to="/dashboard" replace /></PrivateRoute>} />
               <Route path="/security/dashboard" element={<PrivateRoute roles={['security', 'admin']}><SecurityDashboard /></PrivateRoute>} />
               <Route path="/security/receive" element={<PrivateRoute roles={['security', 'admin']}><SecurityReceiveItems /></PrivateRoute>} />
               <Route path="/security/pending-claims" element={<PrivateRoute roles={['security', 'admin']}><SecurityPendingClaims /></PrivateRoute>} />
@@ -85,6 +86,7 @@ function App() {
               <Route path="/admin-panel" element={<PrivateRoute roles={['admin']}><AdminDashboard /></PrivateRoute>} />
               <Route path="/admin/users" element={<PrivateRoute roles={['admin']}><AdminUsers /></PrivateRoute>} />
               <Route path="/admin/pending-approvals" element={<PrivateRoute roles={['admin']}><AdminPendingApprovals /></PrivateRoute>} />
+              <Route path="/admin/reports" element={<PrivateRoute roles={['admin']}><AdminReports /></PrivateRoute>} />
               <Route path="/admin/items" element={<PrivateRoute roles={['admin']}><Navigate to="/admin/items/found" replace /></PrivateRoute>} />
               <Route path="/admin/items/:section" element={<PrivateRoute roles={['admin']}><AdminItemsByStatus /></PrivateRoute>} />
             </Routes>

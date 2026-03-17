@@ -221,7 +221,7 @@ public class ItemService {
      * - createdAt -> ISO 8601 string
      */
     private ItemDTO convertToDTO(Item item) {
-        return new ItemDTO(
+        ItemDTO dto = new ItemDTO(
             item.getId(),
             item.getItemName(),
             toApiCategory(item.getCategory()),
@@ -236,6 +236,8 @@ public class ItemService {
             item.getUserId(),
             item.getUser() != null ? item.getUser().getFullName() : null
         );
+        dto.setUserId(item.getUserId());
+        return dto;
     }
 
     private ItemCategory parseCategory(String category) {
