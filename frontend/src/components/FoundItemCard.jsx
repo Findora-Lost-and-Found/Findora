@@ -22,19 +22,17 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
   
   // Check if current user owns this item
   const isOwnItem = currentUser && (currentUser.id === normalizedItem?.posted_by?.id || currentUser.id === normalizedItem?.user_id);
-<<<<<<< HEAD
 
-    // Determine whether there is a real uploaded photo
-    const hasRealImage =
-      normalizedItem.image &&
-      !normalizedItem.image.includes('placeholder.com') &&
-      !normalizedItem.image.includes('via.placeholder');
-=======
+  // Determine whether there is a real uploaded photo.
+  const hasRealImage =
+    normalizedItem.image &&
+    !normalizedItem.image.includes('placeholder.com') &&
+    !normalizedItem.image.includes('via.placeholder');
+
   const normalizedStatus = useMemo(() => String(normalizedItem?.status || '').toUpperCase(), [normalizedItem?.status]);
   const isAlreadyHandedOver = normalizedStatus === 'HANDOVER_REQUESTED'
     || normalizedStatus === 'HELD_BY_SECURITY'
     || normalizedStatus === 'HANDED_TO_SECURITY';
->>>>>>> b8d0cb7e513d1e7c5f80c86f8dcac51cc2a2893b
   
   const formatDate = (dateString) => {
     const options = { month: 'short', day: 'numeric', year: 'numeric' };

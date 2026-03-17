@@ -35,9 +35,13 @@ const Navbar = () => {
   return (
     <nav className="navbar">
       <div className="nav-container">
-        <Link to="/" className="nav-logo">
-          Findora
-        </Link>
+        {user ? (
+          <span className="nav-logo">Findora</span>
+        ) : (
+          <Link to="/" className="nav-logo">
+            Findora
+          </Link>
+        )}
 
         {user && (
           <div className="nav-menu">
