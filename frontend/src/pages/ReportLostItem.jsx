@@ -2,6 +2,18 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { itemsAPI } from '../services/api';
 import { toast } from 'react-toastify';
+import {
+  sanitizeNicInput,
+  isValidNic,
+  NIC_VALIDATION_MESSAGE,
+  NIC_HELPER_TEXT
+} from '../utils/nicUtils';
+import {
+  sanitizeStudentStaffIdInput,
+  isValidStudentStaffId,
+  STUDENT_STAFF_ID_VALIDATION_MESSAGE,
+  STUDENT_STAFF_ID_HELPER_TEXT
+} from '../utils/studentStaffIdUtils';
 import './ReportLostItem.css';
 
 const CATEGORY_OPTIONS = ['NIC', 'Student / Staff ID', 'Bank Card', 'Purse / Wallet', 'Others'];
@@ -98,6 +110,27 @@ const ReportLostItem = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+
+    if (name === 'nicNumber') {
+      const nicForTyping = String(value).replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 12);
+      setFormData((prev) => ({ ...prev, nicNumber: nicForTyping }));
+      return;
+    }
+
+    if (name === 'studentOrStaffId') {
+      const idForTyping = String(value).replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 7);
+      setFormData((prev) => ({ ...prev, studentOrStaffId: idForTyping }));
+      return;
+    }
+
+    if (name === 'purseIdNumber') {
+      const compact = String(value).toUpperCase().replace(/\s+/g, '');
+      const asNic = sanitizeNicInput(compact);
+      const nextValue = compact.length <= 7 ? sanitizeStudentStaffIdInput(compact) : asNic;
+      setFormData((prev) => ({ ...prev, purseIdNumber: nextValue }));
+      return;
+    }
+
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -105,21 +138,55 @@ const ReportLostItem = () => {
     setFormData((prev) => ({ ...prev, [name]: file || null }));
   };
 
+  const isFutureDate = (dateValue) => {
+    if (!dateValue) return false;
+    const selectedDate = new Date(dateValue);
+    if (Number.isNaN(selectedDate.getTime())) return false;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    selectedDate.setHours(0, 0, 0, 0);
+
+    return selectedDate > today;
+  };
+
+  const isFutureTimeForDate = (dateValue, timeValue) => {
+    if (!dateValue || !timeValue) return false;
+
+    const [hours, minutes] = String(timeValue).split(':').map(Number);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return false;
+
+    const selectedDateTime = new Date(dateValue);
+    if (Number.isNaN(selectedDateTime.getTime())) return false;
+
+    selectedDateTime.setHours(hours, minutes, 0, 0);
+    return selectedDateTime > new Date();
+  };
+
   const validate = () => {
     const nextErrors = {};
+    const normalizedNic = sanitizeNicInput(formData.nicNumber);
+    const normalizedStudentStaffId = sanitizeStudentStaffIdInput(formData.studentOrStaffId);
+    const normalizedPurseId = String(formData.purseIdNumber).trim().toUpperCase();
+    const purseIdLooksLikeStudentStaff = normalizedPurseId.length <= 7;
+    const purseIdValid = purseIdLooksLikeStudentStaff
+      ? isValidStudentStaffId(normalizedPurseId)
+      : isValidNic(normalizedPurseId);
 
     if (!category) nextErrors.category = 'Please select a category.';
 
     if (category === 'NIC') {
       if (!formData.nicName.trim()) nextErrors.nicName = 'Name is required.';
       if (!formData.nicNumber.trim()) nextErrors.nicNumber = 'NIC Number is required.';
-      else if (!/^\d{12}$/.test(formData.nicNumber.trim())) nextErrors.nicNumber = 'NIC Number must be exactly 12 digits.';
+      else if (!isValidNic(normalizedNic)) nextErrors.nicNumber = NIC_VALIDATION_MESSAGE;
     }
 
     if (category === 'Student / Staff ID') {
       if (!formData.idName.trim()) nextErrors.idName = 'Name is required.';
       if (!formData.studentOrStaffId.trim()) nextErrors.studentOrStaffId = 'Student ID or Staff ID is required.';
-      else if (!/^\d{6}[A-Z]$/.test(formData.studentOrStaffId.trim())) nextErrors.studentOrStaffId = 'ID must be 6 digits followed by 1 letter (e.g. 240574S).';
+      else if (!isValidStudentStaffId(normalizedStudentStaffId)) {
+        nextErrors.studentOrStaffId = STUDENT_STAFF_ID_VALIDATION_MESSAGE;
+      }
     }
 
     if (category === 'Bank Card') {
@@ -128,20 +195,37 @@ const ReportLostItem = () => {
       if (!/^\d{4}$/.test(formData.cardLast4.trim())) nextErrors.cardLast4 = 'Last 4 digits must be exactly 4 numbers.';
       if (!formData.bankLocation1.trim()) nextErrors.bankLocation1 = 'Field 1 is required.';
       if (!formData.bankDateLost) nextErrors.bankDateLost = 'Date is required.';
+      else if (isFutureDate(formData.bankDateLost)) nextErrors.bankDateLost = 'Invalid date. Please select today or a past date.';
       if (!formData.bankFromTime) nextErrors.bankFromTime = 'From time is required.';
+      else if (isFutureTimeForDate(formData.bankDateLost, formData.bankFromTime)) {
+        nextErrors.bankFromTime = 'Invalid time. Please select the past time';
+      }
       if (!formData.bankToTime) nextErrors.bankToTime = 'To time is required.';
+      else if (isFutureTimeForDate(formData.bankDateLost, formData.bankToTime)) {
+        nextErrors.bankToTime = 'Invalid time. Please select the past time';
+      }
     }
 
     if (category === 'Purse / Wallet') {
       if (purseOption === 'with-id') {
         if (!formData.purseIdNumber.trim()) nextErrors.purseIdNumber = 'NIC number or Student/Staff ID is required.';
+        else if (!purseIdValid) {
+          nextErrors.purseIdNumber = 'Enter a valid NIC or Student/Staff ID.';
+        }
       }
 
       if (purseOption === 'without-id') {
         if (!formData.purseLocation1.trim()) nextErrors.purseLocation1 = 'Field 1 is required.';
         if (!formData.purseDateLost) nextErrors.purseDateLost = 'Date is required.';
+        else if (isFutureDate(formData.purseDateLost)) nextErrors.purseDateLost = 'Invalid date. Please select today or a past date.';
         if (!formData.purseFromTime) nextErrors.purseFromTime = 'From time is required.';
+        else if (isFutureTimeForDate(formData.purseDateLost, formData.purseFromTime)) {
+          nextErrors.purseFromTime = 'Invalid time. Please select the past time';
+        }
         if (!formData.purseToTime) nextErrors.purseToTime = 'To time is required.';
+        else if (isFutureTimeForDate(formData.purseDateLost, formData.purseToTime)) {
+          nextErrors.purseToTime = 'Invalid time. Please select the past time';
+        }
         if (!formData.purseItems1.trim()) nextErrors.purseItems1 = 'At least one item is required.';
       }
     }
@@ -149,8 +233,15 @@ const ReportLostItem = () => {
     if (category === 'Others') {
       if (!formData.otherLocation1.trim()) nextErrors.otherLocation1 = 'Field 1 is required.';
       if (!formData.otherDateLost) nextErrors.otherDateLost = 'Date is required.';
+      else if (isFutureDate(formData.otherDateLost)) nextErrors.otherDateLost = 'Invalid date. Please select today or a past date.';
       if (!formData.otherFromTime) nextErrors.otherFromTime = 'From time is required.';
+      else if (isFutureTimeForDate(formData.otherDateLost, formData.otherFromTime)) {
+        nextErrors.otherFromTime = 'Invalid time. Please select the past time';
+      }
       if (!formData.otherToTime) nextErrors.otherToTime = 'To time is required.';
+      else if (isFutureTimeForDate(formData.otherDateLost, formData.otherToTime)) {
+        nextErrors.otherToTime = 'Invalid time. Please select the past time';
+      }
     }
 
     setErrors(nextErrors);
@@ -186,12 +277,12 @@ const ReportLostItem = () => {
 
     if (category === 'NIC') {
       item_name = `NIC - ${formData.nicName || 'Unknown'}`;
-      description = `NIC Number: ${formData.nicNumber}`;
+      description = `NIC Number: ${sanitizeNicInput(formData.nicNumber)}`;
     }
 
     if (category === 'Student / Staff ID') {
       item_name = `Student/Staff ID - ${formData.idName || 'Unknown'}`;
-      description = `ID Number: ${formData.studentOrStaffId}`;
+      description = `ID Number: ${sanitizeStudentStaffIdInput(formData.studentOrStaffId)}`;
     }
 
     if (category === 'Bank Card') {
@@ -205,7 +296,11 @@ const ReportLostItem = () => {
     if (category === 'Purse / Wallet') {
       item_name = 'Purse / Wallet';
       if (purseOption === 'with-id') {
-        description = `Claim with ID: ${formData.purseIdNumber}`;
+        const normalizedPurseId = String(formData.purseIdNumber).trim().toUpperCase();
+        const compactPurseId = normalizedPurseId.length <= 7
+          ? sanitizeStudentStaffIdInput(normalizedPurseId)
+          : sanitizeNicInput(normalizedPurseId);
+        description = `Claim with ID: ${compactPurseId}`;
       } else {
         description = `Items inside: ${[formData.purseItems1, formData.purseItems2, formData.purseItems3].filter(Boolean).join(', ')}`;
         location = [formData.purseLocation1, formData.purseLocation2, formData.purseLocation3].filter(Boolean).join(', ') || location;
@@ -290,7 +385,15 @@ const ReportLostItem = () => {
               </div>
               <div className="report-lost-form-group">
                 <label className="required">NIC Number</label>
-                <input name="nicNumber" value={formData.nicNumber} onChange={(e) => setFormData(prev => ({ ...prev, nicNumber: e.target.value.replace(/\D/g, '') }))} maxLength="12" inputMode="numeric" placeholder="e.g. 200445678123" />
+                <input
+                  name="nicNumber"
+                  value={formData.nicNumber}
+                  onChange={handleInputChange}
+                  maxLength="12"
+                  autoComplete="off"
+                  placeholder="e.g. 123456789V or 199001234567"
+                />
+                <small>{NIC_HELPER_TEXT}</small>
                 {errors.nicNumber && <p className="report-lost-error">{errors.nicNumber}</p>}
               </div>
             </div>
@@ -309,18 +412,12 @@ const ReportLostItem = () => {
                 <input
                   name="studentOrStaffId"
                   value={formData.studentOrStaffId}
-                  onChange={(e) => {
-                    const raw = e.target.value.toUpperCase();
-                    let result = '';
-                    for (let i = 0; i < raw.length && i < 7; i++) {
-                      if (i < 6 && /\d/.test(raw[i])) result += raw[i];
-                      else if (i === 6 && /[A-Z]/.test(raw[i])) result += raw[i];
-                    }
-                    setFormData(prev => ({ ...prev, studentOrStaffId: result }));
-                  }}
+                  onChange={handleInputChange}
                   maxLength="7"
+                  autoComplete="off"
                   placeholder="e.g. 240574S"
                 />
+                <small>{STUDENT_STAFF_ID_HELPER_TEXT}</small>
                 {errors.studentOrStaffId && <p className="report-lost-error">{errors.studentOrStaffId}</p>}
               </div>
             </div>
@@ -382,7 +479,7 @@ const ReportLostItem = () => {
 
                 <div className="report-lost-form-group">
                   <label className="required">What date did you lose it?</label>
-                  <input type="date" name="bankDateLost" value={formData.bankDateLost} onChange={handleInputChange} />
+                  <input type="date" name="bankDateLost" max={getDefaultDate()} value={formData.bankDateLost} onChange={handleInputChange} />
                   {errors.bankDateLost && <p className="report-lost-error">{errors.bankDateLost}</p>}
                 </div>
 
@@ -454,7 +551,14 @@ const ReportLostItem = () => {
               {purseOption === 'with-id' && (
                 <div className="report-lost-form-group">
                   <label className="required">Enter NIC number or Student/Staff ID</label>
-                  <input name="purseIdNumber" value={formData.purseIdNumber} onChange={handleInputChange} />
+                  <input
+                    name="purseIdNumber"
+                    value={formData.purseIdNumber}
+                    onChange={handleInputChange}
+                    maxLength="12"
+                    autoComplete="off"
+                    placeholder="NIC or Student/Staff ID"
+                  />
                   {errors.purseIdNumber && <p className="report-lost-error">{errors.purseIdNumber}</p>}
                 </div>
               )}
@@ -478,7 +582,7 @@ const ReportLostItem = () => {
 
                   <div className="report-lost-form-group">
                     <label className="required">What date did you lose it?</label>
-                    <input type="date" name="purseDateLost" value={formData.purseDateLost} onChange={handleInputChange} />
+                    <input type="date" name="purseDateLost" max={getDefaultDate()} value={formData.purseDateLost} onChange={handleInputChange} />
                     {errors.purseDateLost && <p className="report-lost-error">{errors.purseDateLost}</p>}
                   </div>
 
@@ -547,7 +651,7 @@ const ReportLostItem = () => {
 
               <div className="report-lost-form-group">
                 <label className="required">Date lost</label>
-                <input type="date" name="otherDateLost" value={formData.otherDateLost} onChange={handleInputChange} />
+                <input type="date" name="otherDateLost" max={getDefaultDate()} value={formData.otherDateLost} onChange={handleInputChange} />
                 {errors.otherDateLost && <p className="report-lost-error">{errors.otherDateLost}</p>}
               </div>
 
