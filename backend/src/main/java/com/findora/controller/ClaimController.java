@@ -1,17 +1,13 @@
 package com.findora.controller;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -32,13 +28,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.findora.model.Claim;
 import com.findora.model.Item;
-import com.findora.model.ItemStatus;
 import com.findora.model.ItemType;
-import com.findora.model.Notification;
-import com.findora.model.User;
 import com.findora.repository.ClaimRepository;
 import com.findora.repository.ItemRepository;
-import com.findora.repository.NotificationRepository;
 import com.findora.repository.UserRepository;
 
 /**
@@ -53,17 +45,15 @@ public class ClaimController {
         Claim.ClaimStatus.APPROVED
     );
 
-    @Autowired
-    private ClaimRepository claimRepository;
+    private final ClaimRepository claimRepository;
+    private final ItemRepository itemRepository;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private ItemRepository itemRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private NotificationRepository notificationRepository;
+    public ClaimController(ClaimRepository claimRepository, ItemRepository itemRepository, UserRepository userRepository) {
+        this.claimRepository = claimRepository;
+        this.itemRepository = itemRepository;
+        this.userRepository = userRepository;
+    }
 
     @PostMapping
     @PreAuthorize("hasAnyRole('STUDENT', 'STAFF', 'SECURITY', 'ADMIN')")
@@ -104,24 +94,15 @@ public class ClaimController {
                 throw new IllegalArgumentException("Only found items can be claimed");
             }
 
-            if (Objects.equals(item.getUserId(), currentUserId)) {
+            if (item.getUserId() != null && item.getUserId().equals(currentUserId)) {
                 throw new IllegalArgumentException("You cannot claim your own item");
             }
 
-            if (item.getStatus() == ItemStatus.CLAIMED || item.getStatus() == ItemStatus.CLOSED) {
-                throw new IllegalArgumentException("This item is no longer claimable");
-            }
-
-            List<Claim> existingClaims = claimRepository.findByItemIdAndClaimerId(itemId, currentUserId);
-            boolean hasOpenClaim = existingClaims.stream().anyMatch(c -> EnumSet.of(
-                Claim.ClaimStatus.PENDING,
-                Claim.ClaimStatus.APPROVED,
-                Claim.ClaimStatus.COLLECTED
-            ).contains(c.getStatus()));
-
-            if (hasOpenClaim) {
-                throw new IllegalArgumentException("You already have an active claim for this item");
-            }
+            claimRepository
+                .findFirstByItemIdAndClaimerIdAndStatusInOrderByClaimedAtDesc(itemId, currentUserId, OPEN_STATUSES)
+                .ifPresent(existingClaim -> {
+                    throw new IllegalArgumentException("You already have an active claim for this item");
+                });
 
             String otp = String.format("%06d", ThreadLocalRandom.current().nextInt(0, 1_000_000));
             LocalDateTime otpExpiry = LocalDateTime.now().plusHours(24);
@@ -134,29 +115,6 @@ public class ClaimController {
             claim.setStatus(Claim.ClaimStatus.PENDING);
             claim = claimRepository.save(claim);
 
-            Notification claimerNotification = new Notification();
-            claimerNotification.setUserId(currentUserId);
-            claimerNotification.setType(Notification.NotificationType.CLAIM);
-            claimerNotification.setTitle("Claim Submitted");
-            claimerNotification.setMessage("Your claim was submitted. Keep your OTP ready for security verification.");
-            claimerNotification.setRelatedId(claim.getId());
-            notificationRepository.save(claimerNotification);
-
-            List<User> securityUsers = userRepository.findByRole(User.UserRole.SECURITY);
-            List<Notification> securityNotifications = new ArrayList<>();
-            for (User securityUser : securityUsers) {
-                Notification notification = new Notification();
-                notification.setUserId(securityUser.getId());
-                notification.setType(Notification.NotificationType.CLAIM);
-                notification.setTitle("New Claim Submitted");
-                notification.setMessage("A new claim is waiting for verification.");
-                notification.setRelatedId(claim.getId());
-                securityNotifications.add(notification);
-            }
-            if (!securityNotifications.isEmpty()) {
-                notificationRepository.saveAll(securityNotifications);
-            }
-
             Map<String, Object> claimPayload = new LinkedHashMap<>();
             claimPayload.put("id", claim.getId());
             claimPayload.put("item_id", claim.getItemId());
@@ -164,11 +122,11 @@ public class ClaimController {
             claimPayload.put("otp", claim.getOtp());
             claimPayload.put("otp_expiry", claim.getOtpExpiry() != null ? claim.getOtpExpiry().toString() : null);
             claimPayload.put("status", claim.getStatus().name().toLowerCase());
-            claimPayload.put("claimed_at", claim.getClaimedAt() != null ? claim.getClaimedAt().toString() : null);
+            claimPayload.put("claimed_at", claim.getClaimedAt());
 
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                 "success", true,
-                "message", "Claim submitted successfully",
+                "message", "Claim submitted successfully. OTP sent.",
                 "otp", otp,
                 "claim", claimPayload
             ));

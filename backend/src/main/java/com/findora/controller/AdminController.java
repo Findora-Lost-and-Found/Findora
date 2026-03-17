@@ -173,23 +173,20 @@ public class AdminController {
         String normalizedStatus = status == null ? "found" : status.trim().toLowerCase(Locale.ROOT);
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        List<Map<String, Object>> items;
-        if ("released".equals(normalizedStatus)) {
-            items = itemRepository.findPaginatedItems(null, null, null, ItemStatus.CLOSED, pageable)
+        List<Map<String, Object>> items = switch (normalizedStatus) {
+            case "released" -> itemRepository.findPaginatedItems(null, null, null, ItemStatus.CLOSED, pageable)
                 .stream()
                 .map(item -> toAdminItemPayload(item, "released"))
                 .toList();
-        } else if ("received".equals(normalizedStatus)) {
-            items = itemRepository.findPaginatedItems(null, null, null, ItemStatus.CLAIMED, pageable)
+            case "received" -> itemRepository.findPaginatedItems(null, null, null, ItemStatus.CLAIMED, pageable)
                 .stream()
                 .map(item -> toAdminItemPayload(item, "received"))
                 .toList();
-        } else {
-            items = itemRepository.findPaginatedItems(null, null, ItemType.FOUND, null, pageable)
+            default -> itemRepository.findPaginatedItems(null, null, ItemType.FOUND, null, pageable)
                 .stream()
                 .map(item -> toAdminItemPayload(item, "found"))
                 .toList();
-        }
+        };
 
         return ResponseEntity.ok(Map.of(
             "success", true,
@@ -282,8 +279,8 @@ public class AdminController {
         if (rawValue == null) {
             return defaultValue;
         }
-        if (rawValue instanceof Boolean) {
-            return (Boolean) rawValue;
+        if (rawValue instanceof Boolean boolValue) {
+            return boolValue;
         }
         String value = String.valueOf(rawValue).trim().toLowerCase(Locale.ROOT);
         if ("true".equals(value) || "1".equals(value) || "yes".equals(value)) {
