@@ -2,12 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { itemsAPI } from '../services/api';
-import { isValidNicNumber, normalizeNicNumber } from '../utils/nicUtils';
+import { NIC_HELPER_TEXT, NIC_VALIDATION_MESSAGE, isValidNic, isValidNicNumber, normalizeNic, normalizeNicNumber, sanitizeNicInput } from '../utils/nicUtils';
 import { isValidStudentIdNumber, normalizeStudentIdNumber, validateStudentID } from '../utils/studentIdUtils';
 import { isValidCardLast4, normalizeCardLast4 } from '../utils/cardUtils';
 import { validateLostTimeWithDate } from '../utils/timeUtils';
 import { BANK_OPTIONS } from '../data/bankOptions';
-
 import './ReportLostItem.css';
 
 const CATEGORY_OPTIONS = ['NIC', 'Student / Staff ID', 'Bank Card', 'Purse / Wallet', 'Others'];
@@ -78,9 +77,9 @@ const ReportLostItem = () => {
     const { name, value } = e.target;
     const normalizePurseId = (rawValue) => String(rawValue).trim().toUpperCase();
 
-    const normalizedValue =
+    const nextValue =
       name === 'nicNumber'
-        ? normalizeNicNumber(value)
+        ? sanitizeNicInput(value)
         : name === 'studentOrStaffId'
           ? normalizeStudentIdNumber(value)
           : name === 'purseIdNumber'
@@ -88,7 +87,7 @@ const ReportLostItem = () => {
           : name === 'cardLast4'
             ? normalizeCardLast4(value)
           : value;
-    setFormData((prev) => ({ ...prev, [name]: normalizedValue }));
+    setFormData((prev) => ({ ...prev, [name]: nextValue }));
   };
 
   const handleFileChange = (name, file) => {
@@ -120,6 +119,7 @@ const ReportLostItem = () => {
     if (category === 'NIC') {
       if (!formData.nicName.trim()) nextErrors.nicName = 'Name is required.';
       if (!formData.nicNumber.trim()) nextErrors.nicNumber = 'NIC Number is required.';
+      else if (!isValidNic(formData.nicNumber)) nextErrors.nicNumber = NIC_VALIDATION_MESSAGE;
       if (formData.nicNumber.trim() && !isValidNicNumber(formData.nicNumber)) {
         nextErrors.nicNumber = 'NIC must be 12 digits or 9 digits followed by V.';
       }
@@ -238,7 +238,7 @@ const ReportLostItem = () => {
 
     if (category === 'NIC') {
       item_name = `NIC - ${formData.nicName}`;
-      description = `NIC Number: ${formData.nicNumber}`;
+      description = `NIC Number: ${normalizeNic(formData.nicNumber)}`;
       location = [formData.nicLocation1, formData.nicLocation2].filter(Boolean).join(', ');
       date = formData.nicDateLost;
       time = formData.nicFromTime;
@@ -333,8 +333,11 @@ const ReportLostItem = () => {
                   name="nicNumber"
                   value={formData.nicNumber}
                   onChange={handleInputChange}
-                  placeholder="e.g. 200012345678 or 901234567V"
+                  maxLength={12}
+                  autoComplete="off"
+                  placeholder="123456789V or 199001234567"
                 />
+                <small style={{ color: '#6B7280' }}>{NIC_HELPER_TEXT}</small>
                 {errors.nicNumber && <p className="report-lost-error">{errors.nicNumber}</p>}
               </div>
               <div className="report-lost-private">

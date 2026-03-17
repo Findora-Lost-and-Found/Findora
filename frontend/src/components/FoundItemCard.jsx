@@ -55,6 +55,11 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
 
       <div className="card-content">
         <h3 className="card-title">{normalizedItem.name}</h3>
+        {isAlreadyHandedOver && (
+          <div className="handed-over-label" style={{ color: '#219653', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+            Handed Over to Security
+          </div>
+        )}
         
         <div className="card-meta">
           <div className="meta-item">
@@ -69,7 +74,7 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
           <small>Posted by <strong>{postedByName}</strong></small>
         </div>
 
-        <div className="card-actions">
+        <div className={`card-actions${isOwnItem ? ' single-action' : ''}`}>
           {isOwnItem ? (
             isAlreadyHandedOver ? (
               <button className="btn btn-secondary" disabled>
@@ -95,6 +100,7 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
           <button 
             onClick={handleReportClick}
             className="btn btn-report"
+            aria-label="Report item"
           >
             🚩 Report
           </button>

@@ -2,12 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { itemsAPI } from '../services/api';
 import { toast } from 'react-toastify';
-import { isValidNicNumber, normalizeNicNumber } from '../utils/nicUtils';
+import { NIC_HELPER_TEXT, NIC_VALIDATION_MESSAGE, isValidNic, isValidNicNumber, normalizeNic, normalizeNicNumber, sanitizeNicInput } from '../utils/nicUtils';
 import { isValidStudentIdNumber, normalizeStudentIdNumber, validateStudentID } from '../utils/studentIdUtils';
 import { isValidCardLast4, normalizeCardLast4 } from '../utils/cardUtils';
 import { validateLostTimeWithDate } from '../utils/timeUtils';
 import { BANK_OPTIONS } from '../data/bankOptions';
-
 import './ReportFoundItem.css';
 
 const CATEGORY_OPTIONS = [
@@ -44,7 +43,10 @@ const ReportFoundItem = () => {
     pursePrivateLocation: '',
     pursePrivateDate: '',
     pursePrivateTime: '',
+    pursePhoto: null,
     otherPhoto: null,
+    otherItemName: '',
+    otherDescription: '',
     otherPrivateLocation: '',
     otherPrivateDate: '',
     otherPrivateTime: ''
@@ -60,9 +62,9 @@ const ReportFoundItem = () => {
     const { name, value } = e.target;
     const normalizePurseId = (rawValue) => String(rawValue).trim().toUpperCase();
 
-    const normalizedValue =
+    const nextValue =
       name === 'nicNumber'
-        ? normalizeNicNumber(value)
+        ? sanitizeNicInput(value)
         : name === 'studentOrStaffId'
           ? normalizeStudentIdNumber(value)
           : name === 'purseIdNumber'
@@ -70,11 +72,15 @@ const ReportFoundItem = () => {
           : name === 'cardLast4'
             ? normalizeCardLast4(value)
           : value;
-    setFormData((prev) => ({ ...prev, [name]: normalizedValue }));
+    setFormData((prev) => ({ ...prev, [name]: nextValue }));
   };
 
   const handleFileChange = (e) => {
     setFormData((prev) => ({ ...prev, otherPhoto: e.target.files?.[0] || null }));
+  };
+
+  const handlePurseFileChange = (e) => {
+    setFormData((prev) => ({ ...prev, pursePhoto: e.target.files?.[0] || null }));
   };
 
   const validate = () => {
@@ -102,9 +108,7 @@ const ReportFoundItem = () => {
     if (category === 'NIC') {
       if (!formData.nicName.trim()) nextErrors.nicName = 'Name is required.';
       if (!formData.nicNumber.trim()) nextErrors.nicNumber = 'NIC Number is required.';
-      if (formData.nicNumber.trim() && !isValidNicNumber(formData.nicNumber)) {
-        nextErrors.nicNumber = 'NIC must be 12 digits or 9 digits followed by V.';
-      }
+      else if (!isValidNic(formData.nicNumber)) nextErrors.nicNumber = NIC_VALIDATION_MESSAGE;
     }
 
     if (category === 'Student / Staff ID') {
@@ -158,6 +162,7 @@ const ReportFoundItem = () => {
     }
 
     if (category === 'Others') {
+      if (!formData.otherItemName.trim()) nextErrors.otherItemName = 'Item name is required.';
       if (!formData.otherPhoto) nextErrors.otherPhoto = 'Photo upload is required.';
       if (!formData.otherPrivateLocation.trim()) nextErrors.otherPrivateLocation = 'Location is required.';
       if (!formData.otherPrivateDate) nextErrors.otherPrivateDate = 'Date is required.';
@@ -201,7 +206,7 @@ const ReportFoundItem = () => {
 
     if (category === 'NIC') {
       item_name = `NIC - ${formData.nicName || 'Unknown'}`;
-      description = `NIC Number: ${formData.nicNumber}`;
+      description = `NIC Number: ${normalizeNic(formData.nicNumber)}`;
     }
 
     if (category === 'Student / Staff ID') {
@@ -219,6 +224,7 @@ const ReportFoundItem = () => {
 
     if (category === 'Purse') {
       item_name = 'Purse / Wallet';
+      image = formData.pursePhoto;
       if (purseOption === 'with-id') {
         description = `Claim with ID: ${formData.purseIdNumber}`;
       } else {
@@ -230,8 +236,8 @@ const ReportFoundItem = () => {
     }
 
     if (category === 'Others') {
-      item_name = 'Other Found Item';
-      description = 'General found item report';
+      item_name = formData.otherItemName || 'Other Found Item';
+      description = formData.otherDescription || 'General found item report';
       location = formData.otherPrivateLocation || location;
       date = formData.otherPrivateDate || date;
       time = formData.otherPrivateTime || time;
@@ -308,8 +314,11 @@ const ReportFoundItem = () => {
                   name="nicNumber"
                   value={formData.nicNumber}
                   onChange={handleInputChange}
-                  placeholder="e.g. 200012345678 or 901234567V"
+                  maxLength={12}
+                  autoComplete="off"
+                  placeholder="123456789V or 199001234567"
                 />
+                <small style={{ color: '#6B7280' }}>{NIC_HELPER_TEXT}</small>
                 {errors.nicNumber && <p className="error-text">{errors.nicNumber}</p>}
               </div>
             </div>
@@ -407,6 +416,11 @@ const ReportFoundItem = () => {
             <div className="category-section">
               <h3>Purse Details</h3>
 
+              <div className="form-group">
+                <label>Upload Photo of the Purse</label>
+                <input type="file" accept="image/*" onChange={handlePurseFileChange} />
+              </div>
+
               <div className="purse-options">
                 <label>
                   <input
@@ -488,6 +502,28 @@ const ReportFoundItem = () => {
           {category === 'Others' && (
             <div className="category-section">
               <h3>Other Item Details</h3>
+
+              <div className="form-group">
+                <label className="required">Item Name</label>
+                <input
+                  name="otherItemName"
+                  value={formData.otherItemName}
+                  onChange={handleInputChange}
+                  placeholder="e.g. Black backpack, Umbrella, Keys..."
+                />
+                {errors.otherItemName && <p className="error-text">{errors.otherItemName}</p>}
+              </div>
+
+              <div className="form-group">
+                <label>Description</label>
+                <textarea
+                  name="otherDescription"
+                  value={formData.otherDescription}
+                  onChange={handleInputChange}
+                  rows={3}
+                  placeholder="Describe the item in detail (colour, size, brand, etc.)"
+                />
+              </div>
 
               <div className="form-group">
                 <label className="required">Upload Photo of the item</label>

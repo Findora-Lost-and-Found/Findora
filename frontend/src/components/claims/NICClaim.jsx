@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { isValidNicNumber, normalizeNicNumber } from '../../utils/nicUtils';
+import { NIC_HELPER_TEXT, NIC_VALIDATION_MESSAGE, isValidNic, normalizeNic, sanitizeNicInput } from '../../utils/nicUtils';
 
 const NICClaim = ({ item, onSubmit, onCancel }) => {
   const [step, setStep] = useState('template'); // template, verify
@@ -10,19 +10,17 @@ const NICClaim = ({ item, onSubmit, onCancel }) => {
   };
 
   const handleVerify = () => {
-    const normalizedNicNumber = normalizeNicNumber(nicNumber);
+    const normalizedNic = normalizeNic(nicNumber);
 
-    if (!normalizedNicNumber) {
+    if (!normalizedNic) {
       alert('Please enter your NIC number');
       return;
     }
-
-    if (!isValidNicNumber(normalizedNicNumber)) {
-      alert('NIC must be 12 digits or 9 digits followed by V.');
+    if (!isValidNic(normalizedNic)) {
+      alert(NIC_VALIDATION_MESSAGE);
       return;
     }
-
-    onSubmit({ nicNumber: normalizedNicNumber, itemId: item.id });
+    onSubmit({ nicNumber: normalizedNic, itemId: item.id });
   };
 
   return (
@@ -64,12 +62,14 @@ const NICClaim = ({ item, onSubmit, onCancel }) => {
             <input
               id="nic"
               type="text"
-              placeholder="Enter your NIC number"
+              placeholder="123456789V or 199001234567"
               value={nicNumber}
-              onChange={(e) => setNicNumber(normalizeNicNumber(e.target.value))}
+              onChange={(e) => setNicNumber(sanitizeNicInput(e.target.value))}
+              maxLength="12"
+              autoComplete="off"
             />
             <small style={{ color: '#9CA3AF' }}>
-              Accepted formats: 200012345678 or 901234567V
+              {NIC_HELPER_TEXT}
             </small>
           </div>
 

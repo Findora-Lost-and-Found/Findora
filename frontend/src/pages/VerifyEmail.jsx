@@ -20,11 +20,11 @@ const VerifyEmail = () => {
 
     setLoading(true);
     try {
-      await verifyEmail(otp);
-      toast.success('Email verified successfully!');
+      const result = await verifyEmail(otp);
+      toast.success(result?.message || 'Email verified successfully!');
       navigate(getHomeRouteForUser(user));
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Invalid OTP');
+      toast.error(error.message || 'Invalid OTP');
     } finally {
       setLoading(false);
     }

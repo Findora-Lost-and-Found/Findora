@@ -8,6 +8,35 @@ import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
 
 const DEFAULT_POST_ROLES = ['student', 'staff', 'security'];
+const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
+
+const readFirst = (obj, keys, fallback = '') => {
+  for (const key of keys) {
+    const value = obj?.[key];
+    if (value !== undefined && value !== null && String(value).trim() !== '') {
+      return value;
+    }
+  }
+  return fallback;
+};
+
+const toImageUrl = (rawImage) => {
+  if (!rawImage) {
+    return 'https://via.placeholder.com/300x200?text=Item+Image';
+  }
+
+  const normalized = String(rawImage).trim().replace(/\\/g, '/');
+
+  if (!normalized || normalized === 'null' || normalized === 'undefined') {
+    return 'https://via.placeholder.com/300x200?text=Item+Image';
+  }
+
+  if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+    return normalized;
+  }
+
+  return `${API_ORIGIN}${normalized.startsWith('/') ? normalized : `/${normalized}`}`;
+};
 
 const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES }) => {
   const { user } = useAuth();
@@ -39,7 +68,7 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
         itemsAPI.getMy(),
         claimsAPI.getMy(),
         // Reuse the same found-items feed for any role that shares the dashboard UI.
-        itemsAPI.getAll({ type: 'found', status: 'active' })
+        itemsAPI.getAll({ type: 'found' })
       ]);
 
       setStats({
@@ -48,14 +77,14 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
       });
 
       if (foundRes.status === 'fulfilled') {
-        const apiItems = (foundRes.value.data.items || []).map((item) => ({
+        const apiItems = (foundRes.value.data.items || foundRes.value.data.content || []).map((item) => ({
           ...item,
           name: item.name || item.item_name,
           date_found: item.date_found || item.date || item.created_at,
-          image: item.image || (item.image_url ? `http://localhost:8080${item.image_url}` : 'https://via.placeholder.com/300x200?text=Item+Image'),
+          image: toImageUrl(readFirst(item, ['image', 'imageUrl', 'image_url'])),
           category: normalizeCategory(item.category, item.name || item.item_name),
           posted_by: item.posted_by || {
-            id: item.user_id,
+            id: item.userId || item.user_id,
             full_name: item.full_name || item.username || 'Unknown User'
           }
         }));
