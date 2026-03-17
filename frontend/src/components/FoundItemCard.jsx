@@ -75,8 +75,6 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
         </div>
 
         <div className={`card-actions${isOwnItem ? ' single-action' : ''}`}>
-          {!isOwnItem && (
-        <div className="card-actions">
           {isOwnItem ? (
             isAlreadyHandedOver ? (
               <button className="btn btn-secondary" disabled>

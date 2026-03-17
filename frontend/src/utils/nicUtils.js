@@ -23,10 +23,6 @@ export const sanitizeNicInput = (value = '') => {
   return sanitized;
 };
 
-export const normalizeNic = (value = '') => String(value).toUpperCase().replace(/[\s-]/g, '');
+export const normalizeNic = (value = '') => sanitizeNicInput(value);
 
 export const isValidNic = (value = '') => NIC_REGEX.test(normalizeNic(value));
-
-export const normalizeNicNumber = (value = '') => normalizeNic(value);
-
-export const isValidNicNumber = (value = '') => isValidNic(value);

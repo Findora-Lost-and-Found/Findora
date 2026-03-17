@@ -5,8 +5,6 @@ import { itemsAPI, claimsAPI, securityAPI } from '../services/api';
 import { toast } from 'react-toastify';
 import PostModal from '../components/PostModal';
 import FoundItemCard from '../components/FoundItemCard';
-import PostModal from '../components/PostModal';
-import { claimsAPI, itemsAPI } from '../services/api';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
 
