@@ -9,7 +9,7 @@ const Notification = require('../models/Notification');
 exports.createClaim = async (req, res) => {
   try {
     const { item_id } = req.body;
-    const claimer_id = req.user.id;
+    const claimer_id = Number(req.user.id);
 
     // Check if item exists and is a found item
     const item = await Item.findById(item_id);
@@ -35,9 +35,17 @@ exports.createClaim = async (req, res) => {
       });
     }
 
+    // Prevent claiming your own posted item.
+    if (Number(item.user_id) === claimer_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'You cannot claim your own item'
+      });
+    }
+
     // Check if user has already claimed this item
     const existingClaims = await Claim.findByItemId(item_id);
-    const userClaim = existingClaims.find(c => c.claimer_id === claimer_id && c.status === 'pending');
+    const userClaim = existingClaims.find(c => Number(c.claimer_id) === claimer_id && c.status === 'pending');
 
     if (userClaim) {
       return res.status(400).json({

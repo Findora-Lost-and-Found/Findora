@@ -1,11 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
 import { itemsAPI } from '../services/api';
 import ItemCard from '../components/ItemCard';
-import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
+import Pagination from '../components/Pagination';
+import MatchCard from '../components/MatchCard';
+import matchesAPI from '../services/matchesAPI';
+
+const PAGE_SIZE = 4;
 
 const LostItems = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({
+    totalPages: 0,
+    totalElements: 0,
+    pageNumber: 0,
+    pageSize: PAGE_SIZE
+  });
+  const [currentPage, setCurrentPage] = useState(0);
+  const [matchesByLostId, setMatchesByLostId] = useState({});
+  const [otpInputs, setOtpInputs] = useState({});
   const [filters, setFilters] = useState({
     category: '',
     search: ''
@@ -13,35 +27,104 @@ const LostItems = () => {
 
   useEffect(() => {
     loadItems();
-  }, [filters]);
+  }, [currentPage, filters.category, filters.search]);
 
   const loadItems = async () => {
     try {
-      // My Lost Items shows only the logged-in user's lost posts.
-      const response = await itemsAPI.getMy({ type: 'lost' });
-      const myLostItems = (response.data.items || []).filter((item) => item.type === 'lost');
-      const searchTerm = filters.search.trim().toLowerCase();
+      setLoading(true);
 
-      const filteredItems = myLostItems.filter((item) => {
-        const matchesCategory = !filters.category || item.category === filters.category;
-        const matchesSearch = !searchTerm
-          || (item.item_name || '').toLowerCase().includes(searchTerm)
-          || (item.description || '').toLowerCase().includes(searchTerm)
-          || (item.location || '').toLowerCase().includes(searchTerm)
-          || (item.category || '').toLowerCase().includes(searchTerm);
-        return matchesCategory && matchesSearch;
+      const response = await itemsAPI.getMy({
+        type: 'lost',
+        page: currentPage,
+        size: PAGE_SIZE,
+        sort: 'createdAt,desc',
+        category: filters.category || undefined,
+        keyword: filters.search || undefined
       });
 
-      setItems(sortFoundItems(filteredItems, FOUND_ITEM_SORT.LATEST));
+      setItems(response.data?.content || []);
+      setPagination({
+        totalPages: response.data?.totalPages ?? 0,
+        totalElements: response.data?.totalElements ?? 0,
+        pageNumber: response.data?.pageNumber ?? currentPage,
+        pageSize: response.data?.pageSize ?? PAGE_SIZE
+      });
+
+      await loadMatches();
     } catch (error) {
       console.error('Error loading items:', error);
+      setItems([]);
+      setPagination({
+        totalPages: 0,
+        totalElements: 0,
+        pageNumber: 0,
+        pageSize: PAGE_SIZE
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  const loadMatches = async () => {
+    try {
+      const response = await matchesAPI.getMyMatches();
+      const matches = response.data?.matches || [];
+
+      const grouped = matches.reduce((acc, match) => {
+        const lostItemId = match.lostItemId;
+        if (!lostItemId) {
+          return acc;
+        }
+
+        if (!acc[lostItemId]) {
+          acc[lostItemId] = [];
+        }
+        acc[lostItemId].push(match);
+        return acc;
+      }, {});
+
+      setMatchesByLostId(grouped);
+    } catch (error) {
+      console.error('Error loading matches:', error);
+      setMatchesByLostId({});
+    }
+  };
+
+  const handleOtpInput = (matchId, value) => {
+    setOtpInputs((prev) => ({ ...prev, [matchId]: value }));
+  };
+
+  const handleClaimViaOtp = async (matchId, providedOtp) => {
+    try {
+      const otp = String(providedOtp ?? otpInputs[matchId] ?? '').trim();
+      if (!otp) {
+        toast.error('Enter OTP first');
+        return;
+      }
+
+      const response = await matchesAPI.claimMatch(matchId, otp);
+      const claimId = response.data?.claim?.id;
+      toast.success(claimId ? `Claim created (#${claimId})` : 'Claim created');
+      setOtpInputs((prev) => ({ ...prev, [matchId]: '' }));
+      await loadMatches();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to claim via OTP');
+    }
+  };
+
+  const handleResendOtp = async (matchId) => {
+    try {
+      await matchesAPI.resendOtp(matchId);
+      toast.success('OTP sent');
+      await loadMatches();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to resend OTP');
+    }
+  };
+
   const handleFilterChange = (e) => {
     setFilters({ ...filters, [e.target.name]: e.target.value });
+    setCurrentPage(0);
   };
 
   if (loading) {
@@ -75,9 +158,35 @@ const LostItems = () => {
         {items.length === 0 ? (
           <p>You have not posted any lost items yet.</p>
         ) : (
-          items.map(item => <ItemCard key={item.id} item={item} />)
+          items.map(item => (
+            <div key={item.id}>
+              <ItemCard item={item} />
+
+              {(matchesByLostId[item.id] || []).length > 0 && (
+                <div className="suggested-matches-block">
+                  <h3>Suggested Matches</h3>
+                  {(matchesByLostId[item.id] || []).map((match) => (
+                    <MatchCard
+                      key={match.matchId}
+                      match={match}
+                      otpValue={otpInputs[match.matchId]}
+                      onOtpChange={handleOtpInput}
+                      onClaimViaOtp={handleClaimViaOtp}
+                      onResendOtp={handleResendOtp}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          ))
         )}
       </div>
+
+      <Pagination
+        currentPage={pagination.pageNumber}
+        totalPages={pagination.totalPages}
+        onPageChange={setCurrentPage}
+      />
     </div>
   );
 };

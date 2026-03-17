@@ -25,8 +25,4 @@ export const sanitizeNicInput = (value = '') => {
 
 export const normalizeNic = (value = '') => sanitizeNicInput(value);
 
-export const normalizeNicNumber = (value = '') => sanitizeNicInput(value);
-
 export const isValidNic = (value = '') => NIC_REGEX.test(normalizeNic(value));
-
-export const isValidNicNumber = (value = '') => isValidNic(value);

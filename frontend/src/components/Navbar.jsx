@@ -8,15 +8,6 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
 
-  useEffect(() => {
-    if (user) {
-      fetchUnreadCount();
-      // Keep badge fresh so match notifications appear quickly after a found post.
-      const interval = setInterval(fetchUnreadCount, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [user]);
-
   const fetchUnreadCount = async () => {
     try {
       const response = await notificationsAPI.getUnreadCount();
@@ -25,6 +16,15 @@ const Navbar = () => {
       console.error('Error fetching unread count:', error);
     }
   };
+
+  useEffect(() => {
+    if (user) {
+      fetchUnreadCount();
+      // Keep badge fresh so match notifications appear quickly after a found post.
+      const interval = setInterval(fetchUnreadCount, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
 
   const handleLogout = () => {
     logout();
@@ -42,10 +42,15 @@ const Navbar = () => {
           <div className="nav-menu">
             <Link to="/dashboard" className="nav-link">Dashboard</Link>
             
-            {(user.role === 'student' || user.role === 'staff') && (
+            {(user.role === 'student' || user.role === 'staff' || user.role === 'security') && (
               <>
                 <Link to="/lost-items" className="nav-link">My Lost Items</Link>
                 <Link to="/found-items" className="nav-link">Found Items</Link>
+              </>
+            )}
+
+            {(user.role === 'student' || user.role === 'staff') && (
+              <>
                 <Link to="/my-claims" className="nav-link">My Claims</Link>
               </>
             )}
@@ -60,8 +65,9 @@ const Navbar = () => {
 
             {user.role === 'admin' && (
               <>
-                <Link to="/admin/dashboard" className="nav-link">Admin Panel</Link>
+                <Link to="/admin-panel" className="nav-link">Admin Panel</Link>
                 <Link to="/admin/users" className="nav-link">Users</Link>
+                <Link to="/admin/pending-approvals" className="nav-link">Pending Approvals</Link>
                 <Link to="/admin/items" className="nav-link">Items</Link>
                 <Link to="/admin/reports" className="nav-link">Reports</Link>
               </>

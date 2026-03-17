@@ -39,7 +39,7 @@ CREATE TABLE items (
   date DATE NOT NULL,
   time TIME NOT NULL,
   image_url VARCHAR(255),
-  status ENUM('active', 'claimed', 'closed') DEFAULT 'active',
+  status ENUM('active', 'handover_requested', 'held_by_security', 'handed_to_security', 'claimed', 'closed') DEFAULT 'active',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -93,6 +93,7 @@ CREATE TABLE security_transactions (
   item_id INT NOT NULL,
   claim_id INT,
   transaction_type ENUM('receive', 'release') NOT NULL,
+  status ENUM('requested', 'received') NOT NULL,
   received_from VARCHAR(100),
   released_to VARCHAR(100),
   notes TEXT,
@@ -137,8 +138,4 @@ CREATE TABLE post_reports (
   INDEX idx_reporter (reporter_id)
 );
 
--- Insert default admin user (password: Admin@123)
--- Password hash for 'Admin@123'
-INSERT INTO users (username, email, password, full_name, role, is_verified, is_approved) 
-VALUES 
-('admin', 'admin@findora.com', '$2a$10$rZ4JqL9WGxYnXH3kqVqVvOQNUZJxKD7GKqFNO3NfGOvHgZ8FfKFVW', 'System Admin', 'admin', TRUE, TRUE);
+-- Temporary test admin is seeded by backend/utils/seedTestAdmin.js in non-production environments.

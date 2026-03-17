@@ -1,6 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { adminAPI } from '../../services/api';
 import MobileWarning from '../../components/MobileWarning';
+
+const DECLINED_APPROVAL_IDS_KEY = 'findora-declined-approval-ids';
+
+const toBoolean = (value) => {
+  return value === true || value === 1 || value === '1' || value === 'true';
+};
+
+const getDeclinedApprovalIds = () => {
+  try {
+    const raw = localStorage.getItem(DECLINED_APPROVAL_IDS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.map((id) => Number(id)) : [];
+  } catch (error) {
+    return [];
+  }
+};
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
@@ -20,8 +37,26 @@ const AdminDashboard = () => {
 
   const loadStats = async () => {
     try {
-      const response = await adminAPI.getStats();
-      setStats(response.data.stats);
+      const [statsRes, approvalsRes] = await Promise.all([
+        adminAPI.getStats(),
+        adminAPI.getPendingApprovals()
+      ]);
+
+      const baseStats = statsRes.data.stats;
+      const declinedIds = getDeclinedApprovalIds();
+      const approvals = approvalsRes.data.approvals || [];
+
+      // Keep dashboard count aligned with Pending Approvals page visibility rules.
+      const visiblePendingCount = approvals.filter((user) => {
+        const isSuspended = toBoolean(user?.is_suspended) || toBoolean(user?.isSuspended);
+        const isDeclinedLocally = declinedIds.includes(Number(user?.id));
+        return !isSuspended && !isDeclinedLocally;
+      }).length;
+
+      setStats({
+        ...baseStats,
+        pendingApprovals: visiblePendingCount
+      });
     } catch (error) {
       console.error('Error loading stats:', error);
     } finally {
@@ -43,69 +78,47 @@ const AdminDashboard = () => {
 
       {stats && (
         <div className="stats-grid">
-          <div className="stat-card">
+          <Link to="/admin/users" className="stat-card stat-card-link">
             <h3>Total Users</h3>
             <p className="stat-number">{stats.users.total}</p>
-          </div>
+          </Link>
 
-          <div className="stat-card">
+          <Link to="/admin/items" className="stat-card stat-card-link">
             <h3>Active Lost Items</h3>
             <p className="stat-number">{stats.items.lost}</p>
-          </div>
+          </Link>
 
-          <div className="stat-card">
+          <Link to="/admin/items/found" className="stat-card stat-card-link">
             <h3>Active Found Items</h3>
             <p className="stat-number">{stats.items.found}</p>
-          </div>
+          </Link>
 
-          <div className="stat-card">
+          <Link to="/admin/items/receive" className="stat-card stat-card-link">
             <h3>Claimed Items</h3>
             <p className="stat-number">{stats.items.claimed}</p>
-          </div>
+          </Link>
 
-          <div className="stat-card">
+          <Link to="/admin/reports" className="stat-card stat-card-link">
             <h3>Pending Reports</h3>
             <p className="stat-number warning">{stats.pendingReports}</p>
-          </div>
+          </Link>
 
-          <div className="stat-card">
+          <Link to="/admin/pending-approvals" className="stat-card stat-card-link">
             <h3>Pending Approvals</h3>
             <p className="stat-number warning">{stats.pendingApprovals}</p>
-          </div>
+          </Link>
 
-          <div className="stat-card">
+          <Link to="/admin/items/receive" className="stat-card stat-card-link">
             <h3>Items Received</h3>
             <p className="stat-number">{stats.transactions.received || 0}</p>
-          </div>
+          </Link>
 
-          <div className="stat-card">
+          <Link to="/admin/items/release" className="stat-card stat-card-link">
             <h3>Items Released</h3>
             <p className="stat-number">{stats.transactions.released || 0}</p>
-          </div>
+          </Link>
         </div>
       )}
-
-      <div className="admin-quick-links">
-        <h2>Quick Actions</h2>
-        <div className="link-grid">
-          <a href="/admin/users" className="quick-link-card">
-            <h3>Manage Users</h3>
-            <p>View and manage all users</p>
-          </a>
-          <a href="/admin/items" className="quick-link-card">
-            <h3>Manage Items</h3>
-            <p>View all lost and found items</p>
-          </a>
-          <a href="/admin/reports" className="quick-link-card">
-            <h3>Handle Reports</h3>
-            <p>Review and resolve reports</p>
-          </a>
-          <a href="/admin/transactions" className="quick-link-card">
-            <h3>View Transactions</h3>
-            <p>All security transactions</p>
-          </a>
-        </div>
-      </div>
     </div>
   );
 };

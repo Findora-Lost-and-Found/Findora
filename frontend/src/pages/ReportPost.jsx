@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import { reportsAPI } from '../services/api';
 import './ReportPost.css';
 
 const ReportPost = () => {
@@ -8,6 +10,7 @@ const ReportPost = () => {
   const [selectedReason, setSelectedReason] = useState('');
   const [description, setDescription] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const reportReasons = [
     {
@@ -27,20 +30,33 @@ const ReportPost = () => {
     }
   ];
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedReason) {
-      alert('Please select a report reason');
+      toast.error('Please select a report reason');
       return;
     }
-    
-    // Send report to admin
-    console.log('Report submitted:', { itemId, reason: selectedReason, description });
-    setSubmitted(true);
-    
-    setTimeout(() => {
-      navigate('/dashboard');
-    }, 2000);
+
+    const selectedOption = reportReasons.find((reason) => reason.id === selectedReason);
+
+    try {
+      setSubmitting(true);
+      await reportsAPI.create({
+        itemId,
+        reason: selectedOption?.title || selectedReason,
+        description
+      });
+      toast.success('Report submitted successfully');
+      setSubmitted(true);
+
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1200);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to submit report');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (submitted) {
@@ -103,8 +119,8 @@ const ReportPost = () => {
             <button type="button" onClick={() => navigate(-1)} className="btn-secondary">
               Cancel
             </button>
-            <button type="submit" className="btn-primary">
-              Submit Report
+            <button type="submit" className="btn-primary" disabled={submitting}>
+              {submitting ? 'Submitting...' : 'Submit Report'}
             </button>
           </div>
         </form>

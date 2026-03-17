@@ -19,6 +19,8 @@ frontend/dist/
 frontend/dist-ssr/
 frontend/.vite/
 backend/target/
+backend/target/**
+**/target/
 backend/coverage/
 frontend/coverage/
 *.tsbuildinfo
@@ -37,6 +39,8 @@ pnpm-debug.log*
 *.pid.lock
 *.tmp
 *.temp
+*.swp
+*~
 
 # Uploaded/generated local files
 backend/uploads/*

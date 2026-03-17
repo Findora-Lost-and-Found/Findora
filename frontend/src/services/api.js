@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const configuredApiUrl = import.meta.env.VITE_API_URL;
+const API_URL = configuredApiUrl?.includes('localhost:5000')
+  ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')
+  : configuredApiUrl || 'http://localhost:8080/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -27,8 +30,8 @@ api.interceptors.request.use(
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
   login: (data) => api.post('/auth/login', data),
-  verifyEmail: (otp) => api.post('/auth/verify-email', { otp }),
-  resendOTP: () => api.post('/auth/resend-otp'),
+  verifyEmail: (payload) => api.post('/auth/verify-email', payload),
+  resendOTP: (payload) => api.post('/auth/resend-otp', payload),
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
   resetPassword: (data) => api.post('/auth/reset-password', data),
   changePassword: (data) => api.put('/auth/change-password', data),
@@ -58,7 +61,7 @@ export const itemsAPI = {
 
 // Claims API
 export const claimsAPI = {
-  create: (item_id) => api.post('/claims', { item_id }),
+  create: (item_id, meta = undefined) => api.post('/claims', { item_id, ...(meta || {}) }),
   getMy: () => api.get('/claims/my'),
   getById: (id) => api.get(`/claims/${id}`),
   getPending: () => api.get('/claims/pending')
@@ -66,9 +69,14 @@ export const claimsAPI = {
 
 // Security API
 export const securityAPI = {
-  verifyClaim: (claim_id, otp) => api.post('/security/verify-claim', { claim_id, otp }),
+  verifyClaim: (claimId, itemId, otp) => api.post('/security/verify-claim', { claimId, itemId, otp }),
+  handoverRequest: (itemId) => api.post('/security/handover-request', { itemId }),
+  getReceiveItems: () => api.get('/security/receive-items'),
+  getHeldItems: () => api.get('/items', { params: { type: 'found', status: 'held_by_security', page: 0, size: 50, sort: 'createdAt,desc' } }),
+  confirmReceive: (itemId) => api.post('/security/receive-item', { itemId }),
   receiveItem: (data) => api.post('/security/receive-item', data),
   getTransactions: (params) => api.get('/security/transactions', { params }),
+  getFoundItems: (params) => api.get('/security/found-items', { params }),
   getStats: () => api.get('/security/stats'),
   getPendingClaims: () => api.get('/security/pending-claims')
 };
@@ -78,6 +86,7 @@ export const adminAPI = {
   getUsers: (params) => api.get('/admin/users', { params }),
   getPendingApprovals: (params) => api.get('/admin/pending-approvals', { params }),
   approveUser: (id) => api.put(`/admin/approve-user/${id}`),
+  declineUser: (id) => api.put(`/admin/decline-user/${id}`),
   banUser: (id, banned) => api.put(`/admin/ban-user/${id}`, { banned }),
   suspendUser: (id, suspended) => api.put(`/admin/suspend-user/${id}`, { suspended }),
   getReports: (params) => api.get('/admin/reports', { params }),

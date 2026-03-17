@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getHomeRouteForUser } from '../utils/navigation';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -22,7 +23,7 @@ const Login = () => {
     const result = await login(formData.identifier, formData.password);
 
     if (result.success) {
-      navigate('/dashboard');
+      navigate(getHomeRouteForUser(result.user));
     }
 
     setLoading(false);

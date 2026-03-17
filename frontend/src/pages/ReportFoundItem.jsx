@@ -2,18 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { itemsAPI } from '../services/api';
 import { toast } from 'react-toastify';
-import {
-  sanitizeNicInput,
-  isValidNic,
-  NIC_VALIDATION_MESSAGE,
-  NIC_HELPER_TEXT
-} from '../utils/nicUtils';
-import {
-  sanitizeStudentStaffIdInput,
-  isValidStudentStaffId,
-  STUDENT_STAFF_ID_VALIDATION_MESSAGE,
-  STUDENT_STAFF_ID_HELPER_TEXT
-} from '../utils/studentStaffIdUtils';
+import { NIC_HELPER_TEXT, NIC_VALIDATION_MESSAGE, isValidNic, normalizeNic, sanitizeNicInput } from '../utils/nicUtils';
 import './ReportFoundItem.css';
 
 const CATEGORY_OPTIONS = [
@@ -81,7 +70,10 @@ const ReportFoundItem = () => {
     pursePrivateLocation: '',
     pursePrivateDate: '',
     pursePrivateTime: '',
+    pursePhoto: null,
     otherPhoto: null,
+    otherItemName: '',
+    otherDescription: '',
     otherPrivateLocation: '',
     otherPrivateDate: '',
     otherPrivateTime: ''
@@ -95,57 +87,16 @@ const ReportFoundItem = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-
-    if (name === 'nicNumber') {
-      const nicForTyping = String(value).replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 12);
-      setFormData((prev) => ({ ...prev, nicNumber: nicForTyping }));
-      return;
-    }
-
-    if (name === 'studentOrStaffId') {
-      const idForTyping = String(value).replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 7);
-      setFormData((prev) => ({ ...prev, studentOrStaffId: idForTyping }));
-      return;
-    }
-
-    if (name === 'purseIdNumber') {
-      const compact = String(value).toUpperCase().replace(/\s+/g, '');
-      const asNic = sanitizeNicInput(compact);
-      const nextValue = compact.length <= 7 ? sanitizeStudentStaffIdInput(compact) : asNic;
-      setFormData((prev) => ({ ...prev, purseIdNumber: nextValue }));
-      return;
-    }
-
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const nextValue = name === 'nicNumber' ? sanitizeNicInput(value) : value;
+    setFormData((prev) => ({ ...prev, [name]: nextValue }));
   };
 
   const handleFileChange = (e) => {
     setFormData((prev) => ({ ...prev, otherPhoto: e.target.files?.[0] || null }));
   };
 
-  const isFutureDate = (dateValue) => {
-    if (!dateValue) return false;
-    const selectedDate = new Date(dateValue);
-    if (Number.isNaN(selectedDate.getTime())) return false;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    selectedDate.setHours(0, 0, 0, 0);
-
-    return selectedDate > today;
-  };
-
-  const isFutureTimeForDate = (dateValue, timeValue) => {
-    if (!dateValue || !timeValue) return false;
-
-    const [hours, minutes] = String(timeValue).split(':').map(Number);
-    if (Number.isNaN(hours) || Number.isNaN(minutes)) return false;
-
-    const selectedDateTime = new Date(dateValue);
-    if (Number.isNaN(selectedDateTime.getTime())) return false;
-
-    selectedDateTime.setHours(hours, minutes, 0, 0);
-    return selectedDateTime > new Date();
+  const handlePurseFileChange = (e) => {
+    setFormData((prev) => ({ ...prev, pursePhoto: e.target.files?.[0] || null }));
   };
 
   const validate = () => {
@@ -163,21 +114,21 @@ const ReportFoundItem = () => {
     if (category === 'NIC') {
       if (!formData.nicName.trim()) nextErrors.nicName = 'Name is required.';
       if (!formData.nicNumber.trim()) nextErrors.nicNumber = 'NIC Number is required.';
-      else if (!isValidNic(normalizedNic)) nextErrors.nicNumber = NIC_VALIDATION_MESSAGE;
+      else if (!isValidNic(formData.nicNumber)) nextErrors.nicNumber = NIC_VALIDATION_MESSAGE;
     }
 
     if (category === 'Student / Staff ID') {
       if (!formData.idName.trim()) nextErrors.idName = 'Name is required.';
       if (!formData.studentOrStaffId.trim()) nextErrors.studentOrStaffId = 'Student ID or Staff ID is required.';
-      else if (!isValidStudentStaffId(normalizedStudentStaffId)) {
-        nextErrors.studentOrStaffId = STUDENT_STAFF_ID_VALIDATION_MESSAGE;
+      if (formData.studentOrStaffId.trim() && !isValidStudentIdNumber(formData.studentOrStaffId)) {
+        nextErrors.studentOrStaffId = 'Student ID must be 6 digits followed by 1 letter.';
       }
     }
 
     if (category === 'Bank Card') {
       if (!formData.cardType) nextErrors.cardType = 'Card Type is required.';
       if (!formData.bankName.trim()) nextErrors.bankName = 'Name of the Bank is required.';
-      if (!/^\d{4}$/.test(formData.cardLast4.trim())) nextErrors.cardLast4 = 'Last 4 digits must be exactly 4 numbers.';
+      if (!/^\d{4}$/.test(formData.cardLast4)) nextErrors.cardLast4 = 'Last 4 digits of the card are required.';
       if (!formData.bankPrivateLocation.trim()) nextErrors.bankPrivateLocation = 'Location is required.';
       if (!formData.bankPrivateDate) nextErrors.bankPrivateDate = 'Date is required.';
       else if (isFutureDate(formData.bankPrivateDate)) nextErrors.bankPrivateDate = 'Invalid date. Please select today or a past date.';
@@ -191,8 +142,12 @@ const ReportFoundItem = () => {
       if (purseOption === 'with-id') {
         if (!formData.purseName.trim()) nextErrors.purseName = 'Name is required.';
         if (!formData.purseIdNumber.trim()) nextErrors.purseIdNumber = 'Student ID or NIC number is required.';
-        else if (!purseIdValid) {
-          nextErrors.purseIdNumber = 'Enter a valid NIC or Student/Staff ID.';
+        if (
+          formData.purseIdNumber.trim() &&
+          !isValidNicNumber(formData.purseIdNumber) &&
+          !isValidStudentIdNumber(formData.purseIdNumber)
+        ) {
+          nextErrors.purseIdNumber = 'Enter a valid NIC or Student ID (6 digits + 1 letter).';
         }
       }
 
@@ -210,6 +165,7 @@ const ReportFoundItem = () => {
     }
 
     if (category === 'Others') {
+      if (!formData.otherItemName.trim()) nextErrors.otherItemName = 'Item name is required.';
       if (!formData.otherPhoto) nextErrors.otherPhoto = 'Photo upload is required.';
       if (!formData.otherPrivateLocation.trim()) nextErrors.otherPrivateLocation = 'Location is required.';
       if (!formData.otherPrivateDate) nextErrors.otherPrivateDate = 'Date is required.';
@@ -253,7 +209,7 @@ const ReportFoundItem = () => {
 
     if (category === 'NIC') {
       item_name = `NIC - ${formData.nicName || 'Unknown'}`;
-      description = `NIC Number: ${sanitizeNicInput(formData.nicNumber)}`;
+      description = `NIC Number: ${normalizeNic(formData.nicNumber)}`;
     }
 
     if (category === 'Student / Staff ID') {
@@ -271,6 +227,7 @@ const ReportFoundItem = () => {
 
     if (category === 'Purse') {
       item_name = 'Purse / Wallet';
+      image = formData.pursePhoto;
       if (purseOption === 'with-id') {
         const normalizedPurseId = String(formData.purseIdNumber).trim().toUpperCase();
         const compactPurseId = normalizedPurseId.length <= 7
@@ -286,8 +243,8 @@ const ReportFoundItem = () => {
     }
 
     if (category === 'Others') {
-      item_name = 'Other Found Item';
-      description = 'General found item report';
+      item_name = formData.otherItemName || 'Other Found Item';
+      description = formData.otherDescription || 'General found item report';
       location = formData.otherPrivateLocation || location;
       date = formData.otherPrivateDate || date;
       time = formData.otherPrivateTime || time;
@@ -364,11 +321,11 @@ const ReportFoundItem = () => {
                   name="nicNumber"
                   value={formData.nicNumber}
                   onChange={handleInputChange}
-                  maxLength="12"
+                  maxLength={12}
                   autoComplete="off"
-                  placeholder="e.g. 123456789V or 199001234567"
+                  placeholder="123456789V or 199001234567"
                 />
-                <small>{NIC_HELPER_TEXT}</small>
+                <small style={{ color: '#6B7280' }}>{NIC_HELPER_TEXT}</small>
                 {errors.nicNumber && <p className="error-text">{errors.nicNumber}</p>}
               </div>
             </div>
@@ -388,11 +345,9 @@ const ReportFoundItem = () => {
                   name="studentOrStaffId"
                   value={formData.studentOrStaffId}
                   onChange={handleInputChange}
-                  maxLength="7"
-                  autoComplete="off"
-                  placeholder="e.g. 240574S"
+                  placeholder="e.g. 123456A"
+                  maxLength={7}
                 />
-                <small>{STUDENT_STAFF_ID_HELPER_TEXT}</small>
                 {errors.studentOrStaffId && <p className="error-text">{errors.studentOrStaffId}</p>}
               </div>
             </div>
@@ -414,25 +369,41 @@ const ReportFoundItem = () => {
               <div className="form-group">
                 <label className="required">Name of the Bank</label>
                 <select name="bankName" value={formData.bankName} onChange={handleInputChange}>
-                  <option value="">Select a bank</option>
-                  {SRI_LANKA_BANKS.map((bank) => (
-                    <option key={bank} value={bank}>{bank}</option>
-                  ))}
+                  <option value="">-- Select Bank --</option>
+                  <option>Bank of Ceylon</option>
+                  <option>People's Bank</option>
+                  <option>Commercial Bank of Ceylon</option>
+                  <option>Hatton National Bank (HNB)</option>
+                  <option>Sampath Bank</option>
+                  <option>Seylan Bank</option>
+                  <option>Nations Trust Bank (NTB)</option>
+                  <option>National Savings Bank (NSB)</option>
+                  <option>Pan Asia Banking Corporation</option>
+                  <option>Union Bank of Colombo</option>
+                  <option>DFCC Bank</option>
+                  <option>Cargills Bank</option>
+                  <option>Amana Bank</option>
+                  <option>MCB Bank</option>
+                  <option>Citibank Sri Lanka</option>
+                  <option>Standard Chartered Bank</option>
+                  <option>HSBC Sri Lanka</option>
+                  <option>Other</option>
                 </select>
                 {errors.bankName && <p className="error-text">{errors.bankName}</p>}
               </div>
               <div className="form-group">
-                <label className="required">Card Number</label>
-                <input
-                  value={`#### #### #### ${formData.cardLast4}`}
-                  onChange={(e) => {
-                    const last4 = e.target.value.replace(/\D/g, '').slice(-4);
-                    setFormData(prev => ({ ...prev, cardLast4: last4 }));
-                  }}
-                  inputMode="numeric"
-                  placeholder="#### #### #### 1234"
-                />
-                <small>Example: #### #### #### 1234</small>
+                <label className="required">Card number</label>
+                <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #ccc', borderRadius: '6px', overflow: 'hidden', background: '#fff' }}>
+                  <span style={{ padding: '0 10px', color: '#aaa', letterSpacing: '2px', fontFamily: 'monospace', fontSize: '1rem', userSelect: 'none', whiteSpace: 'nowrap' }}>#### #### ####</span>
+                  <input
+                    name="cardLast4"
+                    value={formData.cardLast4}
+                    onChange={handleInputChange}
+                    placeholder="1234"
+                    maxLength={4}
+                    style={{ border: 'none', outline: 'none', width: '60px', padding: '10px 8px', fontFamily: 'monospace', fontSize: '1rem' }}
+                  />
+                </div>
                 {errors.cardLast4 && <p className="error-text">{errors.cardLast4}</p>}
               </div>
 
@@ -466,6 +437,11 @@ const ReportFoundItem = () => {
           {category === 'Purse' && (
             <div className="category-section">
               <h3>Purse Details</h3>
+
+              <div className="form-group">
+                <label>Upload Photo of the Purse</label>
+                <input type="file" accept="image/*" onChange={handlePurseFileChange} />
+              </div>
 
               <div className="purse-options">
                 <label>
@@ -503,9 +479,8 @@ const ReportFoundItem = () => {
                       name="purseIdNumber"
                       value={formData.purseIdNumber}
                       onChange={handleInputChange}
-                      maxLength="12"
-                      autoComplete="off"
-                      placeholder="NIC or Student/Staff ID"
+                      placeholder="NIC: 200012345678 / Student ID: 123456A"
+                      maxLength={12}
                     />
                     {errors.purseIdNumber && <p className="error-text">{errors.purseIdNumber}</p>}
                   </div>
@@ -550,6 +525,28 @@ const ReportFoundItem = () => {
           {category === 'Others' && (
             <div className="category-section">
               <h3>Other Item Details</h3>
+
+              <div className="form-group">
+                <label className="required">Item Name</label>
+                <input
+                  name="otherItemName"
+                  value={formData.otherItemName}
+                  onChange={handleInputChange}
+                  placeholder="e.g. Black backpack, Umbrella, Keys..."
+                />
+                {errors.otherItemName && <p className="error-text">{errors.otherItemName}</p>}
+              </div>
+
+              <div className="form-group">
+                <label>Description</label>
+                <textarea
+                  name="otherDescription"
+                  value={formData.otherDescription}
+                  onChange={handleInputChange}
+                  rows={3}
+                  placeholder="Describe the item in detail (colour, size, brand, etc.)"
+                />
+              </div>
 
               <div className="form-group">
                 <label className="required">Upload Photo of the item</label>
