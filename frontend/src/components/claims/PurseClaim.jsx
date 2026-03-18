@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 const PurseClaim = ({ item, onSubmit, onCancel }) => {
   const [step, setStep] = useState('template'); // template, select, withId, withoutId
