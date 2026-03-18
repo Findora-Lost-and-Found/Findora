@@ -91,7 +91,7 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
           <small>Posted by <strong>{postedByName}</strong></small>
         </div>
 
-        <div className={`card-actions${isOwnItem ? ' single-action' : ''}`}>
+        <div className={`card-actions flex items-center gap-3${isOwnItem ? ' single-action' : ''}`}>
           {isOwnItem ? (
             isAlreadyHandedOver ? (
               <button className="btn btn-secondary" disabled>
@@ -114,12 +114,14 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
               🏷️ Claim This Item
             </button>
           )}
-          <button 
+          <button
             onClick={handleReportClick}
-            className="btn btn-report"
-            aria-label="Report item"
+            className="report-icon-btn group relative flex items-center justify-center p-2.5 rounded-lg border border-red-300 bg-red-50 text-red-600 hover:bg-red-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-300 dark:border-red-700 dark:bg-red-900/40 dark:text-red-300 dark:hover:bg-red-800 dark:focus:ring-red-600"
+            title="Report"
+            aria-label="Report"
           >
-            🚩 Report
+            <span className="report-tooltip absolute -top-10 left-1/2 transform -translate-x-1/2 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium text-white bg-red-600 shadow-sm opacity-0 pointer-events-none group-hover:opacity-100 group-focus:opacity-100 transition-opacity" role="tooltip">Report</span>
+            <span aria-hidden="true" role="img">🚩</span>
           </button>
         </div>
       </div>
