@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import { createContext, useState, useContext, useEffect } from 'react';
 import { authAPI } from '../services/api';
 import { toast } from 'react-toastify';
 
@@ -15,14 +15,7 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState(() => {
-    try {
-      return localStorage.getItem('token');
-    } catch (error) {
-      console.warn('Unable to read auth token from localStorage:', error);
-      return null;
-    }
-  });
+  const [token, setToken] = useState(localStorage.getItem('token'));
 
   const getApiErrorMessage = (error, fallbackMessage) => {
     const apiError = error.response?.data;
@@ -54,11 +47,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await authAPI.register(data);
       const { token, user } = response.data;
-      try {
-        localStorage.setItem('token', token);
-      } catch (storageError) {
-        console.warn('Unable to persist auth token:', storageError);
-      }
+      localStorage.setItem('token', token);
       setToken(token);
       setUser(user);
       toast.success(response.data.message);
@@ -77,11 +66,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await authAPI.login({ identifier, password });
       const { token, user } = response.data;
-      try {
-        localStorage.setItem('token', token);
-      } catch (storageError) {
-        console.warn('Unable to persist auth token:', storageError);
-      }
+      localStorage.setItem('token', token);
       setToken(token);
       setUser(user);
       toast.success('Login successful');
@@ -94,11 +79,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    try {
-      localStorage.removeItem('token');
-    } catch (storageError) {
-      console.warn('Unable to clear auth token from localStorage:', storageError);
-    }
+    localStorage.removeItem('token');
     setToken(null);
     setUser(null);
     toast.info('Logged out successfully');

@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { itemsAPI } from '../services/api';
 import { toast } from 'react-toastify';
 import { NIC_HELPER_TEXT, NIC_VALIDATION_MESSAGE, isValidNic, normalizeNic, sanitizeNicInput } from '../utils/nicUtils';
-import { STUDENT_STAFF_ID_VALIDATION_MESSAGE, STUDENT_STAFF_ID_HELPER_TEXT, isValidStudentStaffId, normalizeStudentStaffId, sanitizeStudentStaffIdInput } from '../utils/studentStaffIdUtils';
 import './ReportFoundItem.css';
 
 const CATEGORY_OPTIONS = [
@@ -12,37 +11,6 @@ const CATEGORY_OPTIONS = [
   'Bank Card',
   'Purse',
   'Others'
-];
-
-const SRI_LANKA_BANKS = [
-  'Bank of Ceylon',
-  'National Savings Bank',
-  'People\'s Bank',
-  'Pradeshiya Sanwardhana Bank (Regional Development Bank)',
-  'Sri Lanka Savings Bank',
-  'State Mortgage & Investment Bank',
-  'Amana Bank',
-  'Cargills Bank',
-  'Commercial Bank of Ceylon',
-  'DFCC Bank',
-  'Hatton National Bank (HNB)',
-  'Nations Trust Bank',
-  'National Development Bank (NDB)',
-  'Pan Asia Banking Corporation (PABC)',
-  'Sampath Bank',
-  'Sanasa Development Bank',
-  'Seylan Bank',
-  'Union Bank of Colombo',
-  'Bank of China (Sri Lanka)',
-  'Citibank (Sri Lanka)',
-  'Deutsche Bank (Sri Lanka)',
-  'Habib Bank (Sri Lanka)',
-  'HSBC Sri Lanka',
-  'Indian Bank (Sri Lanka)',
-  'Indian Overseas Bank (Sri Lanka)',
-  'MCB Bank (Sri Lanka)',
-  'Public Bank Berhad (Sri Lanka)',
-  'Standard Chartered (Sri Lanka)',
 ];
 
 const ReportFoundItem = () => {
@@ -88,20 +56,7 @@ const ReportFoundItem = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    let nextValue = value;
-    if (name === 'nicNumber' || name === 'purseIdNumber') {
-      nextValue = String(value)
-        .toUpperCase()
-        .replace(/\s+/g, '')
-        .replace(/[^A-Z0-9]/g, '')
-        .slice(0, 13);
-    } else if (name === 'studentOrStaffId') {
-      nextValue = String(value)
-        .toUpperCase()
-        .replace(/\s+/g, '')
-        .replace(/[^A-Z0-9]/g, '')
-        .slice(0, 7);
-    }
+    const nextValue = name === 'nicNumber' ? sanitizeNicInput(value) : value;
     setFormData((prev) => ({ ...prev, [name]: nextValue }));
   };
 
@@ -111,31 +66,6 @@ const ReportFoundItem = () => {
 
   const handlePurseFileChange = (e) => {
     setFormData((prev) => ({ ...prev, pursePhoto: e.target.files?.[0] || null }));
-  };
-
-  const isFutureDate = (dateValue) => {
-    if (!dateValue) return false;
-    const selectedDate = new Date(dateValue);
-    if (Number.isNaN(selectedDate.getTime())) return false;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    selectedDate.setHours(0, 0, 0, 0);
-
-    return selectedDate > today;
-  };
-
-  const isFutureTimeForDate = (dateValue, timeValue) => {
-    if (!dateValue || !timeValue) return false;
-
-    const [hours, minutes] = String(timeValue).split(':').map(Number);
-    if (Number.isNaN(hours) || Number.isNaN(minutes)) return false;
-
-    const selectedDateTime = new Date(dateValue);
-    if (Number.isNaN(selectedDateTime.getTime())) return false;
-
-    selectedDateTime.setHours(hours, minutes, 0, 0);
-    return selectedDateTime > new Date();
   };
 
   const validate = () => {
@@ -152,8 +82,8 @@ const ReportFoundItem = () => {
     if (category === 'Student / Staff ID') {
       if (!formData.idName.trim()) nextErrors.idName = 'Name is required.';
       if (!formData.studentOrStaffId.trim()) nextErrors.studentOrStaffId = 'Student ID or Staff ID is required.';
-      else if (!isValidStudentStaffId(formData.studentOrStaffId)) {
-        nextErrors.studentOrStaffId = STUDENT_STAFF_ID_VALIDATION_MESSAGE;
+      if (formData.studentOrStaffId.trim() && !isValidStudentIdNumber(formData.studentOrStaffId)) {
+        nextErrors.studentOrStaffId = 'Student ID must be 6 digits followed by 1 letter.';
       }
     }
 
@@ -163,11 +93,7 @@ const ReportFoundItem = () => {
       if (!/^\d{4}$/.test(formData.cardLast4)) nextErrors.cardLast4 = 'Last 4 digits of the card are required.';
       if (!formData.bankPrivateLocation.trim()) nextErrors.bankPrivateLocation = 'Location is required.';
       if (!formData.bankPrivateDate) nextErrors.bankPrivateDate = 'Date is required.';
-      else if (isFutureDate(formData.bankPrivateDate)) nextErrors.bankPrivateDate = 'Invalid date. Please select today or a past date.';
       if (!formData.bankPrivateTime) nextErrors.bankPrivateTime = 'Time is required.';
-      else if (isFutureTimeForDate(formData.bankPrivateDate, formData.bankPrivateTime)) {
-        nextErrors.bankPrivateTime = 'Invalid time. Please select the past time';
-      }
     }
 
     if (category === 'Purse') {
@@ -176,8 +102,8 @@ const ReportFoundItem = () => {
         if (!formData.purseIdNumber.trim()) nextErrors.purseIdNumber = 'Student ID or NIC number is required.';
         if (
           formData.purseIdNumber.trim() &&
-          !isValidNic(formData.purseIdNumber) &&
-          !isValidStudentStaffId(formData.purseIdNumber)
+          !isValidNicNumber(formData.purseIdNumber) &&
+          !isValidStudentIdNumber(formData.purseIdNumber)
         ) {
           nextErrors.purseIdNumber = 'Enter a valid NIC or Student ID (6 digits + 1 letter).';
         }
@@ -188,11 +114,7 @@ const ReportFoundItem = () => {
         if (!formData.purseOtherItems.trim()) nextErrors.purseOtherItems = 'Other items inside purse are required.';
         if (!formData.pursePrivateLocation.trim()) nextErrors.pursePrivateLocation = 'Location is required.';
         if (!formData.pursePrivateDate) nextErrors.pursePrivateDate = 'Date is required.';
-        else if (isFutureDate(formData.pursePrivateDate)) nextErrors.pursePrivateDate = 'Invalid date. Please select today or a past date.';
         if (!formData.pursePrivateTime) nextErrors.pursePrivateTime = 'Time is required.';
-        else if (isFutureTimeForDate(formData.pursePrivateDate, formData.pursePrivateTime)) {
-          nextErrors.pursePrivateTime = 'Invalid time. Please select the past time';
-        }
       }
     }
 
@@ -201,11 +123,7 @@ const ReportFoundItem = () => {
       if (!formData.otherPhoto) nextErrors.otherPhoto = 'Photo upload is required.';
       if (!formData.otherPrivateLocation.trim()) nextErrors.otherPrivateLocation = 'Location is required.';
       if (!formData.otherPrivateDate) nextErrors.otherPrivateDate = 'Date is required.';
-      else if (isFutureDate(formData.otherPrivateDate)) nextErrors.otherPrivateDate = 'Invalid date. Please select today or a past date.';
       if (!formData.otherPrivateTime) nextErrors.otherPrivateTime = 'Time is required.';
-      else if (isFutureTimeForDate(formData.otherPrivateDate, formData.otherPrivateTime)) {
-        nextErrors.otherPrivateTime = 'Invalid time. Please select the past time';
-      }
     }
 
     setErrors(nextErrors);
@@ -246,7 +164,7 @@ const ReportFoundItem = () => {
 
     if (category === 'Student / Staff ID') {
       item_name = `Student/Staff ID - ${formData.idName || 'Unknown'}`;
-      description = `ID Number: ${normalizeStudentStaffId(formData.studentOrStaffId)}`;
+      description = `ID Number: ${formData.studentOrStaffId}`;
     }
 
     if (category === 'Bank Card') {
@@ -261,11 +179,7 @@ const ReportFoundItem = () => {
       item_name = 'Purse / Wallet';
       image = formData.pursePhoto;
       if (purseOption === 'with-id') {
-        const normalizedPurseId = String(formData.purseIdNumber).trim().toUpperCase();
-        const compactPurseId = isValidStudentStaffId(normalizedPurseId)
-          ? normalizeStudentStaffId(normalizedPurseId)
-          : normalizeNic(normalizedPurseId);
-        description = `Claim with ID: ${compactPurseId}`;
+        description = `Claim with ID: ${formData.purseIdNumber}`;
       } else {
         description = `Items inside: ${formData.purseOtherItems || formData.purseMoney}`;
         location = formData.pursePrivateLocation || location;
@@ -350,11 +264,10 @@ const ReportFoundItem = () => {
               <div className="form-group">
                 <label className="required">NIC Number</label>
                 <input
-                  type="text"
                   name="nicNumber"
                   value={formData.nicNumber}
                   onChange={handleInputChange}
-                  maxLength={13}
+                  maxLength={12}
                   autoComplete="off"
                   placeholder="123456789V or 199001234567"
                 />
@@ -375,7 +288,6 @@ const ReportFoundItem = () => {
               <div className="form-group">
                 <label className="required">Student ID or Staff ID</label>
                 <input
-                  type="text"
                   name="studentOrStaffId"
                   value={formData.studentOrStaffId}
                   onChange={handleInputChange}
@@ -451,7 +363,7 @@ const ReportFoundItem = () => {
                 <div className="form-row">
                   <div className="form-group">
                     <label className="required">Date</label>
-                    <input type="date" name="bankPrivateDate" max={getDefaultDate()} value={formData.bankPrivateDate} onChange={handleInputChange} />
+                    <input type="date" name="bankPrivateDate" value={formData.bankPrivateDate} onChange={handleInputChange} />
                     {errors.bankPrivateDate && <p className="error-text">{errors.bankPrivateDate}</p>}
                   </div>
                   <div className="form-group">
@@ -510,12 +422,11 @@ const ReportFoundItem = () => {
                   <div className="form-group">
                     <label className="required">Student ID or NIC number</label>
                     <input
-                      type="text"
                       name="purseIdNumber"
                       value={formData.purseIdNumber}
                       onChange={handleInputChange}
                       placeholder="NIC: 200012345678 / Student ID: 123456A"
-                      maxLength={13}
+                      maxLength={12}
                     />
                     {errors.purseIdNumber && <p className="error-text">{errors.purseIdNumber}</p>}
                   </div>
@@ -543,7 +454,7 @@ const ReportFoundItem = () => {
                   <div className="form-row">
                     <div className="form-group">
                       <label className="required">Date</label>
-                      <input type="date" name="pursePrivateDate" max={getDefaultDate()} value={formData.pursePrivateDate} onChange={handleInputChange} />
+                      <input type="date" name="pursePrivateDate" value={formData.pursePrivateDate} onChange={handleInputChange} />
                       {errors.pursePrivateDate && <p className="error-text">{errors.pursePrivateDate}</p>}
                     </div>
                     <div className="form-group">
@@ -599,7 +510,7 @@ const ReportFoundItem = () => {
                 <div className="form-row">
                   <div className="form-group">
                     <label className="required">Date</label>
-                    <input type="date" name="otherPrivateDate" max={getDefaultDate()} value={formData.otherPrivateDate} onChange={handleInputChange} />
+                    <input type="date" name="otherPrivateDate" value={formData.otherPrivateDate} onChange={handleInputChange} />
                     {errors.otherPrivateDate && <p className="error-text">{errors.otherPrivateDate}</p>}
                   </div>
                   <div className="form-group">

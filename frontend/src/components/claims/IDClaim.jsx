@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 const IDClaim = ({ item, idType, onSubmit, onCancel }) => {
   const [step, setStep] = useState('template');
