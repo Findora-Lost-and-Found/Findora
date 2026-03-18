@@ -4,21 +4,25 @@ import { useAuth } from '../context/AuthContext';
 import './FoundItemCard.css';
 import ClaimModal from './ClaimModal';
 import { normalizeCategory } from '../utils/categoryUtils';
-import { maskNicInText } from '../utils/itemDisplayUtils';
+import { maskSensitiveDescription } from '../utils/itemDisplayUtils';
 import SampleItemImage from './SampleItemImage';
+
+const configuredApiUrl = import.meta.env.VITE_API_URL;
+const API_ORIGIN = (configuredApiUrl?.includes('localhost:5000')
+  ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')
+  : configuredApiUrl || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
 
 const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }) => {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
+  const [imageLoadFailed, setImageLoadFailed] = useState(false);
   const normalizedItem = {
     ...item,
     category: normalizeCategory(item.category, item.name || item.item_name)
   };
   const postedByName = normalizedItem?.posted_by?.full_name || normalizedItem?.full_name || normalizedItem?.username || 'Unknown User';
-  const displayDescription = normalizedItem.category === 'NIC'
-    ? maskNicInText(normalizedItem.description)
-    : normalizedItem.description;
+  const displayDescription = maskSensitiveDescription(normalizedItem.description, normalizedItem.category);
 
   // Treat ownership as true only when both IDs are present and equal.
   const currentUserId = Number(currentUser?.id);
@@ -28,11 +32,28 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
     && Number.isFinite(ownerId)
     && currentUserId === ownerId;
 
-  // Determine whether there is a real uploaded photo.
+  const rawImage = normalizedItem.image || normalizedItem.image_url || normalizedItem.imageUrl || '';
+  const normalizedRawImage = String(rawImage || '').trim();
   const hasRealImage =
-    normalizedItem.image &&
-    !normalizedItem.image.includes('placeholder.com') &&
-    !normalizedItem.image.includes('via.placeholder');
+    normalizedRawImage !== ''
+    && !normalizedRawImage.includes('placeholder.com')
+    && !normalizedRawImage.includes('via.placeholder');
+
+  const resolvedImageSrc = useMemo(() => {
+    if (!hasRealImage) {
+      return '';
+    }
+
+    const source = normalizedRawImage.replace(/\\/g, '/');
+    if (source.startsWith('http://') || source.startsWith('https://')) {
+      return source;
+    }
+
+    const normalizedPath = source.replace(/\/+/g, '/').replace(/^\/+/, '');
+    return `${API_ORIGIN}/${normalizedPath}`;
+  }, [hasRealImage, normalizedRawImage]);
+
+  const showOriginalPhotoNote = normalizedItem.category === 'Other' && hasRealImage && !imageLoadFailed;
 
   const normalizedStatus = useMemo(() => String(normalizedItem?.status || '').toUpperCase(), [normalizedItem?.status]);
   const isAlreadyHandedOver = normalizedStatus === 'HANDOVER_REQUESTED'
@@ -55,13 +76,13 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
   return (
     <div className="found-item-card" id={`found-item-${normalizedItem.id}`}>
       <div className="card-image-container">
-        {hasRealImage ? (
+        {hasRealImage && !imageLoadFailed ? (
           <img
-            src={normalizedItem.image}
+            src={resolvedImageSrc}
             alt={normalizedItem.name}
             className="card-image"
             onError={(e) => {
-              e.target.style.display = 'none';
+              setImageLoadFailed(true);
             }}
           />
         ) : (
@@ -90,6 +111,10 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
         <div className="card-posted-by">
           <small>Posted by <strong>{postedByName}</strong></small>
         </div>
+
+        {showOriginalPhotoNote && (
+          <div className="original-photo-note">Founder uploaded the original photo</div>
+        )}
 
         <div className={`card-actions${isOwnItem ? ' single-action' : ''}`}>
           {isOwnItem ? (
