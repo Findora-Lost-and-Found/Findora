@@ -69,7 +69,7 @@ function App() {
               {/* Item Routes */}
               <Route path="/report-lost" element={<PrivateRoute roles={['student', 'staff', 'security']}><ReportLostItem /></PrivateRoute>} />
               <Route path="/report-found" element={<PrivateRoute roles={['student', 'staff', 'security']}><ReportFoundItem /></PrivateRoute>} />
-              <Route path="/report-post/:itemId" element={<PrivateRoute roles={['student', 'staff']}><ReportPost /></PrivateRoute>} />
+              <Route path="/report-post/:itemId" element={<PrivateRoute roles={['student', 'staff', 'security']}><ReportPost /></PrivateRoute>} />
               <Route path="/lost-items" element={<PrivateRoute roles={['student', 'staff', 'security']}><LostItems /></PrivateRoute>} />
               <Route path="/found-items" element={<PrivateRoute roles={['student', 'staff', 'security']}><FoundItems /></PrivateRoute>} />
               <Route path="/my-claims" element={<PrivateRoute roles={['student', 'staff']}><MyClaims /></PrivateRoute>} />
