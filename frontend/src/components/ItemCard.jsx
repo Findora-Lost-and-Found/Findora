@@ -1,3 +1,4 @@
+import React from 'react';
 import { normalizeCategory } from '../utils/categoryUtils';
 
 const ItemCard = ({ item, showActions = false, onDelete }) => {

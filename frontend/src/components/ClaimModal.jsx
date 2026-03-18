@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'react-toastify';
 import { claimsAPI } from '../services/api';
@@ -133,7 +133,16 @@ const ClaimModal = ({ isOpen, onClose, item }) => {
             </div>
           )}
 
-          {currentStep === 'form' && getCategoryComponent()}
+          {currentStep === 'form' && (
+            <>
+              {claimError && (
+                <p style={{ color: 'red', marginBottom: '1rem', textAlign: 'center' }}>{claimError}</p>
+              )}
+              {claimLoading ? (
+                <p style={{ textAlign: 'center', padding: '2rem' }}>Submitting claim...</p>
+              ) : getCategoryComponent()}
+            </>
+          )}
 
           {currentStep === 'otp' && (
             <OTPDisplay
