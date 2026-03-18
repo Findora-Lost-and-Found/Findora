@@ -125,13 +125,57 @@
 
 /* Card Actions */
 .card-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
   gap: 0.75rem;
 }
 
 .card-actions.single-action {
-  grid-template-columns: 1fr;
+  justify-content: stretch;
+}
+
+.card-actions .btn-claim,
+.card-actions .btn-secondary {
+  flex: 1;
+}
+
+.report-icon-btn {
+  position: relative;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid #fca5a5;
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.report-icon-btn:hover {
+  background: #fee2e2;
+}
+
+.report-icon-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #fca5a5;
+}
+
+.report-tooltip {
+  position: absolute;
+  top: -2.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.report-icon-btn:hover .report-tooltip,
+.report-icon-btn:focus .report-tooltip,
+.report-icon-btn:focus-visible .report-tooltip {
+  opacity: 1;
 }
 
 .btn {
@@ -157,17 +201,6 @@
 .btn-claim:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(15, 118, 110, 0.3);
-}
-
-.btn-report {
-  background: #FEF2F2;
-  color: #DC2626;
-  border: 2px solid #FCA5A5;
-}
-
-.btn-report:hover {
-  background: #FEE2E2;
-  border-color: #DC2626;
 }
 
 .btn-view {
@@ -232,6 +265,16 @@ body.dark-mode .card-posted-by {
   border-bottom-color: #374151;
 }
 
+body.dark-mode .report-icon-btn {
+  border-color: #b91c1c;
+  background: rgba(127, 29, 29, 0.4);
+  color: #fca5a5;
+}
+
+body.dark-mode .report-icon-btn:hover {
+  background: rgba(153, 27, 27, 0.55);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .found-item-card {
@@ -262,7 +305,7 @@ body.dark-mode .card-posted-by {
   }
 
   .card-actions {
-    grid-template-columns: 1fr;
+    flex-wrap: nowrap;
     gap: 0.5rem;
   }
 
