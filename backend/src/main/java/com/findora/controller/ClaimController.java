@@ -188,7 +188,6 @@ public class ClaimController {
 
     @GetMapping("/my")
     @PreAuthorize("hasAnyRole('STUDENT', 'STAFF', 'SECURITY', 'ADMIN')")
-    @Transactional(readOnly = true)
     public ResponseEntity<?> getMyClaims(
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "10") Integer size) {
