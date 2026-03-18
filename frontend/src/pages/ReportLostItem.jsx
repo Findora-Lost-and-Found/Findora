@@ -7,6 +7,9 @@ import './ReportLostItem.css';
 
 const CATEGORY_OPTIONS = ['NIC', 'Student / Staff ID', 'Bank Card', 'Purse / Wallet', 'Others'];
 
+const isValidNicNumber = (value) => isValidNic(value);
+const isValidStudentIdNumber = (value) => /^\d{6}[A-Za-z]$/.test(String(value || '').trim());
+
 const ReportLostItem = () => {
   const [category, setCategory] = useState('');
   const [purseOption, setPurseOption] = useState('with-id');

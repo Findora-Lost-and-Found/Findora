@@ -18,7 +18,6 @@ public class ItemDTO {
     private String status;             // e.g., "active", "claimed"
     private String imageUrl;           // Maps from image_url in DB
     private String createdAt;          // ISO 8601 timestamp string
-    private Long userId;
     private String fullName;
 
     public ItemDTO() {
@@ -34,8 +33,6 @@ public class ItemDTO {
         this.status = status;
         this.imageUrl = imageUrl;
         this.createdAt = createdAt;
-        this.userId = userId;
-        this.fullName = fullName;
         this.userId = userId;
         this.fullName = fullName;
     }
@@ -122,14 +119,6 @@ public class ItemDTO {
         this.createdAt = createdAt;
     }
 
-    public Long getUserId() {
-        return userId;
-    }
-
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
-
     public String getFullName() {
         return fullName;
     }
@@ -147,11 +136,6 @@ public class ItemDTO {
     @JsonProperty("created_at")
     public String getCreatedAtLegacy() {
         return createdAt;
-    }
-
-    @JsonProperty("user_id")
-    public Long getUserIdLegacy() {
-        return userId;
     }
 
     @JsonProperty("full_name")
