@@ -1248,7 +1248,8 @@ tbody tr:hover {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .found-items-grid {
+
+   .found-items-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 
