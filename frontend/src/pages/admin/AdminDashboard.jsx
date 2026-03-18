@@ -42,7 +42,14 @@ const AdminDashboard = () => {
         adminAPI.getPendingApprovals()
       ]);
 
-      const baseStats = statsRes.data.stats;
+      const baseStats = statsRes.data.stats || {
+        users: { total: 0 },
+        items: { lost: 0, found: 0, claimed: 0, foundPosted: 0 },
+        reports: { total: 0, pending: 0 },
+        pendingReports: 0,
+        pendingApprovals: 0,
+        transactions: { received: 0, released: 0 }
+      };
       const declinedIds = getDeclinedApprovalIds();
       const approvals = approvalsRes.data.approvals || [];
 
@@ -93,9 +100,19 @@ const AdminDashboard = () => {
             <p className="stat-number">{stats.items.found}</p>
           </Link>
 
+          <Link to="/admin/items/found" className="stat-card stat-card-link">
+            <h3>Found Items Posted</h3>
+            <p className="stat-number">{stats.items.foundPosted || 0}</p>
+          </Link>
+
           <Link to="/admin/items/receive" className="stat-card stat-card-link">
             <h3>Claimed Items</h3>
             <p className="stat-number">{stats.items.claimed}</p>
+          </Link>
+
+          <Link to="/admin/reports" className="stat-card stat-card-link">
+            <h3>Total Reports</h3>
+            <p className="stat-number">{stats.reports?.total || 0}</p>
           </Link>
 
           <Link to="/admin/reports" className="stat-card stat-card-link">

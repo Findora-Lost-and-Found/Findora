@@ -5,6 +5,7 @@ import './FoundItemCard.css';
 import ClaimModal from './ClaimModal';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { maskNicInText } from '../utils/itemDisplayUtils';
+import SampleItemImage from './SampleItemImage';
 
 const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }) => {
   const navigate = useNavigate();
@@ -18,9 +19,21 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
   const displayDescription = normalizedItem.category === 'NIC'
     ? maskNicInText(normalizedItem.description)
     : normalizedItem.description;
-  
-  // Check if current user owns this item
-  const isOwnItem = currentUser && (currentUser.id === normalizedItem?.posted_by?.id || currentUser.id === normalizedItem?.user_id);
+
+  // Treat ownership as true only when both IDs are present and equal.
+  const currentUserId = Number(currentUser?.id);
+  const ownerIdRaw = normalizedItem?.posted_by?.id ?? normalizedItem?.user_id ?? normalizedItem?.userId;
+  const ownerId = Number(ownerIdRaw);
+  const isOwnItem = Number.isFinite(currentUserId)
+    && Number.isFinite(ownerId)
+    && currentUserId === ownerId;
+
+  // Determine whether there is a real uploaded photo.
+  const hasRealImage =
+    normalizedItem.image &&
+    !normalizedItem.image.includes('placeholder.com') &&
+    !normalizedItem.image.includes('via.placeholder');
+
   const normalizedStatus = useMemo(() => String(normalizedItem?.status || '').toUpperCase(), [normalizedItem?.status]);
   const isAlreadyHandedOver = normalizedStatus === 'HANDOVER_REQUESTED'
     || normalizedStatus === 'HELD_BY_SECURITY'
@@ -42,14 +55,18 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
   return (
     <div className="found-item-card" id={`found-item-${normalizedItem.id}`}>
       <div className="card-image-container">
-        <img 
-          src={normalizedItem.image} 
-          alt={normalizedItem.name} 
-          className="card-image"
-          onError={(e) => {
-            e.target.src = 'https://via.placeholder.com/300x200?text=Item+Image';
-          }}
-        />
+        {hasRealImage ? (
+          <img
+            src={normalizedItem.image}
+            alt={normalizedItem.name}
+            className="card-image"
+            onError={(e) => {
+              e.target.style.display = 'none';
+            }}
+          />
+        ) : (
+          <SampleItemImage category={normalizedItem.category} item={normalizedItem} />
+        )}
         <div className="card-badge">{normalizedItem.category}</div>
       </div>
 
