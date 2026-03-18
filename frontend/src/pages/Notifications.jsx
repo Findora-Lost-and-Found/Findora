@@ -90,6 +90,19 @@ const Notifications = () => {
                     View Match
                   </Link>
                 )}
+                {notification.type === 'claim' && (
+                  <Link
+                    to="/my-claims"
+                    className="btn-link"
+                    onClick={() => {
+                      if (!notification.is_read) {
+                        markAsRead(notification.id);
+                      }
+                    }}
+                  >
+                    View Claim
+                  </Link>
+                )}
                 {!notification.is_read && (
                   <button onClick={() => markAsRead(notification.id)} className="btn-link">Mark as Read</button>
                 )}

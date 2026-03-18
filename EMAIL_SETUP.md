@@ -23,27 +23,34 @@ The phone number field during signup is **optional** and only used for contact i
 6. Click **Generate**
 7. **Copy the 16-character password** (format: xxxx xxxx xxxx xxxx)
 
-### Step 3: Update Spring Boot Mail Properties
+### Step 3: Set Mail Credentials via Environment Variables
 
-Open `backend/src/main/resources/application.properties` and update:
+The app now reads SMTP credentials from environment variables.
+
+Set these before starting backend:
+
+```powershell
+$env:MAIL_USERNAME="your_actual_gmail@gmail.com"
+$env:MAIL_PASSWORD="your_16_char_app_password"
+```
+
+In [backend/src/main/resources/application.properties](backend/src/main/resources/application.properties), mail settings are:
 
 ```properties
 spring.mail.host=smtp.gmail.com
 spring.mail.port=587
-spring.mail.username=your_actual_gmail@gmail.com
-spring.mail.password=xxxx xxxx xxxx xxxx
+spring.mail.username=${MAIL_USERNAME:}
+spring.mail.password=${MAIL_PASSWORD:}
 spring.mail.properties.mail.smtp.auth=true
 spring.mail.properties.mail.smtp.starttls.enable=true
 spring.mail.properties.mail.smtp.starttls.required=true
 ```
 
-**Replace:**
-- `your_actual_gmail@gmail.com` with your Gmail address
-- `xxxx xxxx xxxx xxxx` with the app password from Step 2
+Do not hardcode real credentials in source files.
 
 ### Step 4: Restart Backend Server
 
-After updating `application.properties`, restart the backend:
+After setting environment variables, restart the backend:
 
 ```bash
 cd backend
@@ -72,7 +79,7 @@ mvn spring-boot:run
 - Verify the email address is correct
 
 ### "Invalid OTP"
-- OTP expires after 10 minutes
+- OTP expires after 24 hours
 - Make sure you're entering the most recent OTP
 - Try requesting a new OTP
 

@@ -9,6 +9,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class ItemDTO {
     private Long id;
+    private Long userId;               // Owner's user ID
     private String name;               // Maps from itemName in DB
     private String category;           // e.g., "NIC", "Wallet"
     private String type;               // e.g., "lost", "found"
@@ -35,6 +36,8 @@ public class ItemDTO {
         this.createdAt = createdAt;
         this.userId = userId;
         this.fullName = fullName;
+        this.userId = userId;
+        this.fullName = fullName;
     }
 
     public Long getId() {
@@ -43,6 +46,15 @@ public class ItemDTO {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    @JsonProperty("user_id")
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
     public String getName() {
@@ -93,6 +105,7 @@ public class ItemDTO {
         this.status = status;
     }
 
+    @JsonProperty("image_url")
     public String getImageUrl() {
         return imageUrl;
     }
@@ -129,11 +142,6 @@ public class ItemDTO {
     @JsonProperty("item_name")
     public String getItemName() {
         return name;
-    }
-
-    @JsonProperty("image_url")
-    public String getImageUrlLegacy() {
-        return imageUrl;
     }
 
     @JsonProperty("created_at")

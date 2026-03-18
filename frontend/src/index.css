@@ -1,5 +1,5 @@
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Manrope', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
@@ -14,8 +14,8 @@ body {
   padding: 0;
   min-width: 320px;
   min-height: 100vh;
-  background-color: #f5f7fa;
-  color: #1F2937;
+  background-color: #f3f4f6;
+  color: #111827;
 }
 
 * {

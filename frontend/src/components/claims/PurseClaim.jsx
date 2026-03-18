@@ -12,7 +12,9 @@ const PurseClaim = ({ item, onSubmit, onCancel }) => {
     toTime: '',
     items1: '',
     items2: '',
-    items3: ''
+    items3: '',
+    foundFromDate: '',
+    foundToDate: ''
   });
 
   const handleCollectClick = () => {
@@ -40,6 +42,10 @@ const PurseClaim = ({ item, onSubmit, onCancel }) => {
   const handleWithoutIdSubmit = () => {
     if (!formData.location1.trim() || !formData.items1.trim()) {
       alert('Please fill in all required fields');
+      return;
+    }
+    if (!formData.foundFromDate) {
+      alert('Please enter the date you lost the item');
       return;
     }
     onSubmit({ ...formData, itemId: item.id, claimType: 'without-id' });
@@ -208,6 +214,30 @@ const PurseClaim = ({ item, onSubmit, onCancel }) => {
               onChange={handleInputChange}
               style={{ marginTop: '0.5rem' }}
             />
+          </div>
+
+          <div className="form-group">
+            <label className="required">When was the item found? (approximate date range)</label>
+            <div className="form-row">
+              <div>
+                <label style={{ fontSize: '0.9rem' }}>From Date</label>
+                <input
+                  type="date"
+                  name="foundFromDate"
+                  value={formData.foundFromDate}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.9rem' }}>To Date</label>
+                <input
+                  type="date"
+                  name="foundToDate"
+                  value={formData.foundToDate}
+                  onChange={handleInputChange}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="form-actions">

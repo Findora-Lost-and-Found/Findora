@@ -2,21 +2,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect } from 'react';
 import { notificationsAPI } from '../services/api';
-import { getHomeRouteForUser } from '../utils/navigation';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
-
-  useEffect(() => {
-    if (user) {
-      fetchUnreadCount();
-      // Keep badge fresh so match notifications appear quickly after a found post.
-      const interval = setInterval(fetchUnreadCount, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [user]);
 
   const fetchUnreadCount = async () => {
     try {
@@ -26,6 +16,15 @@ const Navbar = () => {
       console.error('Error fetching unread count:', error);
     }
   };
+
+  useEffect(() => {
+    if (user) {
+      fetchUnreadCount();
+      // Keep badge fresh so match notifications appear quickly after a found post.
+      const interval = setInterval(fetchUnreadCount, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
 
   const handleLogout = () => {
     logout();
@@ -45,13 +44,18 @@ const Navbar = () => {
 
         {user && (
           <div className="nav-menu">
-            <Link to={getHomeRouteForUser(user)} className="nav-link">Dashboard</Link>
+            <Link to="/dashboard" className="nav-link">Dashboard</Link>
             
             {(user.role === 'student' || user.role === 'staff' || user.role === 'security') && (
               <>
                 <Link to="/lost-items" className="nav-link">My Lost Items</Link>
                 <Link to="/found-items" className="nav-link">Found Items</Link>
-                {user.role !== 'security' && <Link to="/my-claims" className="nav-link">My Claims</Link>}
+              </>
+            )}
+
+            {(user.role === 'student' || user.role === 'staff') && (
+              <>
+                <Link to="/my-claims" className="nav-link">My Claims</Link>
               </>
             )}
 

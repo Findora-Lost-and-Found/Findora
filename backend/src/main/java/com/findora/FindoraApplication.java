@@ -1,8 +1,11 @@
 package com.findora;
 
+import java.time.Clock;
+
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -11,6 +14,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * Lost and Found Management System v2.0 - Spring Boot 3.x
  */
 @SpringBootApplication
+@EnableScheduling
 public class FindoraApplication {
 
     public static void main(String[] args) {
@@ -34,5 +38,10 @@ public class FindoraApplication {
                     .maxAge(3600);
             }
         };
+    }
+
+    @Bean
+    public Clock utcClock() {
+        return Clock.systemUTC();
     }
 }

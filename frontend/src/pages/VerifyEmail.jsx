@@ -20,11 +20,11 @@ const VerifyEmail = () => {
 
     setLoading(true);
     try {
-      await verifyEmail(otp);
-      toast.success('Email verified successfully!');
+      const result = await verifyEmail(otp);
+      toast.success(result?.message || 'Email verified successfully!');
       navigate(getHomeRouteForUser(user));
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Invalid OTP');
+      toast.error(error.message || 'Invalid OTP');
     } finally {
       setLoading(false);
     }
@@ -83,7 +83,7 @@ const VerifyEmail = () => {
               }}
             />
             <small style={{ color: '#6B7280', display: 'block', marginTop: '0.5rem' }}>
-              OTP expires in 10 minutes
+              OTP expires in 24 hours
             </small>
           </div>
 
