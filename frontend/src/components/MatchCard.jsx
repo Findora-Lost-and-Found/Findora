@@ -4,7 +4,7 @@ import './MatchCard.css';
 const MatchCard = ({ match, otpValue, onOtpChange, onClaimViaOtp, onResendOtp }) => {
   const found = match?.foundItem || {};
   const score = Number(match?.score || 0).toFixed(2);
-  const threshold = match?.threshold || 80;
+  const threshold = match?.threshold || 70;
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
 
   const handleOtpSubmit = () => {
