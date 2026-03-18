@@ -37,7 +37,26 @@ import com.findora.repository.UserRepository;
  */
 @RestController
 @RequestMapping("/api/admin")
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
+
+    private final UserRepository userRepository;
+    private final ItemRepository itemRepository;
+    private final ReportRepository reportRepository;
+    private final SecurityTransactionRepository securityTransactionRepository;
+
+    public AdminController(
+            UserRepository userRepository,
+            ItemRepository itemRepository,
+            ReportRepository reportRepository,
+            SecurityTransactionRepository securityTransactionRepository) {
+        this.userRepository = userRepository;
+        this.itemRepository = itemRepository;
+        this.reportRepository = reportRepository;
+        this.securityTransactionRepository = securityTransactionRepository;
+    }
+
+    private static final Logger log = LoggerFactory.getLogger(AdminController.class);
 
     private final UserRepository userRepository;
     private final ItemRepository itemRepository;
@@ -81,6 +100,7 @@ public class AdminController {
         List<Map<String, Object>> approvals = userRepository.findAll(pageable)
             .stream()
             .filter(user -> !Boolean.TRUE.equals(user.getIsApproved())
+                && !Boolean.TRUE.equals(user.getIsSuspended())
                 && user.getRole() != User.UserRole.STUDENT)
             .map(this::toUserPayload)
             .toList();
@@ -106,6 +126,26 @@ public class AdminController {
         userRepository.save(user);
 
         return ResponseEntity.ok(Map.of("success", true, "message", "User approved"));
+    }
+
+    @PutMapping("/decline-user/{id}")
+    public ResponseEntity<?> declineUser(@PathVariable Long id) {
+        User user = userRepository.findById(id)
+            .orElse(null);
+
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("success", false, "message", "User not found"));
+        }
+
+        // Suspension acts as the persisted decline marker without introducing a schema change.
+        user.setIsApproved(false);
+        user.setIsSuspended(true);
+        userRepository.save(user);
+
+        log.info("admin declined user id={} username={}", user.getId(), user.getUsername());
+
+        return ResponseEntity.ok(Map.of("success", true, "message", "User declined"));
     }
 
     @PutMapping("/ban-user/{id}")
@@ -144,16 +184,21 @@ public class AdminController {
 
     @GetMapping("/reports")
     public ResponseEntity<?> getReports(
+            @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "20") Integer size) {
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        List<Report> reportRows = status == null || status.isBlank()
+            ? reportRepository.findAll(pageable).getContent()
+            : reportRepository.findByStatus(Report.ReportStatus.valueOf(status.trim().toUpperCase(Locale.ROOT)), pageable).getContent();
 
         long pendingReports = reportRepository.countByStatus(Report.ReportStatus.PENDING);
 
         return ResponseEntity.ok(Map.of(
             "success", true,
             "pendingReports", pendingReports,
-            "reports", new ArrayList<>(),
+            "reports", reportRows.stream().map(this::toReportPayload).toList(),
             "page", pageable.getPageNumber(),
             "size", pageable.getPageSize()
         ));
@@ -278,12 +323,28 @@ public class AdminController {
         return payload;
     }
 
+    private Map<String, Object> toReportPayload(Report report) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("id", report.getId());
+        payload.put("reporter_id", report.getReporterId());
+        payload.put("reporter_username", report.getReporter() == null ? null : report.getReporter().getUsername());
+        payload.put("reporter_name", report.getReporter() == null ? null : report.getReporter().getFullName());
+        payload.put("item_id", report.getItemId());
+        payload.put("item_name", report.getItem() == null ? null : report.getItem().getItemName());
+        payload.put("reason", report.getReason());
+        payload.put("status", report.getStatus() == null ? null : report.getStatus().name().toLowerCase(Locale.ROOT));
+        payload.put("admin_notes", report.getAdminNotes());
+        payload.put("created_at", report.getCreatedAt() == null ? null : report.getCreatedAt().toString());
+        payload.put("resolved_at", report.getResolvedAt() == null ? null : report.getResolvedAt().toString());
+        return payload;
+    }
+
     private boolean parseBoolean(Object rawValue, boolean defaultValue) {
         if (rawValue == null) {
             return defaultValue;
         }
-        if (rawValue instanceof Boolean) {
-            return (Boolean) rawValue;
+        if (rawValue instanceof Boolean boolValue) {
+            return boolValue;
         }
         String value = String.valueOf(rawValue).trim().toLowerCase(Locale.ROOT);
         if ("true".equals(value) || "1".equals(value) || "yes".equals(value)) {

@@ -2,12 +2,43 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { itemsAPI, securityAPI } from '../services/api';
+import { toast } from 'react-toastify';
+import { itemsAPI, securityAPI } from '../services/api';
 import FoundItemCard from '../components/FoundItemCard';
 import Pagination from '../components/Pagination';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT } from '../utils/itemDisplayUtils';
 
 const PAGE_SIZE = 4;
+const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
+
+const readFirst = (obj, keys, fallback = '') => {
+  for (const key of keys) {
+    const value = obj?.[key];
+    if (value !== undefined && value !== null && String(value).trim() !== '') {
+      return value;
+    }
+  }
+  return fallback;
+};
+
+const toImageUrl = (rawImage) => {
+  if (!rawImage) {
+    return 'https://via.placeholder.com/300x200?text=Item+Image';
+  }
+
+  const normalized = String(rawImage).trim().replace(/\\/g, '/');
+
+  if (!normalized || normalized === 'null' || normalized === 'undefined') {
+    return 'https://via.placeholder.com/300x200?text=Item+Image';
+  }
+
+  if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+    return normalized;
+  }
+
+  return `${API_ORIGIN}${normalized.startsWith('/') ? normalized : `/${normalized}`}`;
+};
 
 const FoundItems = () => {
   const location = useLocation();
@@ -21,6 +52,7 @@ const FoundItems = () => {
     pageSize: PAGE_SIZE
   });
   const [currentPage, setCurrentPage] = useState(0);
+  const [handoverLoadingById, setHandoverLoadingById] = useState({});
   const [handoverLoadingById, setHandoverLoadingById] = useState({});
   const [filters, setFilters] = useState({
     category: '',
@@ -41,7 +73,7 @@ const FoundItems = () => {
     created_at: item.created_at || null,
     posted_time: item.posted_time || item.created_at || item.date_found || item.date || null,
     posted_by: item.posted_by || {
-      id: item.user_id,
+      id: item.userId || item.user_id,
       full_name: item.full_name || item.username || 'Unknown User'
     }
   });
@@ -99,6 +131,21 @@ const FoundItems = () => {
   };
 
   const displayedItems = allItems;
+
+  const handleHandoverRequest = async (itemId) => {
+    try {
+      setHandoverLoadingById((prev) => ({ ...prev, [itemId]: true }));
+      await securityAPI.handoverRequest(itemId);
+      setAllItems((prevItems) => prevItems.map((item) => (
+        item.id === itemId ? { ...item, status: 'handover_requested' } : item
+      )));
+      toast.success('Handover request submitted successfully');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to submit handover request');
+    } finally {
+      setHandoverLoadingById((prev) => ({ ...prev, [itemId]: false }));
+    }
+  };
 
   const handleHandoverRequest = async (itemId) => {
     try {

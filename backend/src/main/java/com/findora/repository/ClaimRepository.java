@@ -22,4 +22,5 @@ public interface ClaimRepository extends JpaRepository<Claim, Long> {
     Optional<Claim> findFirstByItemIdAndClaimerIdAndStatusInOrderByClaimedAtDesc(Long itemId, Long claimerId, Collection<Claim.ClaimStatus> statuses);
     Optional<Claim> findByIdAndClaimerId(Long id, Long claimerId);
     List<Claim> findByItemId(Long itemId);
+    List<Claim> findByItemIdAndClaimerId(Long itemId, Long claimerId);
 }

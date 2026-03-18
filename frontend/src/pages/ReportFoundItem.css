@@ -154,6 +154,73 @@
   font-weight: 600;
 }
 
+body.dark-mode .report-found-page {
+  color: #e5e7eb;
+}
+
+body.dark-mode .report-card {
+  background: #111827;
+  border-color: #374151;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+}
+
+body.dark-mode .report-card h1,
+body.dark-mode .category-section h3,
+body.dark-mode .private-block h4,
+body.dark-mode .form-group label,
+body.dark-mode .purse-options label {
+  color: #f3f4f6;
+}
+
+body.dark-mode .category-section {
+  background: #0f172a;
+  border-color: #374151;
+}
+
+body.dark-mode .private-block {
+  background: #111827;
+  border-color: #4b5563;
+}
+
+body.dark-mode .form-group input,
+body.dark-mode .form-group select,
+body.dark-mode .form-group textarea {
+  background: #1f2937;
+  color: #f3f4f6;
+  border-color: #4b5563;
+}
+
+body.dark-mode .form-group input::placeholder,
+body.dark-mode .form-group textarea::placeholder {
+  color: #9ca3af;
+}
+
+body.dark-mode .form-group input:focus,
+body.dark-mode .form-group select:focus,
+body.dark-mode .form-group textarea:focus {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.16);
+}
+
+body.dark-mode .form-group input[type="file"] {
+  background: #1f2937;
+  color: #e5e7eb;
+}
+
+body.dark-mode .form-group input[type="file"]::file-selector-button {
+  margin-right: 0.75rem;
+  border: 1px solid #4b5563;
+  border-radius: 6px;
+  background: #111827;
+  color: #f9fafb;
+  padding: 0.45rem 0.8rem;
+  cursor: pointer;
+}
+
+body.dark-mode .form-group input[type="file"]::file-selector-button:hover {
+  background: #0f172a;
+}
+
 @media (max-width: 768px) {
   .report-card {
     padding: 1rem;

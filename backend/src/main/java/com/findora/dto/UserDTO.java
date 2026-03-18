@@ -24,12 +24,14 @@ public class UserDTO {
     private Boolean isBanned;
     @JsonProperty("is_suspended")
     private Boolean isSuspended;
+    @JsonProperty("created_at")
+    private String createdAt;
 
     public UserDTO() {
     }
 
     public UserDTO(Long id, String username, String name, String fullName, String role, String email, String phone,
-                   Boolean isVerified, Boolean isApproved, Boolean isBanned, Boolean isSuspended) {
+                   Boolean isVerified, Boolean isApproved, Boolean isBanned, Boolean isSuspended, String createdAt) {
         this.id = id;
         this.username = username;
         this.name = name;
@@ -41,6 +43,7 @@ public class UserDTO {
         this.isApproved = isApproved;
         this.isBanned = isBanned;
         this.isSuspended = isSuspended;
+        this.createdAt = createdAt;
     }
 
     public Long getId() {
@@ -129,5 +132,13 @@ public class UserDTO {
 
     public void setIsSuspended(Boolean isSuspended) {
         this.isSuspended = isSuspended;
+    }
+
+    public String getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(String createdAt) {
+        this.createdAt = createdAt;
     }
 }

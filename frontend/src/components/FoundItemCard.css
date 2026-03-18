@@ -1,9 +1,10 @@
 /* Found Item Card Container */
 .found-item-card {
-  background: white;
+  background: #ffffff;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid #d1d5db;
+  box-shadow: 0 1px 3px rgba(17, 24, 39, 0.08);
   transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
@@ -12,7 +13,7 @@
 
 .found-item-card:hover {
   transform: translateY(-8px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.1);
 }
 
 /* Card Image Container */
@@ -40,7 +41,7 @@
   position: absolute;
   top: 10px;
   right: 10px;
-  background: linear-gradient(135deg, #16A34A 0%, #22C55E 100%);
+  background: linear-gradient(135deg, #0f766e 0%, #0ea5a4 100%);
   color: white;
   padding: 0.5rem 0.75rem;
   border-radius: 20px;
@@ -63,7 +64,7 @@
   margin: 0 0 1rem 0;
   font-size: 1.2rem;
   font-weight: 700;
-  color: #1F2937;
+  color: #111827;
   line-height: 1.4;
 }
 
@@ -80,7 +81,7 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.875rem;
-  color: #6B7280;
+  color: #4b5563;
 }
 
 .meta-icon {
@@ -119,7 +120,7 @@
 }
 
 .card-posted-by strong {
-  color: #16A34A;
+  color: #0f766e;
 }
 
 /* Card Actions */
@@ -127,6 +128,10 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
+}
+
+.card-actions.single-action {
+  grid-template-columns: 1fr;
 }
 
 .btn {
@@ -145,13 +150,13 @@
 }
 
 .btn-claim {
-  background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
   color: white;
 }
 
 .btn-claim:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.3);
 }
 
 .btn-report {
@@ -166,14 +171,14 @@
 }
 
 .btn-view {
-  background: #F3F4F6;
-  color: #16A34A;
-  border: 2px solid #E5E7EB;
+  background: #f9fafb;
+  color: #2563eb;
+  border: 2px solid #d1d5db;
 }
 
 .btn-view:hover {
-  background: #E5E7EB;
-  border-color: #16A34A;
+  background: #eff6ff;
+  border-color: #2563eb;
 }
 
 .btn:active {

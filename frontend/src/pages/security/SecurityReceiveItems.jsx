@@ -48,7 +48,7 @@ const SecurityReceiveItems = () => {
     try {
       setReceivingItemId(itemId);
       await securityAPI.confirmReceive(itemId);
-      toast.success('Item marked as handed over and moved to Pending Claims');
+      toast.success('Item received by Security. It appears in Pending Claims only when a claim exists for this item.');
       await loadReceiveItems();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to confirm item receive');

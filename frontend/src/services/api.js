@@ -30,8 +30,8 @@ api.interceptors.request.use(
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
   login: (data) => api.post('/auth/login', data),
-  verifyEmail: (otp) => api.post('/auth/verify-email', { otp }),
-  resendOTP: () => api.post('/auth/resend-otp'),
+  verifyEmail: (payload) => api.post('/auth/verify-email', payload),
+  resendOTP: (payload) => api.post('/auth/resend-otp', payload),
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
   resetPassword: (data) => api.post('/auth/reset-password', data),
   changePassword: (data) => api.put('/auth/change-password', data),
@@ -61,7 +61,7 @@ export const itemsAPI = {
 
 // Claims API
 export const claimsAPI = {
-  create: (item_id) => api.post('/claims', { item_id }),
+  create: (item_id, meta = undefined) => api.post('/claims', { item_id, ...(meta || {}) }),
   getMy: () => api.get('/claims/my'),
   getById: (id) => api.get(`/claims/${id}`),
   getPending: () => api.get('/claims/pending')
@@ -86,6 +86,7 @@ export const adminAPI = {
   getUsers: (params) => api.get('/admin/users', { params }),
   getPendingApprovals: (params) => api.get('/admin/pending-approvals', { params }),
   approveUser: (id) => api.put(`/admin/approve-user/${id}`),
+  declineUser: (id) => api.put(`/admin/decline-user/${id}`),
   banUser: (id, banned) => api.put(`/admin/ban-user/${id}`, { banned }),
   suspendUser: (id, suspended) => api.put(`/admin/suspend-user/${id}`, { suspended }),
   getReports: (params) => api.get('/admin/reports', { params }),
