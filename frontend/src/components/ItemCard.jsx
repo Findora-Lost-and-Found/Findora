@@ -1,11 +1,16 @@
 import { normalizeCategory } from '../utils/categoryUtils';
 import SampleItemImage from './SampleItemImage';
+import { maskSensitiveDescription } from '../utils/itemDisplayUtils';
 
 const ItemCard = ({ item, showActions = false, onDelete }) => {
   if (!item) return null;
 
-  const API_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8080';
+  const configuredApiUrl = import.meta.env.VITE_API_URL;
+  const API_URL = configuredApiUrl?.includes('localhost:5000')
+    ? configuredApiUrl.replace('localhost:5000', 'localhost:8080').replace('/api', '')
+    : configuredApiUrl?.replace('/api', '') || 'http://localhost:8080';
   const normalizedCategory = normalizeCategory(item.category, item.item_name || item.name);
+  const displayDescription = maskSensitiveDescription(item.description, normalizedCategory);
   const displayDate = item.date ? new Date(item.date).toLocaleDateString() : 'Not provided';
   const rawImage = item.image_url || item.imageUrl || item.image;
   const normalizedImage = rawImage ? String(rawImage).trim().replace(/\\/g, '/') : '';
@@ -29,7 +34,7 @@ const ItemCard = ({ item, showActions = false, onDelete }) => {
         <span className={`category-badge ${item.type}`}>{normalizedCategory}</span>
         <span className={`type-badge ${item.type}`}>{item.type}</span>
         <h3>{item.item_name || 'Unnamed Item'}</h3>
-        <p className="item-description">{item.description || 'No description provided.'}</p>
+        <p className="item-description">{displayDescription || 'No description provided.'}</p>
         <div className="item-info">
           <p><strong>Date:</strong> {displayDate}</p>
           <p><strong>Time:</strong> {item.time || '--:--'}</p>
