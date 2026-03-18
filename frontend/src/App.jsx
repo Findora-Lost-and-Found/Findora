@@ -86,7 +86,6 @@ function App() {
               <Route path="/admin-panel" element={<PrivateRoute roles={['admin']}><AdminDashboard /></PrivateRoute>} />
               <Route path="/admin/users" element={<PrivateRoute roles={['admin']}><AdminUsers /></PrivateRoute>} />
               <Route path="/admin/pending-approvals" element={<PrivateRoute roles={['admin']}><AdminPendingApprovals /></PrivateRoute>} />
-              <Route path="/admin/reports" element={<PrivateRoute roles={['admin']}><AdminReports /></PrivateRoute>} />
               <Route path="/admin/items" element={<PrivateRoute roles={['admin']}><Navigate to="/admin/items/found" replace /></PrivateRoute>} />
               <Route path="/admin/items/:section" element={<PrivateRoute roles={['admin']}><AdminItemsByStatus /></PrivateRoute>} />
             </Routes>
