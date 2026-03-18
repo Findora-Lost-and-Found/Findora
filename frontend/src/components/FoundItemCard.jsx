@@ -31,6 +31,15 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
     return new Date(dateString).toLocaleDateString('en-US', options);
   };
 
+  // Construct full image URL if image_url is relative
+  const getImageUrl = () => {
+    const API_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8080';
+    const imageField = normalizedItem.image_url || normalizedItem.image;
+    if (!imageField) return 'https://via.placeholder.com/300x200?text=Item+Image';
+    if (imageField.startsWith('http')) return imageField;
+    return `${API_URL}${imageField}`;
+  };
+
   const handleClaimClick = () => {
     setIsClaimModalOpen(true);
   };
@@ -43,7 +52,7 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
     <div className="found-item-card" id={`found-item-${normalizedItem.id}`}>
       <div className="card-image-container">
         <img 
-          src={normalizedItem.image} 
+          src={getImageUrl()} 
           alt={normalizedItem.name} 
           className="card-image"
           onError={(e) => {

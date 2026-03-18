@@ -39,6 +39,7 @@ const ReportLostItem = () => {
     purseItems2: '',
     purseItems3: '',
     otherPhoto: null,
+    otherDescription: '',
     otherLocation1: '',
     otherLocation2: '',
     otherLocation3: '',
@@ -147,6 +148,7 @@ const ReportLostItem = () => {
     }
 
     if (category === 'Others') {
+      if (!formData.otherDescription.trim()) nextErrors.otherDescription = 'Description is required.';
       if (!formData.otherLocation1.trim()) nextErrors.otherLocation1 = 'Field 1 is required.';
       if (!formData.otherDateLost) nextErrors.otherDateLost = 'Date is required.';
       if (!formData.otherFromTime) nextErrors.otherFromTime = 'From time is required.';
@@ -209,7 +211,7 @@ const ReportLostItem = () => {
       image = formData.pursePhoto;
     } else {
       item_name = 'Other Item';
-      description = '';
+      description = formData.otherDescription;
       location = [formData.otherLocation1, formData.otherLocation2, formData.otherLocation3].filter(Boolean).join(', ');
       date = formData.otherDateLost;
       time = formData.otherFromTime;
@@ -622,6 +624,18 @@ const ReportLostItem = () => {
                   accept="image/*"
                   onChange={(e) => handleFileChange('otherPhoto', e.target.files?.[0])}
                 />
+              </div>
+
+              <div className="report-lost-form-group">
+                <label className="required">Describe the lost item</label>
+                <textarea
+                  name="otherDescription"
+                  value={formData.otherDescription}
+                  onChange={handleInputChange}
+                  rows={4}
+                  placeholder="Describe the item in detail (color, size, brand, material, distinctive features, etc.)"
+                />
+                {errors.otherDescription && <p className="report-lost-error">{errors.otherDescription}</p>}
               </div>
 
               <h4>Where did you lose it?</h4>

@@ -7,10 +7,18 @@ const ItemCard = ({ item, showActions = false, onDelete }) => {
   const normalizedCategory = normalizeCategory(item.category, item.item_name || item.name);
   const displayDate = item.date ? new Date(item.date).toLocaleDateString() : 'Not provided';
 
+  // Construct full image URL if image_url is relative
+  const getImageUrl = () => {
+    const imageField = item.image_url || item.image;
+    if (!imageField) return null;
+    if (imageField.startsWith('http')) return imageField;
+    return `${API_URL}${imageField}`;
+  };
+
   return (
     <div className="item-card">
-      {item.image_url && (
-        <img src={`${API_URL}${item.image_url}`} alt={item.item_name || 'Lost item'} className="item-image" />
+      {getImageUrl() && (
+        <img src={getImageUrl()} alt={item.item_name || 'Lost item'} className="item-image" />
       )}
       <div className="item-details">
         <span className={`category-badge ${item.type}`}>{normalizedCategory}</span>
