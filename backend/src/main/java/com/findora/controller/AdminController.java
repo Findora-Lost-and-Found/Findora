@@ -1,6 +1,7 @@
 package com.findora.controller;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -42,12 +43,11 @@ import com.findora.repository.UserRepository;
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
 
-    private static final Logger log = LoggerFactory.getLogger(AdminController.class);
-
     private final UserRepository userRepository;
     private final ItemRepository itemRepository;
     private final ReportRepository reportRepository;
     private final SecurityTransactionRepository securityTransactionRepository;
+    private static final Logger log = LoggerFactory.getLogger(AdminController.class);
 
     public AdminController(
             UserRepository userRepository,
@@ -204,20 +204,23 @@ public class AdminController {
         String normalizedStatus = status == null ? "found" : status.trim().toLowerCase(Locale.ROOT);
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        List<Map<String, Object>> items = switch (normalizedStatus) {
-            case "released" -> itemRepository.findPaginatedItems(null, null, null, ItemStatus.CLOSED, pageable)
+        List<Map<String, Object>> items;
+        if ("released".equals(normalizedStatus)) {
+            items = itemRepository.findPaginatedItems(null, null, null, ItemStatus.CLOSED, pageable)
                 .stream()
                 .map(item -> toAdminItemPayload(item, "released"))
                 .toList();
-            case "received" -> itemRepository.findPaginatedItems(null, null, null, ItemStatus.CLAIMED, pageable)
+        } else if ("received".equals(normalizedStatus)) {
+            items = itemRepository.findPaginatedItems(null, null, null, ItemStatus.CLAIMED, pageable)
                 .stream()
                 .map(item -> toAdminItemPayload(item, "received"))
                 .toList();
-            default -> itemRepository.findPaginatedItems(null, null, ItemType.FOUND, null, pageable)
+        } else {
+            items = itemRepository.findPaginatedItems(null, null, ItemType.FOUND, null, pageable)
                 .stream()
                 .map(item -> toAdminItemPayload(item, "found"))
                 .toList();
-        };
+        }
 
         return ResponseEntity.ok(Map.of(
             "success", true,
