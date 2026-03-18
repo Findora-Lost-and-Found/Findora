@@ -39,9 +39,15 @@ const SecurityTransactions = lazy(() => import('./pages/security/SecurityTransac
 
 function App() {
   useEffect(() => {
-    const storedTheme = localStorage.getItem('findora-theme') || 'light';
-    document.body.classList.remove('light-mode', 'dark-mode');
-    document.body.classList.add(`${storedTheme}-mode`);
+    try {
+      const storedTheme = localStorage.getItem('findora-theme') || 'light';
+      if (typeof document !== 'undefined' && document.body) {
+        document.body.classList.remove('light-mode', 'dark-mode');
+        document.body.classList.add(`${storedTheme}-mode`);
+      }
+    } catch (error) {
+      console.warn('Theme setup skipped:', error);
+    }
   }, []);
 
   return (

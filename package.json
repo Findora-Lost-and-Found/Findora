@@ -1,0 +1,15 @@
+{
+  "name": "findora",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Root scripts for running Findora frontend and backend together",
+  "scripts": {
+    "dev": "concurrently \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "install:all": "npm --prefix backend install && npm --prefix frontend install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

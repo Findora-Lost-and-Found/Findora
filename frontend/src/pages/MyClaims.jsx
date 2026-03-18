@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { claimsAPI } from '../services/api';
 import './MyClaims.css';
 
