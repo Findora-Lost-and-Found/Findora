@@ -19,22 +19,6 @@ const getDeclinedApprovalIds = () => {
   }
 };
 
-const DECLINED_APPROVAL_IDS_KEY = 'findora-declined-approval-ids';
-
-const toBoolean = (value) => {
-  return value === true || value === 1 || value === '1' || value === 'true';
-};
-
-const getDeclinedApprovalIds = () => {
-  try {
-    const raw = localStorage.getItem(DECLINED_APPROVAL_IDS_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed.map((id) => Number(id)) : [];
-  } catch (error) {
-    return [];
-  }
-};
-
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -112,7 +96,6 @@ const AdminDashboard = () => {
           </Link>
 
           <Link to="/admin/items/found" className="stat-card stat-card-link">
-          <Link to="/admin/items/found" className="stat-card stat-card-link">
             <h3>Active Found Items</h3>
             <p className="stat-number">{stats.items.found}</p>
           </Link>
@@ -122,7 +105,6 @@ const AdminDashboard = () => {
             <p className="stat-number">{stats.items.foundPosted || 0}</p>
           </Link>
 
-          <Link to="/admin/items/receive" className="stat-card stat-card-link">
           <Link to="/admin/items/receive" className="stat-card stat-card-link">
             <h3>Claimed Items</h3>
             <p className="stat-number">{stats.items.claimed}</p>

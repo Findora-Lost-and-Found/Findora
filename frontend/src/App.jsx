@@ -32,12 +32,8 @@ const AdminReports = lazy(() => import('./pages/admin/AdminReports'));
 const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'));
 const AdminPendingApprovals = lazy(() => import('./pages/admin/AdminPendingApprovals'));
 const AdminItemsByStatus = lazy(() => import('./pages/admin/AdminItemsByStatus'));
-const AdminPendingApprovals = lazy(() => import('./pages/admin/AdminPendingApprovals'));
-const AdminItemsByStatus = lazy(() => import('./pages/admin/AdminItemsByStatus'));
 
 const SecurityPendingClaims = lazy(() => import('./pages/security/SecurityPendingClaims'));
-const SecurityReceiveItems = lazy(() => import('./pages/security/SecurityReceiveItems'));
-const SecurityTransactions = lazy(() => import('./pages/security/SecurityTransactions'));
 const SecurityReceiveItems = lazy(() => import('./pages/security/SecurityReceiveItems'));
 const SecurityTransactions = lazy(() => import('./pages/security/SecurityTransactions'));
 
@@ -82,14 +78,10 @@ function App() {
               <Route path="/security" element={<PrivateRoute roles={['security', 'admin']}><Navigate to="/dashboard" replace /></PrivateRoute>} />
               <Route path="/security/dashboard" element={<PrivateRoute roles={['security', 'admin']}><SecurityDashboard /></PrivateRoute>} />
               <Route path="/security/receive" element={<PrivateRoute roles={['security', 'admin']}><SecurityReceiveItems /></PrivateRoute>} />
-              <Route path="/security/receive" element={<PrivateRoute roles={['security', 'admin']}><SecurityReceiveItems /></PrivateRoute>} />
               <Route path="/security/pending-claims" element={<PrivateRoute roles={['security', 'admin']}><SecurityPendingClaims /></PrivateRoute>} />
-              <Route path="/security/transactions" element={<PrivateRoute roles={['security', 'admin']}><SecurityTransactions /></PrivateRoute>} />
               <Route path="/security/transactions" element={<PrivateRoute roles={['security', 'admin']}><SecurityTransactions /></PrivateRoute>} />
 
               {/* Admin Routes */}
-              <Route path="/admin/dashboard" element={<PrivateRoute roles={['admin']}><Navigate to="/admin-panel" replace /></PrivateRoute>} />
-              <Route path="/admin-panel" element={<PrivateRoute roles={['admin']}><AdminDashboard /></PrivateRoute>} />
               <Route path="/admin/dashboard" element={<PrivateRoute roles={['admin']}><Navigate to="/admin-panel" replace /></PrivateRoute>} />
               <Route path="/admin-panel" element={<PrivateRoute roles={['admin']}><AdminDashboard /></PrivateRoute>} />
               <Route path="/admin/users" element={<PrivateRoute roles={['admin']}><AdminUsers /></PrivateRoute>} />

@@ -231,7 +231,8 @@ public class ItemController {
         Files.createDirectories(uploadPath);
         Files.copy(image.getInputStream(), uploadPath.resolve(storedName), StandardCopyOption.REPLACE_EXISTING);
 
-        return uploadDir.replace("\\", "/") + "/" + storedName;
+        String normalizedUploadDir = uploadDir.replace("\\", "/").replaceAll("/+$", "");
+        return normalizedUploadDir + "/" + storedName;
     }
 
     /**

@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './FoundItemCard.css';
@@ -8,7 +7,6 @@ import { normalizeCategory } from '../utils/categoryUtils';
 import { maskNicInText } from '../utils/itemDisplayUtils';
 import SampleItemImage from './SampleItemImage';
 
-const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }) => {
 const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }) => {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
@@ -21,9 +19,14 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
   const displayDescription = normalizedItem.category === 'NIC'
     ? maskNicInText(normalizedItem.description)
     : normalizedItem.description;
-  
-  // Check if current user owns this item
-  const isOwnItem = currentUser && (currentUser.id === normalizedItem?.posted_by?.id || currentUser.id === normalizedItem?.user_id);
+
+  // Treat ownership as true only when both IDs are present and equal.
+  const currentUserId = Number(currentUser?.id);
+  const ownerIdRaw = normalizedItem?.posted_by?.id ?? normalizedItem?.user_id ?? normalizedItem?.userId;
+  const ownerId = Number(ownerIdRaw);
+  const isOwnItem = Number.isFinite(currentUserId)
+    && Number.isFinite(ownerId)
+    && currentUserId === ownerId;
 
   // Determine whether there is a real uploaded photo.
   const hasRealImage =
