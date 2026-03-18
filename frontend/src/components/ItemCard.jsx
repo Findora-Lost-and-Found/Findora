@@ -6,8 +6,8 @@ const CATEGORY_FALLBACK_IMAGE = {
   'Bank Card': '/assets/card-commercial.svg',
   NIC: '/assets/nic-card.svg',
   'Student ID': '/assets/student-id.svg',
-  Wallet: '/assets/card-peoples.svg',
-  Other: '/assets/card-boc.svg'
+  Wallet: 'https://via.placeholder.com/300x200?text=Wallet+Photo',
+  Other: 'https://via.placeholder.com/300x200?text=Item+Photo'
 };
 
 const getIdentityBadgeLabel = (normalizedCategory, item) => {
@@ -18,13 +18,18 @@ const getIdentityBadgeLabel = (normalizedCategory, item) => {
 };
 
 const ItemCard = ({ item, showActions = false, onDelete }) => {
-  const API_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8080';
+  if (!item) return null;
+
+  const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
   const normalizedCategory = normalizeCategory(item.category, item.item_name || item.name);
+
   const normalizedItem = {
     ...item,
     category: normalizedCategory,
     name: item.name || item.item_name
   };
+
+  const displayDate = item.date ? new Date(item.date).toLocaleDateString() : 'Not provided';
 
   const fallbackImage = CATEGORY_FALLBACK_IMAGE[normalizedCategory] || CATEGORY_FALLBACK_IMAGE.Other;
   const generatedPreviewImage = useMemo(() => buildIdentityPreviewImage(normalizedItem), [normalizedItem]);
@@ -33,16 +38,22 @@ const ItemCard = ({ item, showActions = false, onDelete }) => {
     [normalizedCategory, normalizedItem.name, normalizedItem.item_name, normalizedItem.description]
   );
   const resolvedImage = useMemo(() => {
-    if (generatedPreviewImage) {
-      return generatedPreviewImage;
-    }
-
     if (item.image_url) {
-      return `${API_URL}${item.image_url}`;
+      const normalizedPath = String(item.image_url).trim().replace(/\\/g, '/').replace(/\/+/g, '/').replace(/^\/+/, '');
+      return `${API_URL}/${normalizedPath}`;
     }
 
     if (item.image) {
-      return item.image;
+      const source = String(item.image).trim().replace(/\\/g, '/');
+      if (source.startsWith('http://') || source.startsWith('https://')) {
+        return source;
+      }
+      const normalizedPath = source.replace(/\/+/g, '/').replace(/^\/+/, '');
+      return `${API_URL}/${normalizedPath}`;
+    }
+
+    if (generatedPreviewImage) {
+      return generatedPreviewImage;
     }
 
     return fallbackImage;
@@ -63,12 +74,12 @@ const ItemCard = ({ item, showActions = false, onDelete }) => {
       <div className="item-details">
         <span className={`category-badge ${item.type}`}>{badgeLabel}</span>
         <span className={`type-badge ${item.type}`}>{item.type}</span>
-        <h3>{item.item_name}</h3>
-        <p className="item-description">{item.description}</p>
+        <h3>{item.item_name || 'Unnamed Item'}</h3>
+        <p className="item-description">{item.description || 'No description provided.'}</p>
         <div className="item-info">
-          <p><strong>Date:</strong> {new Date(item.date).toLocaleDateString()}</p>
-          <p><strong>Time:</strong> {item.time}</p>
-          <p><strong>Status:</strong> <span className={`status-badge ${item.status}`}>{item.status}</span></p>
+          <p><strong>Date:</strong> {displayDate}</p>
+          <p><strong>Time:</strong> {item.time || '--:--'}</p>
+          <p><strong>Status:</strong> <span className={`status-badge ${item.status || 'active'}`}>{item.status || 'active'}</span></p>
         </div>
         {item.full_name && <p className="posted-by"><small>Posted by: {item.full_name}</small></p>}
         

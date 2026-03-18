@@ -2,6 +2,7 @@ package com.findora.controller;
 
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -28,10 +29,13 @@ import com.findora.service.AuthService;
 public class AuthController {
 
     private final AuthService authService;
+    private final boolean exposeResetOtp;
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService,
+            @Value("${app.dev.expose-reset-otp:false}") boolean exposeResetOtp) {
         this.authService = authService;
+        this.exposeResetOtp = exposeResetOtp;
     }
 
     /**
@@ -124,6 +128,11 @@ public class AuthController {
     @PostMapping("/verify-email")
     public ResponseEntity<?> verifyEmail(@RequestBody Map<String, String> verifyRequest) {
         try {
+            if (verifyRequest == null) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Request body is required"));
+            }
+
             String otp = verifyRequest.get("otp");
             if (otp == null || otp.isBlank()) {
                 return ResponseEntity.badRequest()
@@ -141,8 +150,12 @@ public class AuthController {
             } else if (usernameOrEmail != null && !usernameOrEmail.isBlank()) {
                 authService.verifyEmail(usernameOrEmail, otp);
             } else {
-                return ResponseEntity.badRequest()
-                    .body(Map.of("success", false, "message", "username/email or userId is required"));
+                String currentUsername = getCurrentUsernameOptional();
+                if (currentUsername == null) {
+                    return ResponseEntity.badRequest()
+                        .body(Map.of("success", false, "message", "username/email or userId is required"));
+                }
+                authService.verifyEmail(currentUsername, otp);
             }
 
             return ResponseEntity.ok(Map.of("success", true, "message", "Email verified successfully"));
@@ -158,14 +171,17 @@ public class AuthController {
     @PostMapping("/resend-otp")
     public ResponseEntity<?> resendOtp(@RequestBody Map<String, String> request) {
         try {
-            String usernameOrEmail = request.get("username");
+            String usernameOrEmail = request != null ? request.get("username") : null;
             if (usernameOrEmail == null || usernameOrEmail.isBlank()) {
-                usernameOrEmail = request.get("email");
+                usernameOrEmail = request != null ? request.get("email") : null;
             }
 
             if (usernameOrEmail == null || usernameOrEmail.isBlank()) {
-                return ResponseEntity.badRequest()
-                    .body(Map.of("success", false, "message", "username or email is required"));
+                usernameOrEmail = getCurrentUsernameOptional();
+                if (usernameOrEmail == null) {
+                    return ResponseEntity.badRequest()
+                        .body(Map.of("success", false, "message", "username or email is required"));
+                }
             }
 
             authService.resendVerificationOtp(usernameOrEmail);
@@ -189,8 +205,20 @@ public class AuthController {
                     .body(Map.of("success", false, "message", "Email is required"));
             }
 
-            authService.initiatePasswordReset(email);
-            return ResponseEntity.ok(Map.of("success", true, "message", "Password reset OTP sent"));
+            String otp = authService.initiatePasswordReset(email);
+
+            if (exposeResetOtp && otp != null) {
+                return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Password reset OTP generated",
+                    "otp", otp
+                ));
+            }
+
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "If the email is registered, a password reset OTP has been sent"
+            ));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
         }
@@ -249,5 +277,17 @@ public class AuthController {
             throw new IllegalStateException("User not authenticated");
         }
         return auth.getName();
+    }
+
+    private String getCurrentUsernameOptional() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return null;
+        }
+        String username = auth.getName();
+        if (username == null || username.isBlank() || "anonymousUser".equalsIgnoreCase(username)) {
+            return null;
+        }
+        return username;
     }
 }

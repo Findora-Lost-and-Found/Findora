@@ -9,6 +9,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class ItemDTO {
     private Long id;
+    private Long userId;               // Owner's user ID
     private String name;               // Maps from itemName in DB
     private String category;           // e.g., "NIC", "Wallet"
     private String type;               // e.g., "lost", "found"
@@ -17,7 +18,6 @@ public class ItemDTO {
     private String status;             // e.g., "active", "claimed"
     private String imageUrl;           // Maps from image_url in DB
     private String createdAt;          // ISO 8601 timestamp string
-    private Long userId;
     private String fullName;
 
     public ItemDTO() {
@@ -43,6 +43,15 @@ public class ItemDTO {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    @JsonProperty("user_id")
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
     public String getName() {
@@ -93,6 +102,7 @@ public class ItemDTO {
         this.status = status;
     }
 
+    @JsonProperty("image_url")
     public String getImageUrl() {
         return imageUrl;
     }
@@ -109,14 +119,6 @@ public class ItemDTO {
         this.createdAt = createdAt;
     }
 
-    public Long getUserId() {
-        return userId;
-    }
-
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
-
     public String getFullName() {
         return fullName;
     }
@@ -131,19 +133,9 @@ public class ItemDTO {
         return name;
     }
 
-    @JsonProperty("image_url")
-    public String getImageUrlLegacy() {
-        return imageUrl;
-    }
-
     @JsonProperty("created_at")
     public String getCreatedAtLegacy() {
         return createdAt;
-    }
-
-    @JsonProperty("user_id")
-    public Long getUserIdLegacy() {
-        return userId;
     }
 
     @JsonProperty("full_name")

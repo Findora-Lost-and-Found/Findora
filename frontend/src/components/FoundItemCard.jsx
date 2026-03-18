@@ -7,12 +7,14 @@ import { normalizeCategory } from '../utils/categoryUtils';
 import { maskNicInText } from '../utils/itemDisplayUtils';
 import { buildIdentityPreviewImage } from '../utils/cardPreviewUtils';
 
+const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
+
 const CATEGORY_FALLBACK_IMAGE = {
   'Bank Card': '/assets/card-commercial.svg',
   NIC: '/assets/nic-card.svg',
   'Student ID': '/assets/student-id.svg',
-  Wallet: '/assets/card-peoples.svg',
-  Other: '/assets/card-boc.svg'
+  Wallet: 'https://via.placeholder.com/300x200?text=Wallet+Photo',
+  Other: 'https://via.placeholder.com/300x200?text=Item+Photo'
 };
 
 const getIdentityBadgeLabel = (normalizedCategory, item) => {
@@ -34,9 +36,15 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
   const displayDescription = normalizedItem.category === 'NIC'
     ? maskNicInText(normalizedItem.description)
     : normalizedItem.description;
-  
-  // Check if current user owns this item
-  const isOwnItem = currentUser && (currentUser.id === normalizedItem?.posted_by?.id || currentUser.id === normalizedItem?.user_id);
+
+  // Treat ownership as true only when both IDs are present and equal.
+  const currentUserId = Number(currentUser?.id);
+  const ownerIdRaw = normalizedItem?.posted_by?.id ?? normalizedItem?.user_id ?? normalizedItem?.userId;
+  const ownerId = Number(ownerIdRaw);
+  const isOwnItem = Number.isFinite(currentUserId)
+    && Number.isFinite(ownerId)
+    && currentUserId === ownerId;
+
   const normalizedStatus = useMemo(() => String(normalizedItem?.status || '').toUpperCase(), [normalizedItem?.status]);
   const isAlreadyHandedOver = normalizedStatus === 'HANDOVER_REQUESTED'
     || normalizedStatus === 'HELD_BY_SECURITY'
@@ -48,17 +56,25 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
     [normalizedItem.category, normalizedItem.name, normalizedItem.item_name, normalizedItem.description]
   );
   const resolvedImage = useMemo(() => {
+    const source = normalizedItem.image ? String(normalizedItem.image).trim() : '';
+    const hasUploadedImage = source
+      && !source.includes('via.placeholder.com')
+      && !source.includes('placeholder.com');
+
+    // Always prefer the actual uploaded item photo when available.
+    if (hasUploadedImage) {
+      if (source.startsWith('http://') || source.startsWith('https://')) {
+        return source;
+      }
+      const normalizedPath = source.replace(/\\/g, '/').replace(/\/+/g, '/').replace(/^\/+/, '');
+      return `${API_ORIGIN}/${normalizedPath}`;
+    }
+
     if (generatedPreviewImage) {
       return generatedPreviewImage;
     }
 
-    const source = normalizedItem.image;
-
-    if (!source || source.includes('via.placeholder.com')) {
-      return fallbackImage;
-    }
-
-    return source;
+    return fallbackImage;
   }, [normalizedItem.image, generatedPreviewImage, fallbackImage]);
   
   const formatDate = (dateString) => {
@@ -92,6 +108,11 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
 
       <div className="card-content">
         <h3 className="card-title">{normalizedItem.name}</h3>
+        {isAlreadyHandedOver && (
+          <div className="handed-over-label" style={{ color: '#219653', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+            Handed Over to Security
+          </div>
+        )}
         
         <div className="card-meta">
           <div className="meta-item">
@@ -106,7 +127,7 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
           <small>Posted by <strong>{postedByName}</strong></small>
         </div>
 
-        <div className="card-actions">
+        <div className={`card-actions${isOwnItem ? ' single-action' : ''}`}>
           {isOwnItem ? (
             isAlreadyHandedOver ? (
               <button className="btn btn-secondary" disabled>
@@ -132,6 +153,7 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
           <button 
             onClick={handleReportClick}
             className="btn btn-report"
+            aria-label="Report item"
           >
             🚩 Report
           </button>

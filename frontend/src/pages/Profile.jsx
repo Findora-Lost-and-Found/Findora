@@ -109,6 +109,8 @@ const Profile = () => {
     return <div className="loading">Loading...</div>;
   }
 
+  const memberSince = user.createdAt || user.created_at;
+
   return (
     <div className="container">
       <div className="profile-container">
@@ -170,7 +172,7 @@ const Profile = () => {
               )}
               <div className="detail-row">
                 <strong>Member Since:</strong>
-                <span>{new Date(user.created_at).toLocaleDateString()}</span>
+                <span>{memberSince ? new Date(memberSince).toLocaleDateString() : 'N/A'}</span>
               </div>
             </div>
           </div>

@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { itemsAPI, claimsAPI } from '../services/api';
+import { itemsAPI, claimsAPI, securityAPI } from '../services/api';
+import { toast } from 'react-toastify';
 import PostModal from '../components/PostModal';
 import FoundItemCard from '../components/FoundItemCard';
+import SecurityDashboard from './SecurityDashboard';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
 import { sampleFoundItems } from '../data/sampleFoundItems';
@@ -23,10 +25,12 @@ const readFirst = (obj, keys, fallback = '') => {
 
 const toImageUrl = (rawImage) => {
   if (!rawImage) return 'https://via.placeholder.com/120x80?text=No+Image';
-  if (rawImage.startsWith('http://') || rawImage.startsWith('https://')) {
-    return rawImage;
+  const normalized = String(rawImage).trim().replace(/\\/g, '/');
+  if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+    return normalized;
   }
-  return `${API_ORIGIN}${rawImage.startsWith('/') ? rawImage : `/${rawImage}`}`;
+  const normalizedPath = normalized.replace(/\/+/g, '/').replace(/^\/+/, '');
+  return `${API_ORIGIN}/${normalizedPath}`;
 };
 
 const toTimestamp = (value) => {
@@ -69,9 +73,15 @@ const Dashboard = () => {
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [foundItems, setFoundItems] = useState([]);
   const [adminSections, setAdminSections] = useState({ found: [], received: [], released: [] });
+  const [handoverLoadingById, setHandoverLoadingById] = useState({});
 
   useEffect(() => {
     if (user) {
+      if (user.role === 'security') {
+        setLoading(false);
+        return;
+      }
+
       loadDashboardData();
     }
   }, [user]);
@@ -83,7 +93,7 @@ const Dashboard = () => {
           itemsAPI.getMy(),
           claimsAPI.getMy(),
           // Dashboard keeps a latest preview, while Found Items page shows complete list.
-          itemsAPI.getAll({ type: 'found', status: 'active' })
+          itemsAPI.getAll({ type: 'found' })
         ]);
 
         setStats({
@@ -97,10 +107,10 @@ const Dashboard = () => {
             ...item,
             name: item.name || item.item_name,
             date_found: item.date_found || item.date || item.created_at,
-            image: item.image || (item.image_url ? `http://localhost:8080${item.image_url}` : 'https://via.placeholder.com/300x200?text=Item+Image'),
+            image: toImageUrl(readFirst(item, ['image', 'image_url', 'imageUrl'])),
             category: normalizeCategory(item.category, item.name || item.item_name),
             posted_by: item.posted_by || {
-              id: item.user_id,
+              id: item.userId || item.user_id,
               full_name: item.full_name || item.username || 'Unknown User'
             }
           }));
@@ -147,8 +157,29 @@ const Dashboard = () => {
     }
   };
 
+  const handleHandoverRequest = async (itemId) => {
+    try {
+      setHandoverLoadingById((prev) => ({ ...prev, [itemId]: true }));
+      await securityAPI.handoverRequest(itemId);
+      setFoundItems((prev) =>
+        prev.map((item) =>
+          item.id === itemId ? { ...item, status: 'handover_requested' } : item
+        )
+      );
+      toast.success('Handover request submitted successfully');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to submit handover request');
+    } finally {
+      setHandoverLoadingById((prev) => ({ ...prev, [itemId]: false }));
+    }
+  };
+
   if (loading) {
     return <div className="loading">Loading...</div>;
+  }
+
+  if (user?.role === 'security') {
+    return <SecurityDashboard />;
   }
 
   return (
@@ -200,6 +231,8 @@ const Dashboard = () => {
                       console.error('Claim error:', err);
                     });
                   }}
+                  onHandover={handleHandoverRequest}
+                  handoverInProgress={!!handoverLoadingById[item.id]}
                 />
               ))}
             </div>
