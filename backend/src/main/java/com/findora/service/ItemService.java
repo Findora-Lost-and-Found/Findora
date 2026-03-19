@@ -33,6 +33,8 @@ public class ItemService {
     private final ItemRepository itemRepository;
     private static final Logger log = LoggerFactory.getLogger(ItemService.class);
     private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_DATE_TIME;
+    private static final java.util.regex.Pattern PRIVATE_BANK_MARKER_PATTERN =
+        java.util.regex.Pattern.compile("\\n?__PRIVATE_(?:CVV|CARD)__=\\d{3,16}");
 
     public ItemService(ItemRepository itemRepository) {
         this.itemRepository = itemRepository;
@@ -224,7 +226,7 @@ public class ItemService {
             item.getItemName(),
             toApiCategory(item.getCategory()),
             item.getType() != null ? item.getType().toString().toLowerCase() : null,
-            item.getDescription(),
+            sanitizeDescriptionForClient(item.getDescription()),
             item.getLocation(),
             item.getStatus() != null ? item.getStatus().toString().toLowerCase() : null,
             item.getImageUrl(),
@@ -234,6 +236,15 @@ public class ItemService {
         );
         dto.setUserId(item.getUserId());
         return dto;
+    }
+
+    private String sanitizeDescriptionForClient(String rawDescription) {
+        if (rawDescription == null || rawDescription.isBlank()) {
+            return rawDescription;
+        }
+
+        String sanitized = PRIVATE_BANK_MARKER_PATTERN.matcher(rawDescription).replaceAll("").trim();
+        return sanitized;
     }
 
     private ItemCategory parseCategory(String category) {
