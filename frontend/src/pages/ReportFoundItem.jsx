@@ -169,7 +169,7 @@ const ReportFoundItem = () => {
 
     if (category === 'Bank Card') {
       item_name = `${formData.bankName} ${formData.cardType} Card`;
-      description = `Last 4 digits: ${formData.cardLast4 || 'N/A'}${formData.cardCvv ? ` | CVV (provided): ${formData.cardCvv}` : ''}`;
+      description = `Last 4 digits: ${formData.cardLast4 || 'N/A'}${formData.cardCvv ? ' | CVV (provided): ***' : ''}`;
       location = formData.bankPrivateLocation || location;
       date = formData.bankPrivateDate || date;
       time = formData.bankPrivateTime || time;

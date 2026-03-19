@@ -123,6 +123,17 @@
   color: #0f766e;
 }
 
+.original-photo-note {
+  margin-bottom: 0.85rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #065f46;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+}
+
 /* Card Actions */
 .card-actions {
   display: flex;

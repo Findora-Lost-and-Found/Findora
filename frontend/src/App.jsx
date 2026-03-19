@@ -16,6 +16,7 @@ const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
+const PendingApproval = lazy(() => import('./pages/PendingApproval'));
 const SecurityDashboard = lazy(() => import('./pages/SecurityDashboard'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Notifications = lazy(() => import('./pages/Notifications'));
@@ -60,6 +61,7 @@ function App() {
 
               {/* Auth Routes */}
               <Route path="/verify-email" element={<PrivateRoute><VerifyEmail /></PrivateRoute>} />
+              <Route path="/pending-approval" element={<PrivateRoute allowPendingApproval><PendingApproval /></PrivateRoute>} />
 
               {/* Protected Routes */}
               <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />

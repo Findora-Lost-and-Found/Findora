@@ -37,6 +37,8 @@ const Signup = () => {
     if (result.success) {
       if (result.requiresVerification) {
         navigate('/verify-email');
+      } else if (result.pendingApproval) {
+        navigate('/login');
       } else {
         navigate(getHomeRouteForUser(result.user));
       }
@@ -103,6 +105,8 @@ const Signup = () => {
             <select name="role" value={formData.role} onChange={handleChange} required>
               <option value="student">Student</option>
               <option value="staff">Staff</option>
+              <option value="security">Security</option>
+              <option value="admin">Admin</option>
             </select>
           </div>
 
