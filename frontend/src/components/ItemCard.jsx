@@ -1,30 +1,40 @@
 import { normalizeCategory } from '../utils/categoryUtils';
+import SampleItemImage from './SampleItemImage';
+import { maskSensitiveDescription } from '../utils/itemDisplayUtils';
 
 const ItemCard = ({ item, showActions = false, onDelete }) => {
   if (!item) return null;
 
-  const API_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8080';
+  const configuredApiUrl = import.meta.env.VITE_API_URL;
+  const API_URL = configuredApiUrl?.includes('localhost:5000')
+    ? configuredApiUrl.replace('localhost:5000', 'localhost:8080').replace('/api', '')
+    : configuredApiUrl?.replace('/api', '') || 'http://localhost:8080';
   const normalizedCategory = normalizeCategory(item.category, item.item_name || item.name);
+  const displayDescription = maskSensitiveDescription(item.description, normalizedCategory);
   const displayDate = item.date ? new Date(item.date).toLocaleDateString() : 'Not provided';
-
-  // Construct full image URL if image_url is relative
-  const getImageUrl = () => {
-    const imageField = item.image_url || item.image;
-    if (!imageField) return null;
-    if (imageField.startsWith('http')) return imageField;
-    return `${API_URL}${imageField}`;
-  };
+  const rawImage = item.image_url || item.imageUrl || item.image;
+  const normalizedImage = rawImage ? String(rawImage).trim().replace(/\\/g, '/') : '';
+  const normalizedPath = normalizedImage ? normalizedImage.replace(/\/+/g, '/').replace(/^\/+/, '') : '';
+  const imageSrc = !normalizedImage
+    ? ''
+    : normalizedImage.startsWith('http://') || normalizedImage.startsWith('https://')
+      ? normalizedImage
+      : `${API_URL}/${normalizedPath}`;
 
   return (
     <div className="item-card">
-      {getImageUrl() && (
-        <img src={getImageUrl()} alt={item.item_name || 'Lost item'} className="item-image" />
-      )}
+      <div className="item-image-container">
+        {imageSrc ? (
+          <img src={imageSrc} alt={item.item_name} className="item-image" />
+        ) : (
+          <SampleItemImage category={normalizedCategory} item={item} />
+        )}
+      </div>
       <div className="item-details">
         <span className={`category-badge ${item.type}`}>{normalizedCategory}</span>
         <span className={`type-badge ${item.type}`}>{item.type}</span>
         <h3>{item.item_name || 'Unnamed Item'}</h3>
-        <p className="item-description">{item.description || 'No description provided.'}</p>
+        <p className="item-description">{displayDescription || 'No description provided.'}</p>
         <div className="item-info">
           <p><strong>Date:</strong> {displayDate}</p>
           <p><strong>Time:</strong> {item.time || '--:--'}</p>
