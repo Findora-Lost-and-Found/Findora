@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.StringUtils;
@@ -40,6 +41,7 @@ import com.findora.model.Item;
 import com.findora.model.ItemCategory;
 import com.findora.model.ItemStatus;
 import com.findora.model.ItemType;
+import com.findora.repository.ItemRepository;
 import com.findora.repository.UserRepository;
 import com.findora.service.ItemService;
 
@@ -54,14 +56,16 @@ import com.findora.service.ItemService;
 public class ItemController {
 
     private final ItemService itemService;
+    private final ItemRepository itemRepository;
     private final UserRepository userRepository;
     private static final Logger log = LoggerFactory.getLogger(ItemController.class);
 
     @Value("${app.upload.dir:uploads}")
     private String uploadDir;
 
-    public ItemController(ItemService itemService, UserRepository userRepository) {
+    public ItemController(ItemService itemService, ItemRepository itemRepository, UserRepository userRepository) {
         this.itemService = itemService;
+        this.itemRepository = itemRepository;
         this.userRepository = userRepository;
     }
 
@@ -242,15 +246,41 @@ public class ItemController {
     }
 
     /**
-     * PUT /api/items/:id/status - Update item status.
-     * TODO: Implement with authorization check
+     * PUT /api/items/:id/status - Update item status (admin only).
+     * Allows admin to update item status to CLOSED (hidden from public view).
      */
     @PutMapping("/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> updateItemStatus(
             @PathVariable Long id,
             @RequestBody Map<String, String> statusUpdate) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-            .body(Map.of("message", "TODO: Implement status update"));
+        try {
+            Item item = itemRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Item not found"));
+
+            String newStatus = statusUpdate.get("status");
+            if (newStatus == null || newStatus.isBlank()) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "status is required"));
+            }
+
+            try {
+                ItemStatus status = ItemStatus.valueOf(newStatus.toUpperCase());
+                item.setStatus(status);
+                itemRepository.save(item);
+                return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Item status updated successfully",
+                    "item", toItemPayload(item)
+                ));
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Invalid status value"));
+            }
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("success", false, "message", e.getMessage()));
+        }
     }
 
     /**
@@ -276,6 +306,24 @@ public class ItemController {
         return userRepository.findByUsername(username)
             .map(user -> user.getId())
             .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
+    }
+
+    private Map<String, Object> toItemPayload(Item item) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("id", item.getId());
+        payload.put("user_id", item.getUserId());
+        payload.put("type", item.getType() == null ? null : item.getType().name().toLowerCase());
+        payload.put("category", item.getCategory() == null ? null : item.getCategory().name().toLowerCase().replace("_", " "));
+        payload.put("item_name", item.getItemName());
+        payload.put("description", item.getDescription());
+        payload.put("location", item.getLocation());
+        payload.put("date", item.getDate() == null ? null : item.getDate().toString());
+        payload.put("time", item.getTime() == null ? null : item.getTime().toString());
+        payload.put("image_url", item.getImageUrl());
+        payload.put("status", item.getStatus() == null ? null : item.getStatus().name().toLowerCase());
+        payload.put("created_at", item.getCreatedAt() == null ? null : item.getCreatedAt().toString());
+        payload.put("updated_at", item.getUpdatedAt() == null ? null : item.getUpdatedAt().toString());
+        return payload;
     }
 
     private Map<String, Object> toFrontendListResponse(PaginatedResponse<ItemDTO> response) {
