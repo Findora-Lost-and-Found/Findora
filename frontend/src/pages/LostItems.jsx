@@ -24,6 +24,7 @@ const LostItems = () => {
     category: '',
     search: ''
   });
+  const [searchInput, setSearchInput] = useState('');
 
   useEffect(() => {
     loadItems();
@@ -39,7 +40,7 @@ const LostItems = () => {
         size: PAGE_SIZE,
         sort: 'createdAt,desc',
         category: filters.category || undefined,
-        keyword: filters.search || undefined
+        keyword: filters.search.trim() || undefined
       });
 
       setItems(response.data?.content || []);
@@ -127,6 +128,17 @@ const LostItems = () => {
     setCurrentPage(0);
   };
 
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    const nextSearch = searchInput.trim();
+
+    setCurrentPage(0);
+    setFilters((prev) => ({
+      ...prev,
+      search: nextSearch
+    }));
+  };
+
   if (loading) {
     return <div className="loading">Loading...</div>;
   }
@@ -145,13 +157,20 @@ const LostItems = () => {
           <option value="Other">Other</option>
         </select>
 
-        <input
-          type="text"
-          name="search"
-          placeholder="Search items..."
-          value={filters.search}
-          onChange={handleFilterChange}
-        />
+        <form className="search-form" onSubmit={handleSearchSubmit}>
+          <input
+            type="text"
+            name="search"
+            placeholder="Search items..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+          />
+          <button type="submit" className="search-icon-btn" aria-label="Search lost items">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+              <path d="M10.5 3a7.5 7.5 0 0 1 5.93 12.1l4.24 4.23a1 1 0 1 1-1.41 1.42l-4.24-4.24A7.5 7.5 0 1 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11a5.5 5.5 0 0 0 0-11z" fill="currentColor"/>
+            </svg>
+          </button>
+        </form>
       </div>
 
       <div className="items-grid">
