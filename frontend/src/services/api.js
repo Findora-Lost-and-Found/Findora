@@ -91,6 +91,7 @@ export const adminAPI = {
   suspendUser: (id, suspended) => api.put(`/admin/suspend-user/${id}`, { suspended }),
   getReports: (params) => api.get('/admin/reports', { params }),
   handleReport: (id, data) => api.put(`/admin/reports/${id}`, data),
+  hideReportedItem: (id) => api.post(`/admin/reports/${id}/hide-item`),
   getStats: () => api.get('/admin/stats'),
   getItems: (params) => api.get('/admin/items', { params }),
   getTransactions: (params) => api.get('/admin/transactions', { params })
