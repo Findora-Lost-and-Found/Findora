@@ -621,6 +621,45 @@ body:not(.dark-mode) .item-card .category-badge {
   color: var(--text-primary);
 }
 
+.search-form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.search-form input {
+  min-width: 220px;
+}
+
+.search-icon-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid color-mix(in srgb, var(--brand) 35%, #ffffff);
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--brand) 0%, #0b5f58 100%);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 14px rgba(15, 118, 110, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.search-icon-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 9px 16px rgba(15, 118, 110, 0.32);
+  filter: brightness(1.05);
+}
+
+.search-icon-btn:active {
+  transform: translateY(0);
+}
+
+.search-icon-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.24);
+}
+
 /* Notifications */
 .notifications-header {
   display: flex;
