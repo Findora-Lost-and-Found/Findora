@@ -110,32 +110,40 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(password));
         user.setFullName(fullName);
         User.UserRole userRole = User.UserRole.valueOf(role.toUpperCase());
-        if (userRole != User.UserRole.STUDENT && userRole != User.UserRole.STAFF) {
-            throw new RuntimeException("Signup is only available for Student and Staff roles");
-        }
         user.setRole(userRole);
-        user.setIsVerified(false);
-        // Students are auto-approved; staff/security/admin roles require admin approval
+        boolean requiresEmailVerification = (userRole == User.UserRole.STUDENT || userRole == User.UserRole.STAFF);
+        user.setIsVerified(!requiresEmailVerification);
+        // Students are auto-approved; staff/security/admin require admin approval.
         boolean autoApproved = (userRole == User.UserRole.STUDENT);
         user.setIsApproved(autoApproved);
-        user.setVerificationOtp(generateOtp());
-        user.setOtpExpiry(LocalDateTime.now().plusHours(24));
+        if (requiresEmailVerification) {
+            user.setVerificationOtp(generateOtp());
+            user.setOtpExpiry(LocalDateTime.now().plusHours(24));
+        }
 
         User savedUser = userRepository.save(user);
 
-        emailService.sendVerificationOtp(savedUser.getEmail(), savedUser.getFullName(), savedUser.getVerificationOtp());
+        if (requiresEmailVerification) {
+            emailService.sendVerificationOtp(savedUser.getEmail(), savedUser.getFullName(), savedUser.getVerificationOtp());
+        }
 
-        String token = jwtTokenProvider.generateToken(
-            savedUser.getUsername(),
-            savedUser.getId().toString(),
-            savedUser.getRole().name()
-        );
+        String token = null;
+        if (userRole == User.UserRole.STUDENT || userRole == User.UserRole.STAFF) {
+            token = jwtTokenProvider.generateToken(
+                savedUser.getUsername(),
+                savedUser.getId().toString(),
+                savedUser.getRole().name()
+            );
+        }
 
         UserDTO userDTO = convertToUserDTO(savedUser);
+        String message = requiresEmailVerification
+            ? "Signup successful. Please verify your email with OTP"
+            : "Signup request submitted. Please wait for admin approval";
 
         log.info("User {} registered successfully", username);
 
-        return new AuthResponse(token, userDTO, "Signup successful. Please verify your email with OTP");
+        return new AuthResponse(token, userDTO, message);
     }
 
     /**
