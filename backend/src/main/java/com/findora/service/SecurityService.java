@@ -8,7 +8,6 @@ import java.util.Objects;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -67,15 +66,18 @@ public class SecurityService {
             throw new IllegalArgumentException("Only the item creator can request handover");
         }
 
+        if (item.getStatus() == ItemStatus.HANDOVER_REQUESTED) {
+            throw new IllegalArgumentException("Handover is already waiting for approvel");
+        }
+
         if (item.getStatus() == ItemStatus.HELD_BY_SECURITY
             || item.getStatus() == ItemStatus.HANDED_TO_SECURITY) {
             throw new IllegalArgumentException("Item is already handed over to security");
         }
 
-        // Transaction-table persistence is intentionally skipped here because
-        // deployments may have inconsistent legacy schemas for security_transactions.
-        // Item status update is also skipped because legacy DBs may not support
-        // the HANDOVER_REQUESTED enum value in items.status.
+        item.setStatus(ItemStatus.HANDOVER_REQUESTED);
+        itemRepository.save(item);
+
         log.info("Handover requested for item {} by user {}", itemId, currentUserId);
 
         List<User> securityUsers = userRepository.findByRole(User.UserRole.SECURITY);
@@ -146,37 +148,17 @@ public class SecurityService {
 
     @Transactional(readOnly = true)
     public List<SecurityReceiveItemDTO> getReceiveItems() {
-        try {
-            List<SecurityTransaction> requestedTx = securityTransactionRepository
-                .findByStatusOrderByCreatedAtDesc(SecurityTransaction.TransactionStatus.REQUESTED);
-
-            return requestedTx.stream()
-                .map(tx -> itemRepository.findById(tx.getItemId()).orElse(null))
-                .filter(Objects::nonNull)
-                .map(item -> new SecurityReceiveItemDTO(
-                    item.getId(),
-                    item.getItemName(),
-                    item.getImageUrl(),
-                    item.getUser() != null ? item.getUser().getFullName() : "Unknown Finder",
-                    item.getLocation(),
-                    item.getDate() != null ? item.getDate().format(DATE_FORMATTER) : null
-                ))
-                .toList();
-        } catch (RuntimeException e) {
-            log.warn("Falling back to items table for receive-items due to transaction schema mismatch: {}", e.getMessage());
-
-            return itemRepository.findByTypeAndStatus(ItemType.FOUND, ItemStatus.HANDOVER_REQUESTED)
-                .stream()
-                .map(item -> new SecurityReceiveItemDTO(
-                    item.getId(),
-                    item.getItemName(),
-                    item.getImageUrl(),
-                    item.getUser() != null ? item.getUser().getFullName() : "Unknown Finder",
-                    item.getLocation(),
-                    item.getDate() != null ? item.getDate().format(DATE_FORMATTER) : null
-                ))
-                .toList();
-        }
+        return itemRepository.findByTypeAndStatus(ItemType.FOUND, ItemStatus.HANDOVER_REQUESTED)
+            .stream()
+            .map(item -> new SecurityReceiveItemDTO(
+                item.getId(),
+                item.getItemName(),
+                item.getImageUrl(),
+                item.getUser() != null ? item.getUser().getFullName() : "Unknown Finder",
+                item.getLocation(),
+                item.getDate() != null ? item.getDate().format(DATE_FORMATTER) : null
+            ))
+            .toList();
     }
 
     @Transactional
