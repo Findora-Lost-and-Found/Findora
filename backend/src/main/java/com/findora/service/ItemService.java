@@ -34,8 +34,9 @@ public class ItemService {
     private final ItemRepository itemRepository;
     private static final Logger log = LoggerFactory.getLogger(ItemService.class);
     private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_DATE_TIME;
-    private static final java.util.regex.Pattern PRIVATE_BANK_MARKER_PATTERN =
-        java.util.regex.Pattern.compile("\\n?__PRIVATE_(?:CVV|CARD)__=\\d{3,16}");
+    private static final Pattern PRIVATE_BANK_MARKER_PATTERN =
+        Pattern.compile("\\n?__PRIVATE_(?:CVV|CARD)__=\\d{3,16}");
+    private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
 
     public ItemService(ItemRepository itemRepository) {
         this.itemRepository = itemRepository;
