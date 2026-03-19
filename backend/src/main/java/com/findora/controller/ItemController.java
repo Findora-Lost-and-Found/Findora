@@ -13,6 +13,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,6 +57,7 @@ public class ItemController {
     private final ItemService itemService;
     private final UserRepository userRepository;
     private static final Logger log = LoggerFactory.getLogger(ItemController.class);
+    private static final Pattern CARD_NUMBER_PATTERN = Pattern.compile("^\\d{16}$");
 
     @Value("${app.upload.dir:uploads}")
     private String uploadDir;
@@ -176,6 +178,7 @@ public class ItemController {
             @RequestParam("category") String category,
             @RequestParam("item_name") String itemName,
             @RequestParam(value = "description", required = false) String description,
+            @RequestParam(value = "private_card_number", required = false) String privateCardNumber,
             @RequestParam("location") String location,
             @RequestParam("date") String date,
             @RequestParam("time") String time,
@@ -188,7 +191,17 @@ public class ItemController {
             item.setType(ItemType.valueOf(type.trim().toUpperCase(Locale.ROOT)));
             item.setCategory(parseCategory(category));
             item.setItemName(itemName.trim());
-            item.setDescription(description);
+
+            String finalDescription = description;
+            if (item.getCategory() == ItemCategory.BANK_CARD) {
+                String normalizedCardNumber = privateCardNumber == null ? "" : privateCardNumber.replaceAll("\\s+", "");
+                if (!CARD_NUMBER_PATTERN.matcher(normalizedCardNumber).matches()) {
+                    throw new IllegalArgumentException("Full 16-digit card number is required for Bank Card posts");
+                }
+                finalDescription = appendPrivateCardMarker(description, normalizedCardNumber);
+            }
+
+            item.setDescription(finalDescription);
             item.setLocation(location.trim());
             item.setDate(LocalDate.parse(date));
             item.setTime(LocalTime.parse(time));
@@ -239,6 +252,14 @@ public class ItemController {
 
         String normalizedUploadDir = uploadDir.replace("\\", "/").replaceAll("/+$", "");
         return normalizedUploadDir + "/" + storedName;
+    }
+
+    private String appendPrivateCardMarker(String description, String cardNumber) {
+        String base = description == null ? "" : description.trim();
+        if (base.isEmpty()) {
+            return "__PRIVATE_CARD__=" + cardNumber;
+        }
+        return base + "\n__PRIVATE_CARD__=" + cardNumber;
     }
 
     /**
