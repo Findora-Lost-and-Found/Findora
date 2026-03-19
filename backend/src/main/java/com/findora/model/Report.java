@@ -37,14 +37,14 @@ public class Report {
     @Column(name = "reporter_id", nullable = false)
     private Long reporterId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "reporter_id", referencedColumnName = "id", insertable = false, updatable = false)
     private User reporter;
 
     @Column(name = "item_id", nullable = false)
     private Long itemId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "item_id", referencedColumnName = "id", insertable = false, updatable = false)
     private Item item;
 

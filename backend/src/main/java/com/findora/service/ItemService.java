@@ -3,6 +3,7 @@ package com.findora.service;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -110,9 +111,11 @@ public class ItemService {
         }
 
         // Fetch paginated results from repository
+        String normalizedKeyword = normalizeKeywordForLike(keyword);
+
         Page<Item> itemPage = itemRepository.findPaginatedItems(
             itemCategory,
-            keyword,
+            normalizedKeyword,
             itemType,
             itemStatus,
             pageable
@@ -144,13 +147,27 @@ public class ItemService {
      * Get items by user ID with pagination.
      */
     public PaginatedResponse<ItemDTO> getUserItems(Long userId, int page, int size) {
-        return getUserItems(userId, page, size, null, null);
+        return getUserItems(userId, page, size, null, null, null, null);
     }
 
     /**
      * Get items by user ID with optional type/status filters.
      */
     public PaginatedResponse<ItemDTO> getUserItems(Long userId, int page, int size, String type, String status) {
+        return getUserItems(userId, page, size, type, status, null, null);
+    }
+
+    /**
+     * Get items by user ID with optional type/status/category/keyword filters.
+     */
+    public PaginatedResponse<ItemDTO> getUserItems(
+            Long userId,
+            int page,
+            int size,
+            String type,
+            String status,
+            String category,
+            String keyword) {
         if (page < 0 || size < 1 || size > 100) {
             throw new IllegalArgumentException("Invalid page or size");
         }
@@ -168,7 +185,25 @@ public class ItemService {
             itemStatus = ItemStatus.valueOf(status.trim().toUpperCase());
         }
 
-        Page<Item> itemPage = itemRepository.findUserItemsFiltered(userId, itemType, itemStatus, pageable);
+        ItemCategory itemCategory = null;
+        if (category != null && !category.isBlank()) {
+            try {
+                itemCategory = parseCategory(category);
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid category filter for user items: {}", category);
+            }
+        }
+
+        String normalizedKeyword = normalizeKeywordForLike(keyword);
+
+        Page<Item> itemPage = itemRepository.findUserItemsFiltered(
+            userId,
+            itemType,
+            itemStatus,
+            itemCategory,
+            normalizedKeyword,
+            pageable
+        );
 
         List<ItemDTO> dtos = itemPage.getContent().stream()
             .map(this::convertToDTO)
@@ -263,6 +298,20 @@ public class ItemService {
             case WALLET -> "Wallet";
             case OTHER -> "Other";
         };
+    }
+
+    private String normalizeKeywordForLike(String keyword) {
+        if (keyword == null) {
+            return null;
+        }
+
+        String trimmed = keyword.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+
+        // Convert multi-word input to SQL LIKE-friendly pattern, e.g. "blue backpack" -> "blue%backpack".
+        return WHITESPACE_PATTERN.matcher(trimmed).replaceAll("%");
     }
 
     /**
