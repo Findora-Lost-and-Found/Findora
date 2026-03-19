@@ -1,7 +1,6 @@
 package com.findora.controller;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -204,22 +203,27 @@ public class AdminController {
         String normalizedStatus = status == null ? "found" : status.trim().toLowerCase(Locale.ROOT);
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        List<Map<String, Object>> items;
-        if ("released".equals(normalizedStatus)) {
-            items = itemRepository.findPaginatedItems(null, null, null, ItemStatus.CLOSED, pageable)
+        List<Map<String, Object>> items = switch (normalizedStatus) {
+            case "released", "release" -> itemRepository.findPaginatedItems(null, null, null, ItemStatus.CLOSED, pageable)
                 .stream()
                 .map(item -> toAdminItemPayload(item, "released"))
                 .toList();
-        } else if ("received".equals(normalizedStatus)) {
-            items = itemRepository.findPaginatedItems(null, null, null, ItemStatus.CLAIMED, pageable)
+            case "received", "receive" -> itemRepository.findPaginatedItems(null, null, null, ItemStatus.CLAIMED, pageable)
                 .stream()
                 .map(item -> toAdminItemPayload(item, "received"))
                 .toList();
-        } else {
-            items = itemRepository.findPaginatedItems(null, null, ItemType.FOUND, null, pageable)
+            case "found" -> itemRepository.findPaginatedItems(null, null, ItemType.FOUND, null, pageable)
                 .stream()
                 .map(item -> toAdminItemPayload(item, "found"))
                 .toList();
+            default -> null;
+        };
+
+        if (items == null) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", "Invalid status. Use one of: found, received, released"
+            ));
         }
 
         return ResponseEntity.ok(Map.of(
