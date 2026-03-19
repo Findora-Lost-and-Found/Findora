@@ -37,6 +37,8 @@ const Signup = () => {
     if (result.success) {
       if (result.requiresVerification) {
         navigate('/verify-email');
+      } else if (result.pendingApproval) {
+        navigate('/login');
       } else {
         navigate(getHomeRouteForUser(result.user));
       }
