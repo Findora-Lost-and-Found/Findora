@@ -1,0 +1,28 @@
+# Maven build output
+target/
+target/**
+!target/.gitkeep
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# User-uploaded files
+uploads/*
+!uploads/.gitkeep
+
+# Logs and temp
+logs/
+*.log
+*.pid
+*.tmp
+*.temp
+*.swp
+*~
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,0 +1,47 @@
+# OS / Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Secrets and environment files
+.env
+.env.*
+!.env.example
+
+# Dependency directories
+backend/node_modules/
+frontend/node_modules/
+
+# Build / cache / reports
+frontend/dist/
+frontend/dist-ssr/
+frontend/.vite/
+backend/target/
+backend/target/**
+**/target/
+backend/coverage/
+frontend/coverage/
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime / temp files
+*.pid
+*.seed
+*.pid.lock
+*.tmp
+*.temp
+*.swp
+*~
+
+# Uploaded/generated local files
+backend/uploads/*
+!backend/uploads/.gitkeep
