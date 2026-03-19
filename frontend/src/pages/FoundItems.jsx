@@ -8,7 +8,10 @@ import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT } from '../utils/itemDisplayUtils';
 
 const PAGE_SIZE = 4;
-const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
+const configuredApiUrl = import.meta.env.VITE_API_URL;
+const API_ORIGIN = (configuredApiUrl?.includes('localhost:5000')
+  ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')
+  : configuredApiUrl || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
 
 const readFirst = (obj, keys, fallback = '') => {
   for (const key of keys) {
@@ -35,7 +38,8 @@ const toImageUrl = (rawImage) => {
     return normalized;
   }
 
-  return `${API_ORIGIN}${normalized.startsWith('/') ? normalized : `/${normalized}`}`;
+  const normalizedPath = normalized.replace(/\/+/g, '/').replace(/^\/+/, '');
+  return `${API_ORIGIN}/${normalizedPath}`;
 };
 
 const FoundItems = () => {
@@ -63,7 +67,7 @@ const FoundItems = () => {
     description: item.description || '',
     location: item.location || 'Unknown location',
     date_found: item.date_found || item.date || item.created_at,
-    image: toImageUrl(readFirst(item, ['image', 'imageUrl', 'image_url'])),
+    image: toImageUrl(readFirst(item, ['image', 'image_url', 'imageUrl'])),
     category: normalizeCategory(item.category, item.name || item.item_name),
     type: item.type || 'found',
     status: item.status || 'active',

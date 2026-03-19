@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import './Pagination.css';
 
 const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   const pageNumbers = useMemo(
@@ -11,21 +12,27 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   }
 
   return (
-    <div className="pagination-controls">
+    <nav className="pagination-wrap" aria-label="Pagination Navigation">
       <button
         type="button"
+        className="pagination-btn pagination-nav"
         onClick={() => onPageChange(Math.max(currentPage - 1, 0))}
         disabled={currentPage === 0}
+        aria-label="Previous page"
       >
-        Previous
+        <span className="pagination-icon" aria-hidden="true">
+          &larr;
+        </span>
+        <span>Previous</span>
       </button>
 
       {pageNumbers.map((pageIndex) => (
         <button
           key={pageIndex}
           type="button"
+          className={`pagination-btn pagination-number ${pageIndex === currentPage ? 'is-active' : ''}`}
           onClick={() => onPageChange(pageIndex)}
-          disabled={pageIndex === currentPage}
+          aria-current={pageIndex === currentPage ? 'page' : undefined}
         >
           {pageIndex + 1}
         </button>
@@ -33,12 +40,17 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
 
       <button
         type="button"
+        className="pagination-btn pagination-nav"
         onClick={() => onPageChange(Math.min(currentPage + 1, totalPages - 1))}
         disabled={currentPage >= totalPages - 1}
+        aria-label="Next page"
       >
-        Next
+        <span>Next</span>
+        <span className="pagination-icon" aria-hidden="true">
+          &rarr;
+        </span>
       </button>
-    </div>
+    </nav>
   );
 };
 
