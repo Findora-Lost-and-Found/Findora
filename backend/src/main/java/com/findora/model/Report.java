@@ -1,13 +1,15 @@
 package com.findora.model;
 
 import java.time.LocalDateTime;
+import java.util.Locale;
 
 import org.hibernate.annotations.CreationTimestamp;
 
+import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
+import jakarta.persistence.Converter;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -49,7 +51,7 @@ public class Report {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String reason;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = ReportStatusConverter.class)
     @Column(nullable = false)
     private ReportStatus status;
 
@@ -64,7 +66,36 @@ public class Report {
     private LocalDateTime resolvedAt;
 
     public enum ReportStatus {
-        PENDING, REVIEWED, RESOLVED
+        PENDING, REVIEWED, RESOLVED;
+
+        public String toDatabaseValue() {
+            return name().toLowerCase(Locale.ROOT);
+        }
+
+        public static ReportStatus fromDatabaseValue(String value) {
+            if (value == null || value.isBlank()) {
+                return null;
+            }
+            try {
+                return ReportStatus.valueOf(value.trim().toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException ex) {
+                return PENDING;
+            }
+        }
+    }
+
+    @Converter(autoApply = false)
+    public static class ReportStatusConverter implements AttributeConverter<ReportStatus, String> {
+
+        @Override
+        public String convertToDatabaseColumn(ReportStatus attribute) {
+            return attribute == null ? null : attribute.toDatabaseValue();
+        }
+
+        @Override
+        public ReportStatus convertToEntityAttribute(String dbData) {
+            return ReportStatus.fromDatabaseValue(dbData);
+        }
     }
 
     public Long getId() {
