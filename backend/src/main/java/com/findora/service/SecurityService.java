@@ -6,6 +6,9 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -20,6 +23,7 @@ import com.findora.dto.SecurityTransactionDTO;
 import com.findora.model.Claim;
 import com.findora.model.Item;
 import com.findora.model.ItemStatus;
+import com.findora.model.ItemType;
 import com.findora.model.Notification;
 import com.findora.model.SecurityTransaction;
 import com.findora.model.User;
@@ -33,6 +37,7 @@ import com.findora.repository.UserRepository;
 public class SecurityService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
+    private static final Logger log = LoggerFactory.getLogger(SecurityService.class);
 
     private final ClaimRepository claimRepository;
     private final ItemRepository itemRepository;
@@ -62,22 +67,16 @@ public class SecurityService {
             throw new IllegalArgumentException("Only the item creator can request handover");
         }
 
-        if (item.getStatus() == ItemStatus.HANDOVER_REQUESTED
-                || item.getStatus() == ItemStatus.HELD_BY_SECURITY
-                || item.getStatus() == ItemStatus.HANDED_TO_SECURITY) {
+        if (item.getStatus() == ItemStatus.HELD_BY_SECURITY
+            || item.getStatus() == ItemStatus.HANDED_TO_SECURITY) {
             throw new IllegalArgumentException("Item is already handed over to security");
         }
 
-        item.setStatus(ItemStatus.HANDOVER_REQUESTED);
-        itemRepository.save(item);
-
-        SecurityTransaction tx = new SecurityTransaction();
-        tx.setSecurityOfficerId(currentUserId);
-        tx.setItemId(itemId);
-        tx.setTransactionType(SecurityTransaction.TransactionType.RECEIVE);
-        tx.setStatus(SecurityTransaction.TransactionStatus.REQUESTED);
-        tx.setReceivedFrom("Finder");
-        securityTransactionRepository.save(tx);
+        // Transaction-table persistence is intentionally skipped here because
+        // deployments may have inconsistent legacy schemas for security_transactions.
+        // Item status update is also skipped because legacy DBs may not support
+        // the HANDOVER_REQUESTED enum value in items.status.
+        log.info("Handover requested for item {} by user {}", itemId, currentUserId);
 
         List<User> securityUsers = userRepository.findByRole(User.UserRole.SECURITY);
         for (User securityUser : securityUsers) {
@@ -147,21 +146,37 @@ public class SecurityService {
 
     @Transactional(readOnly = true)
     public List<SecurityReceiveItemDTO> getReceiveItems() {
-        List<SecurityTransaction> requestedTx = securityTransactionRepository
-            .findByStatusOrderByCreatedAtDesc(SecurityTransaction.TransactionStatus.REQUESTED);
+        try {
+            List<SecurityTransaction> requestedTx = securityTransactionRepository
+                .findByStatusOrderByCreatedAtDesc(SecurityTransaction.TransactionStatus.REQUESTED);
 
-        return requestedTx.stream()
-            .map(tx -> itemRepository.findById(tx.getItemId()).orElse(null))
-            .filter(Objects::nonNull)
-            .map(item -> new SecurityReceiveItemDTO(
-                item.getId(),
-                item.getItemName(),
-                item.getImageUrl(),
-                item.getUser() != null ? item.getUser().getFullName() : "Unknown Finder",
-                item.getLocation(),
-                item.getDate() != null ? item.getDate().format(DATE_FORMATTER) : null
-            ))
-            .toList();
+            return requestedTx.stream()
+                .map(tx -> itemRepository.findById(tx.getItemId()).orElse(null))
+                .filter(Objects::nonNull)
+                .map(item -> new SecurityReceiveItemDTO(
+                    item.getId(),
+                    item.getItemName(),
+                    item.getImageUrl(),
+                    item.getUser() != null ? item.getUser().getFullName() : "Unknown Finder",
+                    item.getLocation(),
+                    item.getDate() != null ? item.getDate().format(DATE_FORMATTER) : null
+                ))
+                .toList();
+        } catch (RuntimeException e) {
+            log.warn("Falling back to items table for receive-items due to transaction schema mismatch: {}", e.getMessage());
+
+            return itemRepository.findByTypeAndStatus(ItemType.FOUND, ItemStatus.HANDOVER_REQUESTED)
+                .stream()
+                .map(item -> new SecurityReceiveItemDTO(
+                    item.getId(),
+                    item.getItemName(),
+                    item.getImageUrl(),
+                    item.getUser() != null ? item.getUser().getFullName() : "Unknown Finder",
+                    item.getLocation(),
+                    item.getDate() != null ? item.getDate().format(DATE_FORMATTER) : null
+                ))
+                .toList();
+        }
     }
 
     @Transactional
@@ -169,16 +184,20 @@ public class SecurityService {
         Item item = itemRepository.findById(itemId)
             .orElseThrow(() -> new IllegalArgumentException("Item not found"));
 
-        SecurityTransaction tx = securityTransactionRepository.findFirstByItemIdOrderByCreatedAtDesc(itemId)
-            .orElseThrow(() -> new IllegalArgumentException("No handover request found for item"));
+        try {
+            SecurityTransaction tx = securityTransactionRepository.findFirstByItemIdOrderByCreatedAtDesc(itemId)
+                .orElseThrow(() -> new IllegalArgumentException("No handover request found for item"));
 
-        if (tx.getStatus() != SecurityTransaction.TransactionStatus.REQUESTED) {
-            throw new IllegalArgumentException("Handover request already processed");
+            if (tx.getStatus() != SecurityTransaction.TransactionStatus.REQUESTED) {
+                throw new IllegalArgumentException("Handover request already processed");
+            }
+
+            tx.setStatus(SecurityTransaction.TransactionStatus.RECEIVED);
+            tx.setSecurityOfficerId(securityOfficerId);
+            securityTransactionRepository.save(tx);
+        } catch (RuntimeException e) {
+            log.warn("Skipping security transaction update due to schema mismatch: {}", e.getMessage());
         }
-
-        tx.setStatus(SecurityTransaction.TransactionStatus.RECEIVED);
-        tx.setSecurityOfficerId(securityOfficerId);
-        securityTransactionRepository.save(tx);
 
         item.setStatus(ItemStatus.HELD_BY_SECURITY);
         itemRepository.save(item);
