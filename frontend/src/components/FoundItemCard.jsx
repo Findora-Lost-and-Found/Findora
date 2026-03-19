@@ -56,8 +56,8 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
   const showOriginalPhotoNote = normalizedItem.category === 'Other' && hasRealImage && !imageLoadFailed;
 
   const normalizedStatus = useMemo(() => String(normalizedItem?.status || '').toUpperCase(), [normalizedItem?.status]);
-  const isAlreadyHandedOver = normalizedStatus === 'HANDOVER_REQUESTED'
-    || normalizedStatus === 'HELD_BY_SECURITY'
+  const isWaitingForSecurity = normalizedStatus === 'HANDOVER_REQUESTED';
+  const isAlreadyHandedOver = normalizedStatus === 'HELD_BY_SECURITY'
     || normalizedStatus === 'HANDED_TO_SECURITY';
   
   const formatDate = (dateString) => {
@@ -93,6 +93,11 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
 
       <div className="card-content">
         <h3 className="card-title">{normalizedItem.name}</h3>
+        {isWaitingForSecurity && (
+          <div className="handed-over-label" style={{ color: '#f2994a', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+            Waiting for Approvel
+          </div>
+        )}
         {isAlreadyHandedOver && (
           <div className="handed-over-label" style={{ color: '#219653', fontWeight: 'bold', marginBottom: '0.5rem' }}>
             Handed Over to Security
@@ -118,7 +123,11 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
 
         <div className={`card-actions flex items-center gap-3${isOwnItem ? ' single-action' : ''}`}>
           {isOwnItem ? (
-            isAlreadyHandedOver ? (
+            isWaitingForSecurity ? (
+              <button className="btn btn-secondary" disabled>
+                Waiting for Approvel
+              </button>
+            ) : isAlreadyHandedOver ? (
               <button className="btn btn-secondary" disabled>
                 Handed Over to Security
               </button>
