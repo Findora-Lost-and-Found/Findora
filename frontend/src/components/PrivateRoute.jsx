@@ -16,8 +16,16 @@ const PrivateRoute = ({ children, roles, allowPendingApproval = false }) => {
   }
 
   const role = String(user.role || '').toLowerCase();
+  const isVerified = Boolean(user.is_verified ?? user.isVerified);
+  const requiresOtpVerification = (role === 'student' || role === 'staff' || role === 'security') && !isVerified;
+  if (requiresOtpVerification && location.pathname !== '/verify-email') {
+    return <Navigate to="/verify-email" replace />;
+  }
+
   const isApproved = Boolean(user.is_approved ?? user.isApproved);
-  const requiresAdminApproval = (role === 'security' || role === 'admin') && !isApproved;
+  const requiresAdminApproval = (role === 'security' || role === 'admin')
+    && !isApproved
+    && (role !== 'security' || isVerified);
 
   if (requiresAdminApproval && !allowPendingApproval) {
     return <Navigate to="/pending-approval" replace />;
@@ -25,12 +33,6 @@ const PrivateRoute = ({ children, roles, allowPendingApproval = false }) => {
 
   if (!requiresAdminApproval && allowPendingApproval) {
     return <Navigate to={getHomeRouteForUser(user)} replace />;
-  }
-
-  const isVerified = Boolean(user.is_verified ?? user.isVerified);
-  const requiresOtpVerification = (role === 'student' || role === 'staff') && !isVerified;
-  if (requiresOtpVerification && location.pathname !== '/verify-email') {
-    return <Navigate to="/verify-email" replace />;
   }
 
   if (roles && !roles.includes(user.role)) {
