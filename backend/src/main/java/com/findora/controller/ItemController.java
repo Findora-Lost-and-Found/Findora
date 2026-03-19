@@ -155,12 +155,14 @@ public class ItemController {
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(required = false) String type,
-            @RequestParam(required = false) String status) {
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String keyword) {
 
         try {
             Long userId = getCurrentUserId();
 
-            PaginatedResponse<ItemDTO> response = itemService.getUserItems(userId, page, size, type, status);
+            PaginatedResponse<ItemDTO> response = itemService.getUserItems(userId, page, size, type, status, category, keyword);
 
             return ResponseEntity.ok(toFrontendListResponse(response));
 
