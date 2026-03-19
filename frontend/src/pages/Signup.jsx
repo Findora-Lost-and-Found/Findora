@@ -103,6 +103,8 @@ const Signup = () => {
             <select name="role" value={formData.role} onChange={handleChange} required>
               <option value="student">Student</option>
               <option value="staff">Staff</option>
+              <option value="security">Security</option>
+              <option value="admin">Admin</option>
             </select>
           </div>
 

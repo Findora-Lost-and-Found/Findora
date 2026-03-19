@@ -195,11 +195,17 @@ public class ItemController {
             item.setStatus(ItemStatus.ACTIVE);
 
             if (image != null && !image.isEmpty()) {
-                item.setImageUrl(saveImage(image));
+                String savedImageUrl = saveImage(image);
+                item.setImageUrl(savedImageUrl);
+                log.info("Image saved for item: {}", savedImageUrl);
             }
 
             Item saved = itemService.createItem(item);
             Optional<ItemDTO> savedDto = itemService.getItemById(saved.getId());
+
+            if (savedDto.isPresent()) {
+                log.info("Item created with ID: {}, image_url: {}", saved.getId(), savedDto.get().getImageUrl());
+            }
 
             return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Map.of(
