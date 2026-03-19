@@ -47,6 +47,8 @@ public class MatchService {
     private static final int MAX_OTP_ATTEMPTS = 2;
     private static final Pattern NIC_PATTERN = Pattern.compile("\\b(?:\\d{12}|\\d{9}[VvXx])\\b");
     private static final Pattern ID_PATTERN = Pattern.compile("\\b[A-Z]{2,4}[- ]?\\d{4,10}\\b");
+    private static final Pattern CARD16_PATTERN = Pattern.compile("\\b\\d{16}\\b");
+    private static final Pattern PRIVATE_CARD_PATTERN = Pattern.compile("__PRIVATE_CARD__=(\\d{16})");
 
     private final MatchRepository matchRepository;
     private final ItemRepository itemRepository;
@@ -157,6 +159,8 @@ public class MatchService {
             return 100.0;
         }
 
+        double bankCardSimilarity = bankCardNumberSimilarity(lost, found);
+
         double nameScore = enhancedTextSimilarity(lost.getItemName(), found.getItemName());
         double descriptionScore = descriptionSimilarity(lost.getDescription(), found.getDescription());
         String foundEvidenceCorpus = String.join(" ",
@@ -185,6 +189,13 @@ public class MatchService {
         if (keywordEvidence > 0.0) {
             double keywordBoost = Math.min(18.0, keywordEvidence * 30.0);
             finalScore = Math.min(100.0, finalScore + keywordBoost);
+        }
+
+        // Near bank-card number matches should remain high confidence.
+        if (bankCardSimilarity >= 0.93) {
+            finalScore = Math.max(finalScore, 93.0);
+        } else if (bankCardSimilarity >= 0.86) {
+            finalScore = Math.max(finalScore, 86.0);
         }
 
         // Strong real-world alignment should still produce OTP-eligible confidence.
@@ -785,6 +796,16 @@ public class MatchService {
         String searchable = ((item.getItemName() == null ? "" : item.getItemName()) + " "
             + (item.getDescription() == null ? "" : item.getDescription())).toUpperCase(Locale.ROOT);
 
+        Matcher privateCardMatcher = PRIVATE_CARD_PATTERN.matcher(searchable);
+        while (privateCardMatcher.find()) {
+            values.add(privateCardMatcher.group(1));
+        }
+
+        Matcher cardMatcher = CARD16_PATTERN.matcher(searchable);
+        while (cardMatcher.find()) {
+            values.add(cardMatcher.group());
+        }
+
         Matcher nicMatcher = NIC_PATTERN.matcher(searchable);
         while (nicMatcher.find()) {
             values.add(nicMatcher.group().replace(" ", ""));
@@ -796,6 +817,53 @@ public class MatchService {
         }
 
         return values;
+    }
+
+    private double bankCardNumberSimilarity(Item lost, Item found) {
+        String lostCard = extractPrimaryCardNumber(lost);
+        String foundCard = extractPrimaryCardNumber(found);
+
+        if (lostCard.isBlank() || foundCard.isBlank()) {
+            return 0.0;
+        }
+
+        if (lostCard.equals(foundCard)) {
+            return 1.0;
+        }
+
+        int distance = levenshteinDistance(lostCard, foundCard);
+        if (distance == 1) {
+            return 0.93;
+        }
+        if (distance == 2) {
+            return 0.86;
+        }
+        if (distance == 3) {
+            return 0.70;
+        }
+
+        return 0.0;
+    }
+
+    private String extractPrimaryCardNumber(Item item) {
+        if (item == null) {
+            return "";
+        }
+
+        String text = ((item.getItemName() == null ? "" : item.getItemName()) + " "
+            + (item.getDescription() == null ? "" : item.getDescription())).toUpperCase(Locale.ROOT);
+
+        Matcher privateCardMatcher = PRIVATE_CARD_PATTERN.matcher(text);
+        if (privateCardMatcher.find()) {
+            return privateCardMatcher.group(1);
+        }
+
+        Matcher cardMatcher = CARD16_PATTERN.matcher(text);
+        if (cardMatcher.find()) {
+            return cardMatcher.group();
+        }
+
+        return "";
     }
 
     private double round(double value) {
