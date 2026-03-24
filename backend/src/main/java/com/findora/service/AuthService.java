@@ -1,6 +1,7 @@
 package com.findora.service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Random;
 
 import org.slf4j.Logger;
@@ -11,7 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.findora.dto.AuthResponse;
 import com.findora.dto.UserDTO;
+import com.findora.model.Notification;
 import com.findora.model.User;
+import com.findora.repository.NotificationRepository;
 import com.findora.repository.UserRepository;
 import com.findora.security.JwtTokenProvider;
 
@@ -27,6 +30,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final EmailService emailService;
+    private final NotificationRepository notificationRepository;
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private static final Random RANDOM = new Random();
 
@@ -34,11 +38,13 @@ public class AuthService {
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             JwtTokenProvider jwtTokenProvider,
-            EmailService emailService) {
+            EmailService emailService,
+            NotificationRepository notificationRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.emailService = emailService;
+        this.notificationRepository = notificationRepository;
     }
 
     /**
@@ -57,7 +63,9 @@ public class AuthService {
             .orElseThrow(() -> new RuntimeException("User not found"));
 
         if (Boolean.FALSE.equals(user.getIsVerified())
-                && (user.getRole() == User.UserRole.STUDENT || user.getRole() == User.UserRole.STAFF)) {
+                && (user.getRole() == User.UserRole.STUDENT
+                    || user.getRole() == User.UserRole.STAFF
+                    || user.getRole() == User.UserRole.SECURITY)) {
             throw new RuntimeException("Please verify your email with OTP before login");
         }
 
@@ -109,32 +117,47 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(password));
         user.setFullName(fullName);
         User.UserRole userRole = User.UserRole.valueOf(role.toUpperCase());
-        if (userRole != User.UserRole.STUDENT && userRole != User.UserRole.STAFF) {
-            throw new RuntimeException("Signup is only available for Student and Staff roles");
-        }
         user.setRole(userRole);
-        user.setIsVerified(false);
-        // Students are auto-approved; staff/security/admin roles require admin approval
+        boolean requiresEmailVerification = (userRole == User.UserRole.STUDENT
+            || userRole == User.UserRole.STAFF
+            || userRole == User.UserRole.SECURITY);
+        user.setIsVerified(!requiresEmailVerification);
+        // Students are auto-approved; staff/security/admin require admin approval.
         boolean autoApproved = (userRole == User.UserRole.STUDENT);
         user.setIsApproved(autoApproved);
-        user.setVerificationOtp(generateOtp());
-        user.setOtpExpiry(LocalDateTime.now().plusHours(24));
+        if (requiresEmailVerification) {
+            user.setVerificationOtp(generateOtp());
+            user.setOtpExpiry(LocalDateTime.now().plusHours(24));
+        }
 
         User savedUser = userRepository.save(user);
 
-        emailService.sendVerificationOtp(savedUser.getEmail(), savedUser.getFullName(), savedUser.getVerificationOtp());
+        if (requiresEmailVerification) {
+            emailService.sendVerificationOtp(savedUser.getEmail(), savedUser.getFullName(), savedUser.getVerificationOtp());
+        }
 
-        String token = jwtTokenProvider.generateToken(
-            savedUser.getUsername(),
-            savedUser.getId().toString(),
-            savedUser.getRole().name()
-        );
+        String token = null;
+        if (requiresEmailVerification) {
+            token = jwtTokenProvider.generateToken(
+                savedUser.getUsername(),
+                savedUser.getId().toString(),
+                savedUser.getRole().name()
+            );
+        }
 
         UserDTO userDTO = convertToUserDTO(savedUser);
+        String message;
+        if (userRole == User.UserRole.SECURITY) {
+            message = "Signup successful. Verify your email with OTP. After verification, your account will be sent for admin approval";
+        } else if (requiresEmailVerification) {
+            message = "Signup successful. Please verify your email with OTP";
+        } else {
+            message = "Signup request submitted. Please wait for admin approval";
+        }
 
         log.info("User {} registered successfully", username);
 
-        return new AuthResponse(token, userDTO, "Signup successful. Please verify your email with OTP");
+        return new AuthResponse(token, userDTO, message);
     }
 
     /**
@@ -156,6 +179,10 @@ public class AuthService {
         user.setVerificationOtp(null);
         user.setOtpExpiry(null);
         userRepository.save(user);
+
+        if (user.getRole() == User.UserRole.SECURITY && Boolean.FALSE.equals(user.getIsApproved())) {
+            notifyAdminsOfSecurityApprovalRequest(user);
+        }
 
         log.info("User {} email verified", user.getUsername());
     }
@@ -260,6 +287,25 @@ public class AuthService {
      */
     private String generateOtp() {
         return String.format("%06d", RANDOM.nextInt(1000000));
+    }
+
+    private void notifyAdminsOfSecurityApprovalRequest(User securityUser) {
+        List<User> admins = userRepository.findByRole(User.UserRole.ADMIN);
+        for (User admin : admins) {
+            Notification notification = new Notification();
+            notification.setUserId(admin.getId());
+            notification.setType(Notification.NotificationType.APPROVAL);
+            notification.setTitle("Security approval requested");
+            notification.setMessage(
+                "Security user "
+                    + securityUser.getFullName()
+                    + " ("
+                    + securityUser.getEmail()
+                    + ") has verified email and is waiting for admin approval."
+            );
+            notification.setRelatedId(securityUser.getId());
+            notificationRepository.save(notification);
+        }
     }
 
     /**

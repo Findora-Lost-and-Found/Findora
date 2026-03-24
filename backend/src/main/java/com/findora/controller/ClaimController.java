@@ -1,6 +1,7 @@
 package com.findora.controller;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -49,8 +50,8 @@ import com.findora.service.MatchService;
 public class ClaimController {
 
     private static final Logger log = LoggerFactory.getLogger(ClaimController.class);
-    private static final double STRONG_THRESHOLD_PERCENT = 80.0;
-    private static final double POSSIBLE_THRESHOLD_PERCENT = 60.0;
+    private static final double STRONG_THRESHOLD_PERCENT = 70.0;
+    private static final double POSSIBLE_THRESHOLD_PERCENT = 50.0;
     private static final Pattern NIC_PATTERN = Pattern.compile("^(?:\\d{9}[VvXx]|\\d{12})$");
 
     private static final Collection<Claim.ClaimStatus> OPEN_STATUSES = List.of(
@@ -147,7 +148,7 @@ public class ClaimController {
                 claimMode = "after_waiting_period";
             } else {
                 throw new IllegalArgumentException(
-                    "Possible match detected (60-79%). OTP is not issued at this stage.");
+                    "Possible match detected (50-69%). OTP is not issued at this stage.");
             }
 
             Claim claim = claimCreationService.createClaimForItem(itemId, currentUserId);
@@ -304,7 +305,8 @@ public class ClaimController {
 
         return switch (category) {
             case NIC -> validateNic(claimData, item);
-            case STUDENT_ID, BANK_CARD -> validateIdNumber(claimData, item);
+            case STUDENT_ID -> validateIdNumber(claimData, item);
+            case BANK_CARD -> validateBankCardIdentity(claimData, item);
             case WALLET -> validateWalletIdentity(claimData, item);
             default -> false;
         };
@@ -340,6 +342,36 @@ public class ClaimController {
         return true;
     }
 
+    private boolean validateBankCardIdentity(Map<String, Object> claimData, Item item) {
+        String rawCardNumber = stringValue(claimData.get("cardNumber"));
+        if (rawCardNumber.isBlank()) {
+            throw new IllegalArgumentException("cardNumber is required for Bank Card claims");
+        }
+
+        String normalizedCardNumber = rawCardNumber.replaceAll("\\s+", "");
+        if (!normalizedCardNumber.matches("^\\d{16}$")) {
+            throw new IllegalArgumentException("Card number must be exactly 16 digits");
+        }
+
+        String privateCardNumber = extractPrivateCardNumber(item.getDescription());
+        if (privateCardNumber.isBlank()) {
+            // Backward compatibility for older bank-card posts created before full card capture.
+            return false;
+        }
+
+        if (privateCardNumber.equals(normalizedCardNumber)) {
+            return true;
+        }
+
+        int distance = levenshteinDistance(privateCardNumber, normalizedCardNumber);
+        if (distance <= 2) {
+            // Near matches should continue into score-based path with a high similarity score.
+            return false;
+        }
+
+        throw new IllegalArgumentException("Entered card number does not match this item");
+    }
+
     private boolean validateWalletIdentity(Map<String, Object> claimData, Item item) {
         String claimType = stringValue(claimData.get("claimType")).toLowerCase(Locale.ROOT);
         if (!"with-id".equals(claimType)) {
@@ -362,27 +394,39 @@ public class ClaimController {
         Item claimProfile = new Item();
         claimProfile.setType(ItemType.LOST);
         claimProfile.setCategory(foundItem.getCategory());
-        claimProfile.setItemName(stringValue(claimData.get("itemName")));
+        String claimItemName = stringValue(claimData.get("itemName"));
+        if (claimItemName.isBlank()) {
+            claimItemName = stringValue(foundItem.getItemName());
+        }
+        claimProfile.setItemName(claimItemName);
 
         String description = String.join(" ",
             stringValue(claimData.get("claimType")),
+            stringValue(claimData.get("cardNumber")),
             stringValue(claimData.get("idNumber")),
             stringValue(claimData.get("nicNumber")),
             stringValue(claimData.get("items1")),
             stringValue(claimData.get("items2")),
             stringValue(claimData.get("items3")),
-            stringValue(claimData.get("additionalDetails"))
+            stringValue(claimData.get("fromTime")),
+            stringValue(claimData.get("toTime"))
         ).trim();
         claimProfile.setDescription(description);
 
-        String location = String.join(" ",
+        String location = String.join(" | ",
             stringValue(claimData.get("location1")),
             stringValue(claimData.get("location2")),
             stringValue(claimData.get("location3"))
-        ).trim();
+        ).replaceAll("(\\s*\\|\\s*)+", " | ")
+            .replaceAll("^(\\s*\\|\\s*)|(\\s*\\|\\s*)$", "")
+            .trim();
         claimProfile.setLocation(location);
 
         claimProfile.setDate(parseDateOrDefault(claimData.get("foundFromDate"), foundItem.getDate()));
+        claimProfile.setTime(parseTimeOrDefault(
+            claimData.get("toTime"),
+            parseTimeOrDefault(claimData.get("fromTime"), foundItem.getTime())
+        ));
         return claimProfile;
     }
 
@@ -402,8 +446,62 @@ public class ClaimController {
         return value == null ? "" : value.replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
     }
 
+    private LocalTime parseTimeOrDefault(Object timeRaw, LocalTime fallback) {
+        if (timeRaw == null) {
+            return fallback;
+        }
+
+        try {
+            return LocalTime.parse(String.valueOf(timeRaw));
+        } catch (DateTimeParseException e) {
+            return fallback;
+        }
+    }
+
     private String normalizeGeneralId(String value) {
         return value == null ? "" : value.replaceAll("[\\s-]+", "").toUpperCase(Locale.ROOT);
+    }
+
+    private String extractPrivateCardNumber(String description) {
+        if (description == null || description.isBlank()) {
+            return "";
+        }
+
+        java.util.regex.Matcher matcher = java.util.regex.Pattern
+            .compile("__PRIVATE_CARD__=(\\d{16})")
+            .matcher(description);
+
+        if (!matcher.find()) {
+            return "";
+        }
+
+        return matcher.group(1);
+    }
+
+    private int levenshteinDistance(String left, String right) {
+        int[] previous = new int[right.length() + 1];
+        int[] current = new int[right.length() + 1];
+
+        for (int j = 0; j <= right.length(); j++) {
+            previous[j] = j;
+        }
+
+        for (int i = 1; i <= left.length(); i++) {
+            current[0] = i;
+            for (int j = 1; j <= right.length(); j++) {
+                int cost = left.charAt(i - 1) == right.charAt(j - 1) ? 0 : 1;
+                current[j] = Math.min(
+                    Math.min(current[j - 1] + 1, previous[j] + 1),
+                    previous[j - 1] + cost
+                );
+            }
+
+            int[] temp = previous;
+            previous = current;
+            current = temp;
+        }
+
+        return previous[right.length()];
     }
 
     private boolean itemContainsNormalizedValue(Item item, String normalizedValue) {

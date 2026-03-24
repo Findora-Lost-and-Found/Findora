@@ -11,7 +11,10 @@ import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
 import { sampleFoundItems } from '../data/sampleFoundItems';
 
 const ADMIN_PREVIEW_LIMIT = 5;
-const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
+const configuredApiUrl = import.meta.env.VITE_API_URL;
+const API_ORIGIN = (configuredApiUrl?.includes('localhost:5000')
+  ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')
+  : configuredApiUrl || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
 
 const readFirst = (obj, keys, fallback = '') => {
   for (const key of keys) {
@@ -102,8 +105,8 @@ const Dashboard = () => {
         });
 
         if (foundRes.status === 'fulfilled') {
-          console.log('Dashboard found items fetched:', foundRes.value.data.items || []);
-          const apiItems = (foundRes.value.data.items || []).map((item) => ({
+          console.log('Dashboard found items fetched:', foundRes.value.data.items || foundRes.value.data.content || []);
+          const apiItems = (foundRes.value.data.items || foundRes.value.data.content || []).map((item) => ({
             ...item,
             name: item.name || item.item_name,
             date_found: item.date_found || item.date || item.created_at,

@@ -52,3 +52,13 @@ export const maskNicInText = (text = '') => {
   // Mask alphanumeric NIC-like tokens that contain digits while preserving the last 4 characters.
   return String(text).replace(/\b(?=[A-Za-z0-9]*\d)[A-Za-z0-9]{5,}\b/g, (token) => maskNicNumber(token));
 };
+
+export const maskCvvInText = (text = '') => {
+  // Hide any explicitly labeled CVV value inside free-form descriptions.
+  return String(text).replace(/(CVV(?:\s*number)?(?:\s*\(provided\))?\s*:\s*)(\d{1,4})/gi, '$1***');
+};
+
+export const maskSensitiveDescription = (text = '', category = '') => {
+  const maskedCvv = maskCvvInText(text);
+  return String(category).toUpperCase() === 'NIC' ? maskNicInText(maskedCvv) : maskedCvv;
+};

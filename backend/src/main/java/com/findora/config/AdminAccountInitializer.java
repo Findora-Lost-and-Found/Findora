@@ -10,17 +10,22 @@ import com.findora.model.User;
 import com.findora.repository.UserRepository;
 
 /**
- * Creates a default admin account on startup when it does not already exist.
+ * Creates default privileged accounts on startup when they do not already exist.
  */
 @Component
 public class AdminAccountInitializer implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(AdminAccountInitializer.class);
 
-    private static final String ADMIN_USERNAME = "n-admin1";
-    private static final String ADMIN_EMAIL = "n-admin1@findora.com";
+    private static final String ADMIN_USERNAME = "admin";
+    private static final String ADMIN_EMAIL = "admin@findora.com";
     private static final String ADMIN_PASSWORD = "pass-123456";
     private static final String ADMIN_FULL_NAME = "Default Admin";
+
+    private static final String SECURITY_USERNAME = "security";
+    private static final String SECURITY_EMAIL = "security@findora.com";
+    private static final String SECURITY_PASSWORD = "pass-123456";
+    private static final String SECURITY_FULL_NAME = "Default Security Officer";
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -32,33 +37,59 @@ public class AdminAccountInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        boolean usernameExists = userRepository.existsByUsername(ADMIN_USERNAME);
-        boolean emailExists = userRepository.existsByEmail(ADMIN_EMAIL);
+        createBootstrapUser(
+            ADMIN_USERNAME,
+            ADMIN_EMAIL,
+            ADMIN_PASSWORD,
+            ADMIN_FULL_NAME,
+            User.UserRole.ADMIN,
+            "ROLE_ADMIN"
+        );
+
+        createBootstrapUser(
+            SECURITY_USERNAME,
+            SECURITY_EMAIL,
+            SECURITY_PASSWORD,
+            SECURITY_FULL_NAME,
+            User.UserRole.SECURITY,
+            "ROLE_SECURITY"
+        );
+    }
+
+    private void createBootstrapUser(
+            String username,
+            String email,
+            String password,
+            String fullName,
+            User.UserRole role,
+            String roleLabel) {
+        boolean usernameExists = userRepository.existsByUsername(username);
+        boolean emailExists = userRepository.existsByEmail(email);
 
         if (usernameExists || emailExists) {
-            log.info("Bootstrap admin already exists for username '{}' or email '{}'.", ADMIN_USERNAME, ADMIN_EMAIL);
+            log.info("Bootstrap {} already exists for username '{}' or email '{}'.", role.name(), username, email);
             return;
         }
 
-        User admin = new User();
-        admin.setUsername(ADMIN_USERNAME);
-        admin.setEmail(ADMIN_EMAIL);
-        admin.setPassword(passwordEncoder.encode(ADMIN_PASSWORD));
-        admin.setFullName(ADMIN_FULL_NAME);
-        admin.setRole(User.UserRole.ADMIN);
-        admin.setIsVerified(true);
-        admin.setIsApproved(true);
-        admin.setIsBanned(false);
-        admin.setIsSuspended(false);
+        User user = new User();
+        user.setUsername(username);
+        user.setEmail(email);
+        user.setPassword(passwordEncoder.encode(password));
+        user.setFullName(fullName);
+        user.setRole(role);
+        user.setIsVerified(true);
+        user.setIsApproved(true);
+        user.setIsBanned(false);
+        user.setIsSuspended(false);
 
-        userRepository.save(admin);
+        userRepository.save(user);
 
         System.out.println("==================================================");
-        System.out.println("Default admin account created successfully");
-        System.out.println("Username: " + ADMIN_USERNAME);
-        System.out.println("Email: " + ADMIN_EMAIL);
-        System.out.println("Password: " + ADMIN_PASSWORD);
-        System.out.println("Role: ROLE_ADMIN");
+        System.out.println("Default " + role.name().toLowerCase() + " account created successfully");
+        System.out.println("Username: " + username);
+        System.out.println("Email: " + email);
+        System.out.println("Password: " + password);
+        System.out.println("Role: " + roleLabel);
         System.out.println("==================================================");
     }
 }
