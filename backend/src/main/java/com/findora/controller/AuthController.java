@@ -123,7 +123,7 @@ public class AuthController {
     /**
      * POST /api/auth/verify-email
      * Verify email with OTP.
-     * TODO: Implement OTP validation
+        * OTP validation endpoint.
      */
     @PostMapping("/verify-email")
     public ResponseEntity<?> verifyEmail(@RequestBody Map<String, String> verifyRequest) {
@@ -166,7 +166,7 @@ public class AuthController {
 
     /**
      * POST /api/auth/resend-otp
-     * TODO: Implement OTP resend
+        * Resend email verification OTP.
      */
     @PostMapping("/resend-otp")
     public ResponseEntity<?> resendOtp(@RequestBody Map<String, String> request) {
@@ -194,7 +194,7 @@ public class AuthController {
     /**
      * POST /api/auth/forgot-password
      * Initiate password reset.
-     * TODO: Integrate with email service
+        * Uses email service to deliver reset OTP.
      */
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> request) {
@@ -227,7 +227,7 @@ public class AuthController {
     /**
      * POST /api/auth/reset-password
      * Reset password with OTP.
-     * TODO: Implement password reset
+        * Validates OTP and updates password.
      */
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> resetRequest) {

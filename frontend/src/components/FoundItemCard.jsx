@@ -4,10 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import './FoundItemCard.css';
 import ClaimModal from './ClaimModal';
 import { normalizeCategory } from '../utils/categoryUtils';
-import { maskNicInText } from '../utils/itemDisplayUtils';
+import { maskSensitiveDescription } from '../utils/itemDisplayUtils';
 import { buildIdentityPreviewImage } from '../utils/cardPreviewUtils';
-
-const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
 
 const CATEGORY_FALLBACK_IMAGE = {
   'Bank Card': '/assets/card-commercial.svg',

@@ -37,7 +37,6 @@ class AuthControllerIntegrationTest {
     private ObjectMapper objectMapper;
 
     @BeforeEach
-    @SuppressWarnings("unused")
     public void setUp() {
         userRepository.deleteAll();
 

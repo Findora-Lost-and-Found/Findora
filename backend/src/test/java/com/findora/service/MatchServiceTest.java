@@ -49,7 +49,7 @@ class MatchServiceTest {
     private MatchService matchService;
 
     @BeforeEach
-    @SuppressWarnings("unused")
+    
     void setUp() {
         Clock clock = Clock.fixed(Instant.parse("2026-03-16T10:00:00Z"), ZoneOffset.UTC);
         when(mailSenderProvider.getIfAvailable()).thenReturn(null);

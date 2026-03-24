@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { buildIdentityPreviewImage } from '../utils/cardPreviewUtils';
+import { maskSensitiveDescription } from '../utils/itemDisplayUtils';
 
 const CATEGORY_FALLBACK_IMAGE = {
   'Bank Card': '/assets/card-commercial.svg',
@@ -20,12 +21,12 @@ const getIdentityBadgeLabel = (normalizedCategory, item) => {
 const ItemCard = ({ item, showActions = false, onDelete }) => {
   if (!item) return null;
 
-  const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
   const configuredApiUrl = import.meta.env.VITE_API_URL;
   const API_URL = configuredApiUrl?.includes('localhost:5000')
     ? configuredApiUrl.replace('localhost:5000', 'localhost:8080').replace('/api', '')
     : configuredApiUrl?.replace('/api', '') || 'http://localhost:8080';
   const normalizedCategory = normalizeCategory(item.category, item.item_name || item.name);
+  const displayDescription = maskSensitiveDescription(item.description, normalizedCategory);
 
   const normalizedItem = {
     ...item,

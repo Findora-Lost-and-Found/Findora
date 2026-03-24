@@ -237,24 +237,24 @@ public class ItemController {
 
     /**
      * PUT /api/items/:id/status - Update item status.
-     * TODO: Implement with authorization check
+        * Pending: add authorization check.
      */
     @PutMapping("/{id}/status")
     public ResponseEntity<?> updateItemStatus(
             @PathVariable Long id,
             @RequestBody Map<String, String> statusUpdate) {
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-            .body(Map.of("message", "TODO: Implement status update"));
+            .body(Map.of("message", "Status update is not implemented yet"));
     }
 
     /**
      * DELETE /api/items/:id - Delete item.
-     * TODO: Implement with authorization check
+        * Pending: add authorization check.
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteItem(@PathVariable Long id) {
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-            .body(Map.of("message", "TODO: Implement item deletion"));
+            .body(Map.of("message", "Item deletion is not implemented yet"));
     }
 
     /**
