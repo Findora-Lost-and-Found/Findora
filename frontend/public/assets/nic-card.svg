@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="190" viewBox="0 0 300 190">
+  <defs>
+    <!-- Light blue card background -->
+    <linearGradient id="nicBg" x1="0" y1="0" x2="0.2" y2="1">
+      <stop offset="0%" stop-color="#ddf0ff"/>
+      <stop offset="100%" stop-color="#b8dcf8"/>
+    </linearGradient>
+    <!-- Gold for emblem outer ring -->
+    <radialGradient id="emblGold" cx="42%" cy="38%">
+      <stop offset="0%" stop-color="#e8c840"/>
+      <stop offset="100%" stop-color="#9a6e08"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Card body: light blue -->
+  <rect width="300" height="190" rx="10" fill="url(#nicBg)"/>
+  <!-- Outer border: blue -->
+  <rect x="1" y="1" width="298" height="188" rx="9" fill="none" stroke="#5aaee8" stroke-width="1.5"/>
+
+  <!-- ══ SRI LANKA EMBLEM (top-right) ══ -->
+  <!-- Outer gold ring -->
+  <circle cx="265" cy="37" r="27" fill="url(#emblGold)"/>
+  <!-- Inner dark maroon shield area -->
+  <circle cx="265" cy="37" r="21" fill="#5e1100"/>
+  <!-- Gold ring border -->
+  <circle cx="265" cy="37" r="27" fill="none" stroke="#7a5800" stroke-width="1.5"/>
+  <!-- Decorative inner ring -->
+  <circle cx="265" cy="37" r="23" fill="none" stroke="#d8a820" stroke-width="0.6" opacity="0.5"/>
+  <!-- Lion: body -->
+  <ellipse cx="265" cy="41" rx="8" ry="9" fill="#d8a835"/>
+  <!-- Lion: head -->
+  <circle cx="265" cy="28" r="7" fill="#d8a835"/>
+  <!-- Lion: mane (slightly larger, darker) -->
+  <circle cx="265" cy="28" r="9.2" fill="#b07820" opacity="0.65"/>
+  <!-- Lion: raised right paw -->
+  <ellipse cx="274" cy="32" rx="3.5" ry="2.8" fill="#d8a835"/>
+  <!-- Lion: left paw (lower) -->
+  <ellipse cx="258" cy="43" rx="2.8" ry="2" fill="#d8a835"/>
+  <!-- Lion: tail (curved) -->
+  <path d="M 273 40 Q 281 33 278 24" fill="none" stroke="#d8a835" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Sword -->
+  <line x1="274" y1="29" x2="283" y2="19" stroke="#e8d060" stroke-width="2" stroke-linecap="round"/>
+  <!-- Lotus ornament at bottom of emblem -->
+  <path d="M 252 57 Q 255 53 259 57 Q 262 53 265 57 Q 268 53 271 57 Q 275 53 278 57" fill="none" stroke="#d0a020" stroke-width="1.2"/>
+  <!-- SRI LANKA text below emblem -->
+  <text x="265" y="73" font-family="Arial,sans-serif" font-size="7" font-weight="bold" fill="#1a3570" text-anchor="middle" letter-spacing="1.2">SRI LANKA</text>
+
+  <!-- ══ CARD TITLES (top-center) ══ -->
+  <!-- Sinhala title -->
+  <text x="133" y="15" font-family="Arial,sans-serif" font-size="8.5" fill="#1a3570" text-anchor="middle">ජාතික හැඳුනුම්පත</text>
+  <!-- Tamil title -->
+  <text x="133" y="27" font-family="Arial,sans-serif" font-size="7.5" fill="#1a3570" text-anchor="middle">தேசிய அடையாள அட்டை</text>
+  <!-- English title (bold, largest) -->
+  <text x="133" y="41" font-family="Arial,sans-serif" font-size="10.5" font-weight="bold" fill="#0f1f55" text-anchor="middle" letter-spacing="0.5">NATIONAL IDENTITY CARD</text>
+  <!-- Sub-label -->
+  <text x="133" y="53" font-family="Arial,sans-serif" font-size="7.5" fill="#1a3570" text-anchor="middle" letter-spacing="1.5">SRI LANKA</text>
+
+  <!-- Separator line under titles -->
+  <line x1="6" y1="60" x2="294" y2="60" stroke="#5aaee8" stroke-width="0.7"/>
+
+  <!-- ══ PHOTO BOX (top-left) ══ -->
+  <rect x="8" y="64" width="63" height="76" rx="3" fill="#d4d0c2" stroke="#9a9080" stroke-width="0.8"/>
+  <circle cx="40" cy="86" r="11" fill="#b4b0a6"/>
+  <path d="M 12 140 Q 12 114 40 114 Q 68 114 68 140" fill="#b4b0a6"/>
+  <text x="40" y="145" font-family="Arial,sans-serif" font-size="7" fill="#777" text-anchor="middle">PHOTO</text>
+
+  <!-- ══ DATA FIELDS ══ -->
+  <!-- NIC Number -->
+  <text x="79" y="73" font-family="Arial,sans-serif" font-size="5.8" fill="#2a4a8a">No. / ජා.හැ.අ. / தே.அ.அ. எண்</text>
+  <text x="79" y="86" font-family="Courier New,monospace" font-size="13.5" font-weight="bold" fill="#0a0a0a" letter-spacing="1.2">XXXXXXXXX1234</text>
+
+  <!-- Name -->
+  <text x="79" y="99" font-family="Arial,sans-serif" font-size="5.8" fill="#2a4a8a">Name / නම / பெயர்</text>
+  <text x="79" y="111" font-family="Arial,sans-serif" font-size="10.5" font-weight="bold" fill="#0a0a0a">KAMAL ASANKA PERERA</text>
+
+  <!-- Date of Birth -->
+  <text x="79" y="122" font-family="Arial,sans-serif" font-size="5.8" fill="#2a4a8a">Date of Birth / ජන්ම දිනය / பிறந்த திகதி</text>
+  <text x="79" y="134" font-family="Arial,sans-serif" font-size="10" fill="#0a0a0a">1990 MAY 15</text>
+
+  <!-- Sex -->
+  <text x="192" y="122" font-family="Arial,sans-serif" font-size="5.8" fill="#2a4a8a">Sex / ලිං. / பால்</text>
+  <text x="192" y="134" font-family="Arial,sans-serif" font-size="10" fill="#0a0a0a">MALE</text>
+
+  <!-- Holder's Signature box -->
+  <text x="8" y="147" font-family="Arial,sans-serif" font-size="5.8" fill="#2a4a8a">Holder's Signature / ලේඛිළා</text>
+  <rect x="8" y="150" width="63" height="26" rx="2" fill="none" stroke="#9a9080" stroke-width="0.8"/>
+
+  <!-- ══ BLUE WAVE SECURITY PATTERN (bottom) ══ -->
+  <g fill="none" stroke="#3377bb" stroke-width="0.75" opacity="0.3">
+    <path d="M 0,150 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0"/>
+    <path d="M 0,154 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0"/>
+    <path d="M 0,158 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0"/>
+    <path d="M 0,162 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0"/>
+    <path d="M 0,166 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0"/>
+    <path d="M 0,170 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0"/>
+    <path d="M 0,174 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0"/>
+    <path d="M 0,178 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0"/>
+    <path d="M 0,182 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0 q 7.5,-3.5 15,0 q 7.5,3.5 15,0"/>
+  </g>
+
+  <!-- Bottom accent bar (Sri Lanka orange) -->
+  <rect x="0" y="184" width="300" height="6" rx="4" fill="#c85000" opacity="0.6"/>
+</svg>
