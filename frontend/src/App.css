@@ -529,6 +529,7 @@ button:disabled {
   width: 100%;
   height: 200px;
   object-fit: cover;
+}
 
 .item-image-container {
   width: 100%;
@@ -540,7 +541,6 @@ button:disabled {
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
 }
 
 .item-details {
@@ -557,8 +557,9 @@ button:disabled {
 }
 
 .category-badge {
-  background: #ecfeff;
-  color: var(--brand);
+  background: #22C55E;
+  color: #ffffff;
+  font-weight: 600;
 }
 
 /* Force green category badges for post cards in light mode */
@@ -570,33 +571,39 @@ body:not(.dark-mode) .found-item-card .card-badge {
 
 body.light-mode .item-card .category-badge,
 body:not(.dark-mode) .item-card .category-badge {
-  background: #ecfeff !important;
-  color: var(--brand) !important;
+  background: #22C55E !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
 }
 
 .type-badge.lost {
-  background: #FEE2E2;
-  color: #991B1B;
+  background: #DC2626;
+  color: #ffffff;
+  font-weight: 600;
 }
 
 .type-badge.found {
-  background: #dbeafe;
-  color: #1e3a8a;
+  background: #059669;
+  color: #ffffff;
+  font-weight: 600;
 }
 
 .status-badge.active {
-  background: #ecfeff;
-  color: var(--brand);
+  background: #059669;
+  color: #ffffff;
+  font-weight: 600;
 }
 
 .status-badge.claimed {
-  background: #FEF3C7;
-  color: #92400E;
+  background: #D97706;
+  color: #ffffff;
+  font-weight: 600;
 }
 
 .status-badge.closed {
-  background: #F3F4F6;
-  color: #4B5563;
+  background: #6B7280;
+  color: #ffffff;
+  font-weight: 600;
 }
 
 .filters {
@@ -611,6 +618,45 @@ body:not(.dark-mode) .item-card .category-badge {
   border-radius: var(--radius-sm);
   background: var(--bg-surface);
   color: var(--text-primary);
+}
+
+.search-form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.search-form input {
+  min-width: 220px;
+}
+
+.search-icon-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid color-mix(in srgb, var(--brand) 35%, #ffffff);
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--brand) 0%, #0b5f58 100%);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 14px rgba(15, 118, 110, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.search-icon-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 9px 16px rgba(15, 118, 110, 0.32);
+  filter: brightness(1.05);
+}
+
+.search-icon-btn:active {
+  transform: translateY(0);
+}
+
+.search-icon-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.24);
 }
 
 /* Notifications */
