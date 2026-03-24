@@ -30,7 +30,12 @@ const OtherItemClaim = ({ item, onSubmit, onCancel }) => {
       alert('Please enter the date you lost the item');
       return;
     }
-    onSubmit({ ...formData, itemId: item.id });
+    onSubmit({
+      ...formData,
+      itemId: item.id,
+      // Provide stable name context for backend similarity scoring.
+      itemName: item?.name || item?.item_name || ''
+    });
   };
 
   return (
@@ -108,7 +113,7 @@ const OtherItemClaim = ({ item, onSubmit, onCancel }) => {
           </div>
 
           <div className="form-group">
-            <label className="required">When was the item found? (approximate date range)</label>
+            <label className="required">When was the item lost? (approximate date range)</label>
             <div className="form-row">
               <div>
                 <label style={{ fontSize: '0.9rem' }}>From Date</label>

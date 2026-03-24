@@ -217,7 +217,7 @@ const PurseClaim = ({ item, onSubmit, onCancel }) => {
           </div>
 
           <div className="form-group">
-            <label className="required">When was the item found? (approximate date range)</label>
+            <label className="required">When was the item lost? (approximate date range)</label>
             <div className="form-row">
               <div>
                 <label style={{ fontSize: '0.9rem' }}>From Date</label>

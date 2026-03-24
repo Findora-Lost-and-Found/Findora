@@ -13,6 +13,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +21,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.StringUtils;
@@ -40,6 +42,7 @@ import com.findora.model.Item;
 import com.findora.model.ItemCategory;
 import com.findora.model.ItemStatus;
 import com.findora.model.ItemType;
+import com.findora.repository.ItemRepository;
 import com.findora.repository.UserRepository;
 import com.findora.service.ItemService;
 
@@ -54,14 +57,17 @@ import com.findora.service.ItemService;
 public class ItemController {
 
     private final ItemService itemService;
+    private final ItemRepository itemRepository;
     private final UserRepository userRepository;
     private static final Logger log = LoggerFactory.getLogger(ItemController.class);
+    private static final Pattern CARD_NUMBER_PATTERN = Pattern.compile("^\\d{16}$");
 
     @Value("${app.upload.dir:uploads}")
     private String uploadDir;
 
-    public ItemController(ItemService itemService, UserRepository userRepository) {
+    public ItemController(ItemService itemService, ItemRepository itemRepository, UserRepository userRepository) {
         this.itemService = itemService;
+        this.itemRepository = itemRepository;
         this.userRepository = userRepository;
     }
 
@@ -151,12 +157,14 @@ public class ItemController {
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(required = false) String type,
-            @RequestParam(required = false) String status) {
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String keyword) {
 
         try {
             Long userId = getCurrentUserId();
 
-            PaginatedResponse<ItemDTO> response = itemService.getUserItems(userId, page, size, type, status);
+            PaginatedResponse<ItemDTO> response = itemService.getUserItems(userId, page, size, type, status, category, keyword);
 
             return ResponseEntity.ok(toFrontendListResponse(response));
 
@@ -176,6 +184,7 @@ public class ItemController {
             @RequestParam("category") String category,
             @RequestParam("item_name") String itemName,
             @RequestParam(value = "description", required = false) String description,
+            @RequestParam(value = "private_card_number", required = false) String privateCardNumber,
             @RequestParam("location") String location,
             @RequestParam("date") String date,
             @RequestParam("time") String time,
@@ -188,18 +197,34 @@ public class ItemController {
             item.setType(ItemType.valueOf(type.trim().toUpperCase(Locale.ROOT)));
             item.setCategory(parseCategory(category));
             item.setItemName(itemName.trim());
-            item.setDescription(description);
+
+            String finalDescription = description;
+            if (item.getCategory() == ItemCategory.BANK_CARD) {
+                String normalizedCardNumber = privateCardNumber == null ? "" : privateCardNumber.replaceAll("\\s+", "");
+                if (!CARD_NUMBER_PATTERN.matcher(normalizedCardNumber).matches()) {
+                    throw new IllegalArgumentException("Full 16-digit card number is required for Bank Card posts");
+                }
+                finalDescription = appendPrivateCardMarker(description, normalizedCardNumber);
+            }
+
+            item.setDescription(finalDescription);
             item.setLocation(location.trim());
             item.setDate(LocalDate.parse(date));
             item.setTime(LocalTime.parse(time));
             item.setStatus(ItemStatus.ACTIVE);
 
             if (image != null && !image.isEmpty()) {
-                item.setImageUrl(saveImage(image));
+                String savedImageUrl = saveImage(image);
+                item.setImageUrl(savedImageUrl);
+                log.info("Image saved for item: {}", savedImageUrl);
             }
 
             Item saved = itemService.createItem(item);
             Optional<ItemDTO> savedDto = itemService.getItemById(saved.getId());
+
+            if (savedDto.isPresent()) {
+                log.info("Item created with ID: {}, image_url: {}", saved.getId(), savedDto.get().getImageUrl());
+            }
 
             return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Map.of(
@@ -235,16 +260,58 @@ public class ItemController {
         return normalizedUploadDir + "/" + storedName;
     }
 
+    private String appendPrivateCardMarker(String description, String cardNumber) {
+        String base = description == null ? "" : description.trim();
+        if (base.isEmpty()) {
+            return "__PRIVATE_CARD__=" + cardNumber;
+        }
+        return base + "\n__PRIVATE_CARD__=" + cardNumber;
+    }
+
+    private String appendPrivateCardMarker(String description, String cardNumber) {
+        String base = description == null ? "" : description.trim();
+        if (base.isEmpty()) {
+            return "__PRIVATE_CARD__=" + cardNumber;
+        }
+        return base + "\n__PRIVATE_CARD__=" + cardNumber;
+    }
+
     /**
-     * PUT /api/items/:id/status - Update item status.
-        * Pending: add authorization check.
+     * PUT /api/items/:id/status - Update item status (admin only).
+     * Allows admin to update item status to CLOSED (hidden from public view).
      */
     @PutMapping("/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> updateItemStatus(
             @PathVariable Long id,
             @RequestBody Map<String, String> statusUpdate) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-            .body(Map.of("message", "Status update is not implemented yet"));
+        try {
+            Item item = itemRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Item not found"));
+
+            String newStatus = statusUpdate.get("status");
+            if (newStatus == null || newStatus.isBlank()) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "status is required"));
+            }
+
+            try {
+                ItemStatus status = ItemStatus.valueOf(newStatus.toUpperCase());
+                item.setStatus(status);
+                itemRepository.save(item);
+                return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Item status updated successfully",
+                    "item", toItemPayload(item)
+                ));
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Invalid status value"));
+            }
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("success", false, "message", e.getMessage()));
+        }
     }
 
     /**
@@ -270,6 +337,24 @@ public class ItemController {
         return userRepository.findByUsername(username)
             .map(user -> user.getId())
             .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
+    }
+
+    private Map<String, Object> toItemPayload(Item item) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("id", item.getId());
+        payload.put("user_id", item.getUserId());
+        payload.put("type", item.getType() == null ? null : item.getType().name().toLowerCase());
+        payload.put("category", item.getCategory() == null ? null : item.getCategory().name().toLowerCase().replace("_", " "));
+        payload.put("item_name", item.getItemName());
+        payload.put("description", item.getDescription());
+        payload.put("location", item.getLocation());
+        payload.put("date", item.getDate() == null ? null : item.getDate().toString());
+        payload.put("time", item.getTime() == null ? null : item.getTime().toString());
+        payload.put("image_url", item.getImageUrl());
+        payload.put("status", item.getStatus() == null ? null : item.getStatus().name().toLowerCase());
+        payload.put("created_at", item.getCreatedAt() == null ? null : item.getCreatedAt().toString());
+        payload.put("updated_at", item.getUpdatedAt() == null ? null : item.getUpdatedAt().toString());
+        return payload;
     }
 
     private Map<String, Object> toFrontendListResponse(PaginatedResponse<ItemDTO> response) {

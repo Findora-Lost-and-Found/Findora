@@ -31,11 +31,10 @@ const ReportFoundItem = () => {
     studentOrStaffId: '',
     cardType: '',
     bankName: '',
-    cardLast4: '',
+    cardNumber: '',
     bankPrivateLocation: '',
     bankPrivateDate: '',
     bankPrivateTime: '',
-    cardCvv: '',
     purseName: '',
     purseIdNumber: '',
     purseMoney: '',
@@ -60,7 +59,13 @@ const ReportFoundItem = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    const nextValue = name === 'nicNumber' ? sanitizeNicInput(value) : value;
+    let nextValue = value;
+    if (name === 'nicNumber') {
+      nextValue = sanitizeNicInput(value);
+    }
+    if (name === 'cardNumber') {
+      nextValue = String(value).replace(/\D/g, '').slice(0, 16);
+    }
     setFormData((prev) => ({ ...prev, [name]: nextValue }));
   };
 
@@ -95,7 +100,7 @@ const ReportFoundItem = () => {
     if (category === 'Bank Card') {
       if (!formData.cardType) nextErrors.cardType = 'Card Type is required.';
       if (!formData.bankName.trim()) nextErrors.bankName = 'Name of the Bank is required.';
-      if (!/^\d{4}$/.test(formData.cardLast4)) nextErrors.cardLast4 = 'Last 4 digits of the card are required.';
+      if (!/^\d{16}$/.test(formData.cardNumber)) nextErrors.cardNumber = 'Full 16-digit card number is required.';
       if (!formData.bankPrivateLocation.trim()) nextErrors.bankPrivateLocation = 'Location is required.';
       if (!formData.bankPrivateDate) nextErrors.bankPrivateDate = 'Date is required.';
       if (!formData.bankPrivateTime) nextErrors.bankPrivateTime = 'Time is required.';
@@ -175,7 +180,7 @@ const ReportFoundItem = () => {
 
     if (category === 'Bank Card') {
       item_name = `${formData.bankName} ${formData.cardType} Card`;
-      description = `Bank Name: ${formData.bankName} | Card Type: ${formData.cardType} | Last 4 digits: ${formData.cardLast4 || 'N/A'}${formData.cardCvv ? ` | CVV (provided): ${formData.cardCvv}` : ''}`;
+      description = `Last 4 digits: ${formData.cardNumber ? formData.cardNumber.slice(-4) : 'N/A'}`;
       location = formData.bankPrivateLocation || location;
       date = formData.bankPrivateDate || date;
       time = formData.bankPrivateTime || time;
@@ -203,7 +208,7 @@ const ReportFoundItem = () => {
       image = formData.otherPhoto;
     }
 
-    return {
+    const payload = {
       type: 'found',
       category: apiCategory,
       item_name,
@@ -213,6 +218,12 @@ const ReportFoundItem = () => {
       time,
       image
     };
+
+    if (category === 'Bank Card') {
+      payload.private_card_number = formData.cardNumber;
+    }
+
+    return payload;
   };
 
   const handleSubmit = async (e) => {
@@ -222,6 +233,7 @@ const ReportFoundItem = () => {
     const payload = buildFoundItemPayload();
     console.log('Submitting found item payload:', {
       ...payload,
+      private_card_number: payload.private_card_number ? '***hidden***' : undefined,
       image: payload.image ? payload.image.name : null
     });
 
@@ -354,18 +366,15 @@ const ReportFoundItem = () => {
               </div>
               <div className="form-group">
                 <label className="required">Card number</label>
-                <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #ccc', borderRadius: '6px', overflow: 'hidden', background: '#fff' }}>
-                  <span style={{ padding: '0 10px', color: '#aaa', letterSpacing: '2px', fontFamily: 'monospace', fontSize: '1rem', userSelect: 'none', whiteSpace: 'nowrap' }}>#### #### ####</span>
-                  <input
-                    name="cardLast4"
-                    value={formData.cardLast4}
-                    onChange={handleInputChange}
-                    placeholder="1234"
-                    maxLength={4}
-                    style={{ border: 'none', outline: 'none', width: '60px', padding: '10px 8px', fontFamily: 'monospace', fontSize: '1rem' }}
-                  />
-                </div>
-                {errors.cardLast4 && <p className="error-text">{errors.cardLast4}</p>}
+                <input
+                  name="cardNumber"
+                  value={formData.cardNumber}
+                  onChange={handleInputChange}
+                  placeholder="Enter full 16-digit card number"
+                  maxLength={16}
+                  inputMode="numeric"
+                />
+                {errors.cardNumber && <p className="error-text">{errors.cardNumber}</p>}
               </div>
 
               <div className="private-block">
@@ -386,10 +395,6 @@ const ReportFoundItem = () => {
                     <input type="time" name="bankPrivateTime" value={formData.bankPrivateTime} onChange={handleInputChange} />
                     {errors.bankPrivateTime && <p className="error-text">{errors.bankPrivateTime}</p>}
                   </div>
-                </div>
-                <div className="form-group">
-                  <label>CVV number (optional)</label>
-                  <input name="cardCvv" value={formData.cardCvv} onChange={handleInputChange} maxLength={4} />
                 </div>
               </div>
             </div>

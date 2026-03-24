@@ -23,14 +23,13 @@ const ReportLostItem = () => {
     studentOrStaffId: '',
     cardType: '',
     bankName: '',
-    cardLast4: '',
+    cardNumber: '',
     bankLocation1: '',
     bankLocation2: '',
     bankLocation3: '',
     bankDateLost: '',
     bankFromTime: '',
     bankToTime: '',
-    cvv: '',
     pursePhoto: null,
     purseIdNumber: '',
     purseLocation1: '',
@@ -43,6 +42,7 @@ const ReportLostItem = () => {
     purseItems2: '',
     purseItems3: '',
     otherPhoto: null,
+    otherDescription: '',
     otherLocation1: '',
     otherLocation2: '',
     otherLocation3: '',
@@ -75,7 +75,13 @@ const ReportLostItem = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    const nextValue = name === 'nicNumber' ? sanitizeNicInput(value) : value;
+    let nextValue = value;
+    if (name === 'nicNumber') {
+      nextValue = sanitizeNicInput(value);
+    }
+    if (name === 'cardNumber') {
+      nextValue = String(value).replace(/\D/g, '').slice(0, 16);
+    }
     setFormData((prev) => ({ ...prev, [name]: nextValue }));
   };
 
@@ -117,9 +123,7 @@ const ReportLostItem = () => {
     if (category === 'Bank Card') {
       if (!formData.cardType) nextErrors.cardType = 'Card Type is required.';
       if (!formData.bankName.trim()) nextErrors.bankName = 'Name of the Bank is required.';
-      if (formData.cardLast4.trim() && !/^\d{4}$/.test(formData.cardLast4)) {
-        nextErrors.cardLast4 = 'Please enter the last 4 digits of the card number.';
-      }
+      if (!/^\d{16}$/.test(formData.cardNumber)) nextErrors.cardNumber = 'Full 16-digit card number is required.';
       if (!formData.bankLocation1.trim()) nextErrors.bankLocation1 = 'Field 1 is required.';
       if (!formData.bankDateLost) nextErrors.bankDateLost = 'Date is required.';
       if (!formData.bankFromTime) nextErrors.bankFromTime = 'From time is required.';
@@ -152,6 +156,7 @@ const ReportLostItem = () => {
     }
 
     if (category === 'Others') {
+      if (!formData.otherDescription.trim()) nextErrors.otherDescription = 'Description is required.';
       if (!formData.otherLocation1.trim()) nextErrors.otherLocation1 = 'Field 1 is required.';
       if (!formData.otherDateLost) nextErrors.otherDateLost = 'Date is required.';
       if (!formData.otherFromTime) nextErrors.otherFromTime = 'From time is required.';
@@ -193,8 +198,8 @@ const ReportLostItem = () => {
       image = null;
     } else if (category === 'Bank Card') {
       item_name = `${formData.cardType} Card - ${formData.bankName}`;
-      description = formData.cardLast4 ? `Last 4 digits: ${formData.cardLast4}` : '';
-      location = [formData.bankLocation1, formData.bankLocation2, formData.bankLocation3].filter(Boolean).join(', ');
+      description = formData.cardNumber ? `Last 4 digits: ${formData.cardNumber.slice(-4)}` : '';
+      location = [formData.bankLocation1].filter(Boolean).join(', ');
       date = formData.bankDateLost;
       time = formData.bankFromTime;
       image = null;
@@ -215,7 +220,7 @@ const ReportLostItem = () => {
       image = formData.pursePhoto;
     } else {
       item_name = 'Other Item';
-      description = '';
+      description = formData.otherDescription;
       location = [formData.otherLocation1, formData.otherLocation2, formData.otherLocation3].filter(Boolean).join(', ');
       date = formData.otherDateLost;
       time = formData.otherFromTime;
@@ -224,7 +229,7 @@ const ReportLostItem = () => {
 
     setLoading(true);
     try {
-      await itemsAPI.create({
+      const payload = {
         type: 'lost',
         category: categoryMap[category],
         item_name,
@@ -233,7 +238,13 @@ const ReportLostItem = () => {
         date,
         time,
         image
-      });
+      };
+
+      if (category === 'Bank Card') {
+        payload.private_card_number = formData.cardNumber;
+      }
+
+      await itemsAPI.create(payload);
       toast.success('Lost item reported successfully!');
       navigate('/lost-items');
     } catch (error) {
@@ -418,19 +429,16 @@ const ReportLostItem = () => {
                 {errors.bankName && <p className="report-lost-error">{errors.bankName}</p>}
               </div>
               <div className="report-lost-form-group">
-                <label>Card number (optional)</label>
-                <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #ccc', borderRadius: '6px', overflow: 'hidden', background: '#fff' }}>
-                  <span style={{ padding: '0 10px', color: '#aaa', letterSpacing: '2px', fontFamily: 'monospace', fontSize: '1rem', userSelect: 'none', whiteSpace: 'nowrap' }}>#### #### ####</span>
-                  <input
-                    name="cardLast4"
-                    value={formData.cardLast4}
-                    onChange={handleInputChange}
-                    placeholder="1234"
-                    maxLength={4}
-                    style={{ border: 'none', outline: 'none', width: '60px', padding: '10px 8px', fontFamily: 'monospace', fontSize: '1rem' }}
-                  />
-                </div>
-                {errors.cardLast4 && <p className="report-lost-error">{errors.cardLast4}</p>}
+                <label className="required">Card number</label>
+                <input
+                  name="cardNumber"
+                  value={formData.cardNumber}
+                  onChange={handleInputChange}
+                  placeholder="Enter full 16-digit card number"
+                  maxLength={16}
+                  inputMode="numeric"
+                />
+                {errors.cardNumber && <p className="report-lost-error">{errors.cardNumber}</p>}
               </div>
 
               <div className="report-lost-private">
@@ -440,15 +448,6 @@ const ReportLostItem = () => {
                   <input name="bankLocation1" value={formData.bankLocation1} onChange={handleInputChange} />
                   {errors.bankLocation1 && <p className="report-lost-error">{errors.bankLocation1}</p>}
                 </div>
-                <div className="report-lost-form-group">
-                  <label>Field 2 (optional)</label>
-                  <input name="bankLocation2" value={formData.bankLocation2} onChange={handleInputChange} />
-                </div>
-                <div className="report-lost-form-group">
-                  <label>Field 3 (optional)</label>
-                  <input name="bankLocation3" value={formData.bankLocation3} onChange={handleInputChange} />
-                </div>
-
                 <div className="report-lost-form-group">
                   <label className="required">What date did you lose it?</label>
                   <input type="date" name="bankDateLost" value={formData.bankDateLost} onChange={handleInputChange} />
@@ -469,11 +468,6 @@ const ReportLostItem = () => {
                       {errors.bankToTime && <p className="report-lost-error">{errors.bankToTime}</p>}
                     </div>
                   </div>
-                </div>
-
-                <div className="report-lost-form-group">
-                  <label>CVV number if you remember (optional)</label>
-                  <input name="cvv" value={formData.cvv} onChange={handleInputChange} maxLength={4} />
                 </div>
               </div>
             </div>
@@ -637,6 +631,18 @@ const ReportLostItem = () => {
                   accept="image/*"
                   onChange={(e) => handleFileChange('otherPhoto', e.target.files?.[0])}
                 />
+              </div>
+
+              <div className="report-lost-form-group">
+                <label className="required">Describe the lost item</label>
+                <textarea
+                  name="otherDescription"
+                  value={formData.otherDescription}
+                  onChange={handleInputChange}
+                  rows={4}
+                  placeholder="Describe the item in detail (color, size, brand, material, distinctive features, etc.)"
+                />
+                {errors.otherDescription && <p className="report-lost-error">{errors.otherDescription}</p>}
               </div>
 
               <h4>Where did you lose it?</h4>
