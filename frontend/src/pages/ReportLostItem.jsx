@@ -4,7 +4,14 @@ import { toast } from 'react-toastify';
 import { itemsAPI } from '../services/api';
 import { NIC_HELPER_TEXT, NIC_VALIDATION_MESSAGE, isValidNic, isValidNicNumber, normalizeNic, normalizeNicNumber, sanitizeNicInput } from '../utils/nicUtils';
 import { isValidStudentIdNumber, normalizeStudentIdNumber, validateStudentID } from '../utils/studentIdUtils';
-import { isValidCardLast4, normalizeCardLast4 } from '../utils/cardUtils';
+import {
+  formatCardNumber,
+  getCardCursorPosition,
+  getCardLast4,
+  isValidCardNumber,
+  maskCardNumber,
+  normalizeCardNumber
+} from '../utils/cardUtils';
 import { validateLostTimeWithDate } from '../utils/timeUtils';
 import { BANK_OPTIONS } from '../data/bankOptions';
 import './ReportLostItem.css';
@@ -75,6 +82,7 @@ const ReportLostItem = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    const inputEl = e.target;
     const normalizePurseId = (rawValue) => String(rawValue).trim().toUpperCase();
 
     const nextValue =
@@ -84,9 +92,20 @@ const ReportLostItem = () => {
           ? normalizeStudentIdNumber(value)
           : name === 'purseIdNumber'
             ? normalizePurseId(value)
-          : name === 'cardLast4'
-            ? normalizeCardLast4(value)
+          : name === 'cardNumber'
+            ? formatCardNumber(value)
           : value;
+
+    if (name === 'cardNumber') {
+      const cursor = inputEl.selectionStart ?? value.length;
+      const digitsBeforeCursor = value.slice(0, cursor).replace(/\D/g, '').length;
+
+      requestAnimationFrame(() => {
+        const nextCursor = getCardCursorPosition(nextValue, digitsBeforeCursor);
+        inputEl.setSelectionRange(nextCursor, nextCursor);
+      });
+    }
+
     setFormData((prev) => ({ ...prev, [name]: nextValue }));
   };
 
@@ -157,9 +176,7 @@ const ReportLostItem = () => {
     if (category === 'Bank Card') {
       if (!formData.cardType) nextErrors.cardType = 'Card Type is required.';
       if (!formData.bankName.trim()) nextErrors.bankName = 'Name of the Bank is required.';
-      if (formData.cardLast4.trim() && !isValidCardLast4(formData.cardLast4)) {
-        nextErrors.cardLast4 = 'Please enter the last 4 characters of the card number.';
-      }
+      if (!isValidCardNumber(formData.cardNumber)) nextErrors.cardNumber = 'Please enter a valid 16-digit card number.';
       if (!formData.bankLocation1.trim()) nextErrors.bankLocation1 = 'Field 1 is required.';
       if (!formData.bankDateLost) nextErrors.bankDateLost = 'Date is required.';
       if (formData.bankDateLost && isFutureDate(formData.bankDateLost)) {
@@ -253,7 +270,8 @@ const ReportLostItem = () => {
       image = null;
     } else if (category === 'Bank Card') {
       item_name = `${formData.cardType} Card - ${formData.bankName}`;
-      description = formData.cardLast4 ? `Last 4 characters: ${formData.cardLast4}` : '';
+      const last4 = getCardLast4(formData.cardNumber);
+      description = `Card: ${maskCardNumber(formData.cardNumber) || '**** **** **** ****'}${last4 ? ` (last 4: ${last4})` : ''}`;
       location = [formData.bankLocation1, formData.bankLocation2, formData.bankLocation3].filter(Boolean).join(', ');
       date = formData.bankDateLost;
       time = formData.bankFromTime;
@@ -296,7 +314,7 @@ const ReportLostItem = () => {
       };
 
       if (category === 'Bank Card') {
-        payload.private_card_number = formData.cardNumber;
+        payload.private_card_number = normalizeCardNumber(formData.cardNumber);
       }
 
       await itemsAPI.create(payload);
@@ -463,20 +481,19 @@ const ReportLostItem = () => {
                 {errors.bankName && <p className="report-lost-error">{errors.bankName}</p>}
               </div>
               <div className="report-lost-form-group">
-                <label>Card number (optional)</label>
-                <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #ccc', borderRadius: '6px', overflow: 'hidden', background: '#fff' }}>
-                  <span style={{ padding: '0 10px', color: '#aaa', letterSpacing: '2px', fontFamily: 'monospace', fontSize: '1rem', userSelect: 'none', whiteSpace: 'nowrap' }}>#### #### ####</span>
-                  <input
-                    name="cardLast4"
-                    value={formData.cardLast4}
-                    onChange={handleInputChange}
-                    placeholder="1234"
-                    maxLength={4}
-                    style={{ border: 'none', outline: 'none', width: '60px', padding: '10px 8px', fontFamily: 'monospace', fontSize: '1rem' }}
-                  />
-                </div>
-                <small className="report-lost-helper">Shown as #### #### #### 1234. You can enter letters or numbers in the last 4 characters.</small>
-                {errors.cardLast4 && <p className="report-lost-error">{errors.cardLast4}</p>}
+                <label className="required">Card number</label>
+                <input
+                  name="cardNumber"
+                  value={formData.cardNumber}
+                  onChange={handleInputChange}
+                  placeholder="xxxx xxxx xxxx xxxx"
+                  maxLength={19}
+                  autoComplete="off"
+                  inputMode="numeric"
+                  pattern="[0-9 ]*"
+                />
+                <small className="report-lost-helper">Enter 16 digits. The number is grouped automatically as xxxx xxxx xxxx xxxx.</small>
+                {errors.cardNumber && <p className="report-lost-error">{errors.cardNumber}</p>}
               </div>
 
               <div className="report-lost-private">
