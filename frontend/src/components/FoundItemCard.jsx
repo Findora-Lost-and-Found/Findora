@@ -4,10 +4,13 @@ import { useAuth } from '../context/AuthContext';
 import './FoundItemCard.css';
 import ClaimModal from './ClaimModal';
 import { normalizeCategory } from '../utils/categoryUtils';
-import { maskNicInText } from '../utils/itemDisplayUtils';
+import { maskSensitiveDescription } from '../utils/itemDisplayUtils';
 import { buildIdentityPreviewImage } from '../utils/cardPreviewUtils';
 
-const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
+const configuredApiUrl = import.meta.env.VITE_API_URL;
+const API_ORIGIN = (configuredApiUrl?.includes('localhost:5000')
+  ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')
+  : configuredApiUrl || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
 
 const CATEGORY_FALLBACK_IMAGE = {
   'Bank Card': '/assets/card-commercial.svg',
@@ -23,11 +26,6 @@ const getIdentityBadgeLabel = (normalizedCategory, item) => {
   const combinedText = `${item?.name || item?.item_name || ''} ${item?.description || ''}`;
   return /id\s*type\s*:\s*staff|staff\s*id|\bsf[-\s]?\d+/i.test(combinedText) ? 'STAFF ID' : 'STUDENT ID';
 };
-
-const configuredApiUrl = import.meta.env.VITE_API_URL;
-const API_ORIGIN = (configuredApiUrl?.includes('localhost:5000')
-  ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')
-  : configuredApiUrl || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
 
 const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }) => {
   const navigate = useNavigate();
