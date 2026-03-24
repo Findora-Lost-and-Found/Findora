@@ -54,7 +54,6 @@ class ReportControllerIntegrationTest {
     private Item item;
 
     @BeforeEach
-    @SuppressWarnings("unused")
     void setUp() {
         reportRepository.deleteAll();
         itemRepository.deleteAll();

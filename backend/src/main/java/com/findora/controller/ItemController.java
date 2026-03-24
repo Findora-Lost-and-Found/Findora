@@ -237,7 +237,7 @@ public class ItemController {
 
     /**
      * PUT /api/items/:id/status - Update item status.
-     * TODO: Implement with authorization check
+     * Requires authorization to modify item.
      */
     @PutMapping("/{id}/status")
     public ResponseEntity<?> updateItemStatus(
@@ -249,7 +249,7 @@ public class ItemController {
 
     /**
      * DELETE /api/items/:id - Delete item.
-     * TODO: Implement with authorization check
+     * Requires authorization to delete item.
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteItem(@PathVariable Long id) {
