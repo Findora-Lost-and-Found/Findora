@@ -315,7 +315,9 @@ const ReportFoundItem = () => {
                 {errors.nicName && <p className="error-text">{errors.nicName}</p>}
               </div>
               <div className="form-group">
+                {/* OTP note only for fields where user might expect OTP */}
                 <label className="required">NIC Number</label>
+                <small style={{ color: '#A1A5AB', fontSize: '0.75rem', marginBottom: '0.5rem', display: 'block', opacity: 0.85 }}>Not used for OTP</small>
                 <input
                   name="nicNumber"
                   value={formData.nicNumber}
@@ -339,7 +341,9 @@ const ReportFoundItem = () => {
                 {errors.idName && <p className="error-text">{errors.idName}</p>}
               </div>
               <div className="form-group">
+                {/* OTP note only for fields where user might expect OTP */}
                 <label className="required">Student ID or Staff ID</label>
+                <small style={{ color: '#A1A5AB', fontSize: '0.75rem', marginBottom: '0.5rem', display: 'block', opacity: 0.85 }}>Not used for OTP</small>
                 <input
                   name="studentOrStaffId"
                   value={formData.studentOrStaffId}
@@ -454,7 +458,9 @@ const ReportFoundItem = () => {
                     {errors.purseName && <p className="error-text">{errors.purseName}</p>}
                   </div>
                   <div className="form-group">
+                    {/* OTP note only for fields where user might expect OTP */}
                     <label className="required">Student ID or NIC number</label>
+                    <small style={{ color: '#A1A5AB', fontSize: '0.75rem', marginBottom: '0.5rem', display: 'block', opacity: 0.85 }}>Not used for OTP</small>
                     <input
                       name="purseIdNumber"
                       value={formData.purseIdNumber}
