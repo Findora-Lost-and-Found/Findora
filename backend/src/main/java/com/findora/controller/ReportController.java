@@ -127,6 +127,8 @@ public class ReportController {
         payload.put("reporter_username", report.getReporter() == null ? null : report.getReporter().getUsername());
         payload.put("item_id", report.getItemId());
         payload.put("item_name", report.getItem() == null ? null : report.getItem().getItemName());
+        payload.put("posted_by_user_id", report.getItem() == null ? null : report.getItem().getUserId());
+        payload.put("posted_by_username", report.getItem() == null || report.getItem().getUser() == null ? null : report.getItem().getUser().getUsername());
         payload.put("reason", report.getReason());
         payload.put("status", report.getStatus() == null ? null : report.getStatus().name().toLowerCase());
         payload.put("admin_notes", report.getAdminNotes());

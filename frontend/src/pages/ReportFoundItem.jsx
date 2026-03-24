@@ -31,11 +31,10 @@ const ReportFoundItem = () => {
     studentOrStaffId: '',
     cardType: '',
     bankName: '',
-    cardLast4: '',
+    cardNumber: '',
     bankPrivateLocation: '',
     bankPrivateDate: '',
     bankPrivateTime: '',
-    cardCvv: '',
     purseName: '',
     purseIdNumber: '',
     purseMoney: '',
@@ -244,7 +243,7 @@ const ReportFoundItem = () => {
       image = formData.otherPhoto;
     }
 
-    return {
+    const payload = {
       type: 'found',
       category: apiCategory,
       item_name,
@@ -254,6 +253,12 @@ const ReportFoundItem = () => {
       time,
       image
     };
+
+    if (category === 'Bank Card') {
+      payload.private_card_number = formData.cardNumber;
+    }
+
+    return payload;
   };
 
   const handleSubmit = async (e) => {
@@ -263,6 +268,7 @@ const ReportFoundItem = () => {
     const payload = buildFoundItemPayload();
     console.log('Submitting found item payload:', {
       ...payload,
+      private_card_number: payload.private_card_number ? '***hidden***' : undefined,
       image: payload.image ? payload.image.name : null
     });
 
@@ -403,10 +409,6 @@ const ReportFoundItem = () => {
                     <input type="time" name="bankPrivateTime" value={formData.bankPrivateTime} onChange={handleInputChange} />
                     {errors.bankPrivateTime && <p className="error-text">{errors.bankPrivateTime}</p>}
                   </div>
-                </div>
-                <div className="form-group">
-                  <label>CVV number (optional)</label>
-                  <input name="cardCvv" value={formData.cardCvv} onChange={handleInputChange} maxLength={4} />
                 </div>
               </div>
             </div>

@@ -6,7 +6,7 @@
 
 .container h1 {
   font-size: 2.5rem;
-  color: #333;
+  color: #111827;
   margin-bottom: 30px;
   text-align: center;
 }
@@ -18,11 +18,11 @@
 }
 
 .claim-card {
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(17, 24, 39, 0.08);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   display: flex;
   flex-direction: column;
@@ -35,7 +35,7 @@
 
 .claim-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.1);
 }
 
 .claim-card img {
@@ -54,20 +54,20 @@
 
 .claim-details h3 {
   font-size: 1.3rem;
-  color: #333;
+  color: #111827;
   margin: 0 0 15px 0;
   word-wrap: break-word;
 }
 
 .claim-details p {
   margin: 10px 0;
-  color: #666;
+  color: #4b5563;
   font-size: 0.95rem;
   line-height: 1.6;
 }
 
 .claim-details strong {
-  color: #333;
+  color: #111827;
   font-weight: 600;
 }
 
@@ -82,32 +82,32 @@
 }
 
 .status-badge.pending {
-  background-color: #fff3cd;
-  color: #856404;
-  border: 1px solid #ffc107;
+  background-color: #F59E0B;
+  color: #ffffff;
+  border: 1px solid #D97706;
 }
 
 .status-badge.approved {
-  background-color: #d4edda;
-  color: #155724;
-  border: 1px solid #28a745;
+  background-color: #10B981;
+  color: #ffffff;
+  border: 1px solid #059669;
 }
 
 .status-badge.rejected {
-  background-color: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
+  background-color: #EF4444;
+  color: #ffffff;
+  border: 1px solid #DC2626;
 }
 
 .status-badge.collected {
-  background-color: #d1ecf1;
-  color: #0c5460;
-  border: 1px solid #bee5eb;
+  background-color: #06B6D4;
+  color: #ffffff;
+  border: 1px solid #0891B2;
 }
 
 .otp-info {
-  background: #f0f8ff;
-  border: 1px solid #b3d9ff;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
   border-radius: 6px;
   padding: 15px;
   margin-top: 15px;
@@ -115,24 +115,24 @@
 }
 
 .otp-info code {
-  background: #e8f4f8;
+  background: #dbeafe;
   padding: 8px 12px;
   border-radius: 4px;
   display: inline-block;
   font-family: 'Courier New', monospace;
   font-size: 1.1rem;
   font-weight: bold;
-  color: #0066cc;
+  color: #1d4ed8;
   letter-spacing: 2px;
 }
 
 .otp-info p {
   margin: 8px 0;
-  color: #333;
+  color: #111827;
 }
 
 .otp-info small {
-  color: #666;
+  color: #4b5563;
   font-size: 0.85rem;
 }
 
@@ -159,7 +159,7 @@
 .loading {
   text-align: center;
   padding: 40px 20px;
-  color: #666;
+  color: #4b5563;
   font-size: 1.1rem;
 }
 
