@@ -2,7 +2,9 @@ package com.findora.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 import java.util.Random;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +35,8 @@ public class AuthService {
     private final NotificationRepository notificationRepository;
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private static final Random RANDOM = new Random();
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
+    private static final Pattern PHONE_PATTERN = Pattern.compile("^\\d{10}$");
 
     public AuthService(
             UserRepository userRepository,
@@ -103,20 +107,32 @@ public class AuthService {
      * Register new user.
      * TODO: Add validation, email verification OTP, etc.
      */
-    public AuthResponse register(String username, String email, String password, String fullName, String role) {
+    public AuthResponse register(String username, String email, String password, String fullName, String role, String phone) {
+        String normalizedEmail = normalizeEmail(email);
+        String normalizedPhone = normalizePhone(phone);
+
+        if (!isValidEmail(normalizedEmail)) {
+            throw new RuntimeException("Invalid email format");
+        }
+
+        if (normalizedPhone != null && !isValidPhone(normalizedPhone)) {
+            throw new RuntimeException("Phone number invalid format");
+        }
+
         if (userRepository.existsByUsername(username)) {
             throw new RuntimeException("Username already exists");
         }
 
-        if (userRepository.existsByEmail(email)) {
+        if (userRepository.existsByEmail(normalizedEmail)) {
             throw new RuntimeException("Email already exists");
         }
 
         User user = new User();
         user.setUsername(username);
-        user.setEmail(email);
+        user.setEmail(normalizedEmail);
         user.setPassword(passwordEncoder.encode(password));
         user.setFullName(fullName);
+        user.setPhone(normalizedPhone);
         User.UserRole userRole = User.UserRole.valueOf(role.toUpperCase());
         user.setRole(userRole);
         boolean requiresEmailVerification = (userRole == User.UserRole.STUDENT
@@ -159,6 +175,25 @@ public class AuthService {
         log.info("User {} registered successfully", username);
 
         return new AuthResponse(token, userDTO, message);
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String normalizePhone(String phone) {
+        if (phone == null || phone.isBlank()) {
+            return null;
+        }
+        return phone.replaceAll("\\D", "");
+    }
+
+    private boolean isValidEmail(String email) {
+        return email != null && EMAIL_PATTERN.matcher(email).matches();
+    }
+
+    private boolean isValidPhone(String phone) {
+        return phone != null && PHONE_PATTERN.matcher(phone).matches();
     }
 
     /**
