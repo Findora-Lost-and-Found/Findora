@@ -11,9 +11,6 @@ import './ReportLostItem.css';
 
 const CATEGORY_OPTIONS = ['NIC', 'Student / Staff ID', 'Bank Card', 'Purse / Wallet', 'Others'];
 
-const isValidNicNumber = (value) => isValidNic(value);
-const isValidStudentIdNumber = (value) => /^\d{6}[A-Za-z]$/.test(String(value || '').trim());
-
 const ReportLostItem = () => {
   const [category, setCategory] = useState('');
   const [purseOption, setPurseOption] = useState('with-id');
@@ -338,7 +335,9 @@ const ReportLostItem = () => {
                 {errors.nicName && <p className="report-lost-error">{errors.nicName}</p>}
               </div>
               <div className="report-lost-form-group">
+                {/* OTP note only for fields where user might expect OTP */}
                 <label className="required">NIC Number</label>
+                <small style={{ color: '#A1A5AB', fontSize: '0.75rem', marginBottom: '0.5rem', display: 'block', opacity: 0.85 }}>Not used for OTP</small>
                 <input
                   name="nicNumber"
                   value={formData.nicNumber}
@@ -394,7 +393,9 @@ const ReportLostItem = () => {
                 {errors.idName && <p className="report-lost-error">{errors.idName}</p>}
               </div>
               <div className="report-lost-form-group">
+                {/* OTP note only for fields where user might expect OTP */}
                 <label className="required">Student ID or Staff ID</label>
+                <small style={{ color: '#A1A5AB', fontSize: '0.75rem', marginBottom: '0.5rem', display: 'block', opacity: 0.85 }}>Not used for OTP</small>
                 <input
                   name="studentOrStaffId"
                   value={formData.studentOrStaffId}
@@ -554,7 +555,9 @@ const ReportLostItem = () => {
               {purseOption === 'with-id' && (
                 <div>
                   <div className="report-lost-form-group">
+                    {/* OTP note only for fields where user might expect OTP */}
                     <label className="required">Enter NIC number or Student/Staff ID</label>
+                    <small style={{ color: '#A1A5AB', fontSize: '0.75rem', marginBottom: '0.5rem', display: 'block', opacity: 0.85 }}>Not used for OTP</small>
                     <input
                       name="purseIdNumber"
                       value={formData.purseIdNumber}
