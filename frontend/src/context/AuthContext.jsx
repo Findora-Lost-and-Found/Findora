@@ -47,14 +47,21 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await authAPI.register(data);
       const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      setToken(token);
-      setUser(user);
+      if (token) {
+        localStorage.setItem('token', token);
+        setToken(token);
+        setUser(user);
+      } else {
+        localStorage.removeItem('token');
+        setToken(null);
+        setUser(null);
+      }
       toast.success(response.data.message);
       const role = String(user?.role || '').toLowerCase();
       const isVerified = Boolean(user?.is_verified ?? user?.isVerified);
-      const requiresVerification = (role === 'student' || role === 'staff') && !isVerified;
-      return { success: true, user, requiresVerification };
+      const requiresVerification = Boolean(token) && (role === 'student' || role === 'staff' || role === 'security') && !isVerified;
+      const pendingApproval = !token && (role === 'security' || role === 'admin');
+      return { success: true, user, requiresVerification, pendingApproval };
     } catch (error) {
       const message = getApiErrorMessage(error, 'Registration failed');
       toast.error(message);

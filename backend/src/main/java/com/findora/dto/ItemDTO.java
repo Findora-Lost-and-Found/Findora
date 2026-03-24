@@ -54,6 +54,7 @@ public class ItemDTO {
         return userId;
     }
 
+    @JsonProperty("user_id")
     public void setUserId(Long userId) {
         this.userId = userId;
     }
@@ -127,6 +128,7 @@ public class ItemDTO {
         return imageUrl;
     }
 
+    @JsonProperty("image_url")
     public void setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
     }
@@ -153,13 +155,28 @@ public class ItemDTO {
         return name;
     }
 
+    @JsonProperty("item_name")
+    public void setItemName(String itemName) {
+        this.name = itemName;
+    }
+
     @JsonProperty("created_at")
     public String getCreatedAtLegacy() {
         return createdAt;
     }
 
+    @JsonProperty("created_at")
+    public void setCreatedAtLegacy(String createdAt) {
+        this.createdAt = createdAt;
+    }
+
     @JsonProperty("full_name")
     public String getFullNameLegacy() {
         return fullName;
+    }
+
+    @JsonProperty("full_name")
+    public void setFullNameLegacy(String fullName) {
+        this.fullName = fullName;
     }
 }

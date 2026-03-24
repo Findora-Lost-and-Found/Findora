@@ -11,6 +11,9 @@ import './ReportLostItem.css';
 
 const CATEGORY_OPTIONS = ['NIC', 'Student / Staff ID', 'Bank Card', 'Purse / Wallet', 'Others'];
 
+const isValidNicNumber = (value) => isValidNic(value);
+const isValidStudentIdNumber = (value) => /^\d{6}[A-Za-z]$/.test(String(value || '').trim());
+
 const ReportLostItem = () => {
   const [category, setCategory] = useState('');
   const [purseOption, setPurseOption] = useState('with-id');
@@ -23,14 +26,13 @@ const ReportLostItem = () => {
     studentOrStaffId: '',
     cardType: '',
     bankName: '',
-    cardLast4: '',
+    cardNumber: '',
     bankLocation1: '',
     bankLocation2: '',
     bankLocation3: '',
     bankDateLost: '',
     bankFromTime: '',
     bankToTime: '',
-    cvv: '',
     pursePhoto: null,
     purseIdNumber: '',
     purseLocation1: '',
@@ -43,6 +45,7 @@ const ReportLostItem = () => {
     purseItems2: '',
     purseItems3: '',
     otherPhoto: null,
+    otherDescription: '',
     otherLocation1: '',
     otherLocation2: '',
     otherLocation3: '',
@@ -207,6 +210,7 @@ const ReportLostItem = () => {
     }
 
     if (category === 'Others') {
+      if (!formData.otherDescription.trim()) nextErrors.otherDescription = 'Description is required.';
       if (!formData.otherLocation1.trim()) nextErrors.otherLocation1 = 'Field 1 is required.';
       if (!formData.otherDateLost) nextErrors.otherDateLost = 'Date is required.';
       if (formData.otherDateLost && isFutureDate(formData.otherDateLost)) {
@@ -274,7 +278,7 @@ const ReportLostItem = () => {
       image = formData.pursePhoto;
     } else {
       item_name = 'Other Item';
-      description = '';
+      description = formData.otherDescription;
       location = [formData.otherLocation1, formData.otherLocation2, formData.otherLocation3].filter(Boolean).join(', ');
       date = formData.otherDateLost;
       time = formData.otherFromTime;
@@ -283,7 +287,7 @@ const ReportLostItem = () => {
 
     setLoading(true);
     try {
-      await itemsAPI.create({
+      const payload = {
         type: 'lost',
         category: categoryMap[category],
         item_name,
@@ -292,7 +296,13 @@ const ReportLostItem = () => {
         date,
         time,
         image
-      });
+      };
+
+      if (category === 'Bank Card') {
+        payload.private_card_number = formData.cardNumber;
+      }
+
+      await itemsAPI.create(payload);
       toast.success('Lost item reported successfully!');
       navigate('/lost-items');
     } catch (error) {
@@ -476,15 +486,6 @@ const ReportLostItem = () => {
                   {errors.bankLocation1 && <p className="report-lost-error">{errors.bankLocation1}</p>}
                 </div>
                 <div className="report-lost-form-group">
-                  <label>Field 2 (optional)</label>
-                  <input name="bankLocation2" value={formData.bankLocation2} onChange={handleInputChange} />
-                </div>
-                <div className="report-lost-form-group">
-                  <label>Field 3 (optional)</label>
-                  <input name="bankLocation3" value={formData.bankLocation3} onChange={handleInputChange} />
-                </div>
-
-                <div className="report-lost-form-group">
                   <label className="required">What date did you lose it?</label>
                   <input type="date" name="bankDateLost" value={formData.bankDateLost} onChange={handleInputChange} />
                   {errors.bankDateLost && <p className="report-lost-error">{errors.bankDateLost}</p>}
@@ -504,11 +505,6 @@ const ReportLostItem = () => {
                       {errors.bankToTime && <p className="report-lost-error">{errors.bankToTime}</p>}
                     </div>
                   </div>
-                </div>
-
-                <div className="report-lost-form-group">
-                  <label>CVV number if you remember (optional)</label>
-                  <input name="cvv" value={formData.cvv} onChange={handleInputChange} maxLength={4} />
                 </div>
               </div>
             </div>
@@ -671,6 +667,18 @@ const ReportLostItem = () => {
                   accept="image/*"
                   onChange={(e) => handleFileChange('otherPhoto', e.target.files?.[0])}
                 />
+              </div>
+
+              <div className="report-lost-form-group">
+                <label className="required">Describe the lost item</label>
+                <textarea
+                  name="otherDescription"
+                  value={formData.otherDescription}
+                  onChange={handleInputChange}
+                  rows={4}
+                  placeholder="Describe the item in detail (color, size, brand, material, distinctive features, etc.)"
+                />
+                {errors.otherDescription && <p className="report-lost-error">{errors.otherDescription}</p>}
               </div>
 
               <h4>Where did you lose it?</h4>

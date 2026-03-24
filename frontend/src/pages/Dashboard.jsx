@@ -10,7 +10,10 @@ import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
 
 const ADMIN_PREVIEW_LIMIT = 5;
-const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
+const configuredApiUrl = import.meta.env.VITE_API_URL;
+const API_ORIGIN = (configuredApiUrl?.includes('localhost:5000')
+  ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')
+  : configuredApiUrl || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
 
 const readFirst = (obj, keys, fallback = '') => {
   for (const key of keys) {
@@ -24,10 +27,12 @@ const readFirst = (obj, keys, fallback = '') => {
 
 const toImageUrl = (rawImage) => {
   if (!rawImage) return 'https://via.placeholder.com/120x80?text=No+Image';
-  if (rawImage.startsWith('http://') || rawImage.startsWith('https://')) {
-    return rawImage;
+  const normalized = String(rawImage).trim().replace(/\\/g, '/');
+  if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+    return normalized;
   }
-  return `${API_ORIGIN}${rawImage.startsWith('/') ? rawImage : `/${rawImage}`}`;
+  const normalizedPath = normalized.replace(/\/+/g, '/').replace(/^\/+/, '');
+  return `${API_ORIGIN}/${normalizedPath}`;
 };
 
 const toTimestamp = (value) => {
@@ -99,12 +104,12 @@ const Dashboard = () => {
         });
 
         if (foundRes.status === 'fulfilled') {
-          console.log('Dashboard found items fetched:', foundRes.value.data.items || []);
-          const apiItems = (foundRes.value.data.items || []).map((item) => ({
+          console.log('Dashboard found items fetched:', foundRes.value.data.items || foundRes.value.data.content || []);
+          const apiItems = (foundRes.value.data.items || foundRes.value.data.content || []).map((item) => ({
             ...item,
             name: item.name || item.item_name,
             date_found: item.date_found || item.date || item.created_at,
-            image: item.image || (item.image_url ? `http://localhost:8080${item.image_url}` : 'https://via.placeholder.com/300x200?text=Item+Image'),
+            image: toImageUrl(readFirst(item, ['image', 'image_url', 'imageUrl'])),
             category: normalizeCategory(item.category, item.name || item.item_name),
             posted_by: item.posted_by || {
               id: item.userId || item.user_id,

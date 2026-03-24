@@ -8,7 +8,10 @@ import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT } from '../utils/itemDisplayUtils';
 
 const PAGE_SIZE = 4;
-const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
+const configuredApiUrl = import.meta.env.VITE_API_URL;
+const API_ORIGIN = (configuredApiUrl?.includes('localhost:5000')
+  ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')
+  : configuredApiUrl || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
 
 const readFirst = (obj, keys, fallback = '') => {
   for (const key of keys) {
@@ -35,7 +38,8 @@ const toImageUrl = (rawImage) => {
     return normalized;
   }
 
-  return `${API_ORIGIN}${normalized.startsWith('/') ? normalized : `/${normalized}`}`;
+  const normalizedPath = normalized.replace(/\/+/g, '/').replace(/^\/+/, '');
+  return `${API_ORIGIN}/${normalizedPath}`;
 };
 
 const FoundItems = () => {
@@ -56,6 +60,7 @@ const FoundItems = () => {
     search: '',
     sortBy: FOUND_ITEM_SORT.LATEST
   });
+  const [searchInput, setSearchInput] = useState('');
 
   const normalizeItem = (item) => ({
     id: item.id,
@@ -63,7 +68,7 @@ const FoundItems = () => {
     description: item.description || '',
     location: item.location || 'Unknown location',
     date_found: item.date_found || item.date || item.created_at,
-    image: toImageUrl(readFirst(item, ['image', 'imageUrl', 'image_url'])),
+    image: toImageUrl(readFirst(item, ['image', 'image_url', 'imageUrl'])),
     category: normalizeCategory(item.category, item.name || item.item_name),
     type: item.type || 'found',
     status: item.status || 'active',
@@ -99,7 +104,7 @@ const FoundItems = () => {
         size: PAGE_SIZE,
         sort: sortParam,
         category: filters.category || undefined,
-        keyword: filters.search || undefined
+        keyword: filters.search.trim() || undefined
       });
 
       const apiItems = response.data?.content || [];
@@ -149,6 +154,17 @@ const FoundItems = () => {
     setCurrentPage(0);
   };
 
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    const nextSearch = searchInput.trim();
+
+    setCurrentPage(0);
+    setFilters((prev) => ({
+      ...prev,
+      search: nextSearch
+    }));
+  };
+
   useEffect(() => {
     const focusItemId = searchParams.get('focusItem');
     if (!focusItemId) return;
@@ -183,13 +199,20 @@ const FoundItems = () => {
           <option value="Other">Other</option>
         </select>
 
-        <input
-          type="text"
-          name="search"
-          placeholder="Search items..."
-          value={filters.search}
-          onChange={handleFilterChange}
-        />
+        <form className="search-form" onSubmit={handleSearchSubmit}>
+          <input
+            type="text"
+            name="search"
+            placeholder="Search items..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+          />
+          <button type="submit" className="search-icon-btn" aria-label="Search found items">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+              <path d="M10.5 3a7.5 7.5 0 0 1 5.93 12.1l4.24 4.23a1 1 0 1 1-1.41 1.42l-4.24-4.24A7.5 7.5 0 1 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11a5.5 5.5 0 0 0 0-11z" fill="currentColor"/>
+            </svg>
+          </button>
+        </form>
 
         <select name="sortBy" value={filters.sortBy} onChange={handleFilterChange}>
           <option value={FOUND_ITEM_SORT.LATEST}>Latest</option>
