@@ -15,6 +15,8 @@ public class ItemDTO {
     private String type;               // e.g., "lost", "found"
     private String description;
     private String location;
+    private String date;
+    private String time;
     private String status;             // e.g., "active", "claimed"
     private String imageUrl;           // Maps from image_url in DB
     private String createdAt;          // ISO 8601 timestamp string
@@ -23,13 +25,15 @@ public class ItemDTO {
     public ItemDTO() {
     }
 
-    public ItemDTO(Long id, String name, String category, String type, String description, String location, String status, String imageUrl, String createdAt, Long userId, String fullName) {
+    public ItemDTO(Long id, String name, String category, String type, String description, String location, String date, String time, String status, String imageUrl, String createdAt, Long userId, String fullName) {
         this.id = id;
         this.name = name;
         this.category = category;
         this.type = type;
         this.description = description;
         this.location = location;
+        this.date = date;
+        this.time = time;
         this.status = status;
         this.imageUrl = imageUrl;
         this.createdAt = createdAt;
@@ -93,6 +97,22 @@ public class ItemDTO {
 
     public void setLocation(String location) {
         this.location = location;
+    }
+
+    public String getDate() {
+        return date;
+    }
+
+    public void setDate(String date) {
+        this.date = date;
+    }
+
+    public String getTime() {
+        return time;
+    }
+
+    public void setTime(String time) {
+        this.time = time;
     }
 
     public String getStatus() {

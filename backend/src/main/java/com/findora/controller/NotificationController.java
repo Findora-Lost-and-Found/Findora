@@ -159,6 +159,10 @@ public class NotificationController {
             mapped.put("found_item_id", notification.getRelatedId());
         }
 
+        if (notification.getType() == Notification.NotificationType.CLAIM) {
+            mapped.put("claim_id", notification.getRelatedId());
+        }
+
         return mapped;
     }
 
