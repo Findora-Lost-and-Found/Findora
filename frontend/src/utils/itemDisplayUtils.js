@@ -58,7 +58,19 @@ export const maskCvvInText = (text = '') => {
   return String(text).replace(/(CVV(?:\s*number)?(?:\s*\(provided\))?\s*:\s*)(\d{1,4})/gi, '$1***');
 };
 
+export const maskCardInText = (text = '') => {
+  const withMaskedRawCards = String(text).replace(/\b(?:\d[ -]?){13,19}\b/g, (token) => {
+    const digits = token.replace(/\D/g, '');
+    if (digits.length !== 16) return token;
+    return `**** **** **** ${digits.slice(-4)}`;
+  });
+
+  // If backend stores private marker in description, keep only masked last 4 for display.
+  return withMaskedRawCards.replace(/__PRIVATE_CARD__=(\d{16})/gi, (_, cardNumber) => `Card: **** **** **** ${cardNumber.slice(-4)}`);
+};
+
 export const maskSensitiveDescription = (text = '', category = '') => {
   const maskedCvv = maskCvvInText(text);
-  return String(category).toUpperCase() === 'NIC' ? maskNicInText(maskedCvv) : maskedCvv;
+  const maskedCard = maskCardInText(maskedCvv);
+  return String(category).toUpperCase() === 'NIC' ? maskNicInText(maskedCard) : maskedCard;
 };

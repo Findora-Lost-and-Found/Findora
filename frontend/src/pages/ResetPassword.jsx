@@ -12,6 +12,8 @@ const ResetPassword = () => {
     newPassword: '',
     confirmPassword: ''
   });
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
@@ -95,26 +97,46 @@ const ResetPassword = () => {
 
           <div className="form-group">
             <label>New Password</label>
-            <input
-              type="password"
-              name="newPassword"
-              placeholder="Enter new password"
-              value={formData.newPassword}
-              onChange={handleChange}
-              required
-            />
+            <div className="password-input-wrapper">
+              <input
+                type={showNewPassword ? 'text' : 'password'}
+                name="newPassword"
+                placeholder="Enter new password"
+                value={formData.newPassword}
+                onChange={handleChange}
+                required
+              />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+              >
+                {showNewPassword ? '🙈' : '👁️'}
+              </button>
+            </div>
           </div>
 
           <div className="form-group">
             <label>Confirm Password</label>
-            <input
-              type="password"
-              name="confirmPassword"
-              placeholder="Confirm new password"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              required
-            />
+            <div className="password-input-wrapper">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                name="confirmPassword"
+                placeholder="Confirm new password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+              />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+              >
+                {showConfirmPassword ? '🙈' : '👁️'}
+              </button>
+            </div>
           </div>
 
           <button 

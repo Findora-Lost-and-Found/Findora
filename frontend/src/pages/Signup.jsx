@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getHomeRouteForUser } from '../utils/navigation';
+import { isValidEmail, isValidPhone, normalizeEmail, normalizePhone } from '../utils/contactValidation';
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -13,16 +14,56 @@ const Signup = () => {
     role: 'student',
     phone: ''
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [phoneError, setPhoneError] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    if (name === 'phone') {
+      const normalizedPhone = normalizePhone(value);
+      setFormData((prev) => ({ ...prev, phone: normalizedPhone }));
+
+      if (normalizedPhone && !isValidPhone(normalizedPhone)) {
+        setPhoneError('Phone number invalid format');
+      } else {
+        setPhoneError('');
+      }
+      return;
+    }
+
+    if (name === 'email') {
+      const normalizedEmail = normalizeEmail(value);
+      setFormData((prev) => ({ ...prev, email: normalizedEmail }));
+
+      if (normalizedEmail && !isValidEmail(normalizedEmail)) {
+        setEmailError('Invalid email format');
+      } else {
+        setEmailError('');
+      }
+      return;
+    }
+
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!isValidEmail(formData.email)) {
+      setEmailError('Invalid email format');
+      return;
+    }
+
+    if (formData.phone && !isValidPhone(formData.phone)) {
+      setPhoneError('Phone number invalid format');
+      return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       alert('Passwords do not match');
@@ -87,6 +128,7 @@ const Signup = () => {
               required
               placeholder="Enter your email"
             />
+            {emailError && <small style={{ color: '#DC2626' }}>{emailError}</small>}
           </div>
 
           <div className="form-group">
@@ -96,8 +138,10 @@ const Signup = () => {
               name="phone"
               value={formData.phone}
               onChange={handleChange}
+              maxLength="10"
               placeholder="Contact number (not used for OTP)"
             />
+            {phoneError && <small style={{ color: '#DC2626' }}>{phoneError}</small>}
           </div>
 
           <div className="form-group">
@@ -112,27 +156,47 @@ const Signup = () => {
 
           <div className="form-group">
             <label>Password</label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              minLength="6"
-              placeholder="Enter password (min 6 characters)"
-            />
+            <div className="password-input-wrapper">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                minLength="6"
+                placeholder="Enter password (min 6 characters)"
+              />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? '🙈' : '👁️'}
+              </button>
+            </div>
           </div>
 
           <div className="form-group">
             <label>Confirm Password</label>
-            <input
-              type="password"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              required
-              placeholder="Confirm password"
-            />
+            <div className="password-input-wrapper">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+                placeholder="Confirm password"
+              />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+              >
+                {showConfirmPassword ? '🙈' : '👁️'}
+              </button>
+            </div>
           </div>
 
           <button type="submit" className="btn-primary" disabled={loading}>

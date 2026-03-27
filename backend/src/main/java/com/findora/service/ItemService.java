@@ -34,6 +34,8 @@ public class ItemService {
     private final ItemRepository itemRepository;
     private static final Logger log = LoggerFactory.getLogger(ItemService.class);
     private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_DATE_TIME;
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
     private static final Pattern PRIVATE_BANK_MARKER_PATTERN =
         Pattern.compile("\\n?__PRIVATE_(?:CVV|CARD)__=\\d{3,16}");
     private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
@@ -268,6 +270,8 @@ public class ItemService {
             sanitizeDescriptionForClient(item.getDescription(), item.getCategory()),
 >>>>>>> develop-i
             item.getLocation(),
+            item.getDate() != null ? item.getDate().format(DATE_FORMATTER) : null,
+            item.getTime() != null ? item.getTime().format(TIME_FORMATTER) : null,
             item.getStatus() != null ? item.getStatus().toString().toLowerCase() : null,
             item.getImageUrl(),
             item.getCreatedAt() != null ? item.getCreatedAt().format(ISO_FORMATTER) : null,
