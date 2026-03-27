@@ -1,4 +1,4 @@
-package com.findora.service;
+﻿package com.findora.service;
 
 import java.lang.reflect.Constructor;
 import java.time.Clock;
@@ -56,12 +56,8 @@ class MatchServiceTest {
 
         Class<?> matchRepositoryClass = Class.forName("com.findora.repository.MatchRepository");
         Object matchRepositoryProxy = org.mockito.Mockito.mock(matchRepositoryClass);
-<<<<<<< HEAD
-        @SuppressWarnings("unchecked") JpaRepository<Match, Long> castedRepository = (JpaRepository<Match, Long>) matchRepositoryProxy;
-=======
         @SuppressWarnings("unchecked")
         JpaRepository<Match, Long> castedRepository = (JpaRepository<Match, Long>) matchRepositoryProxy;
->>>>>>> develop-i
         this.matchRepository = castedRepository;
         Constructor<MatchService> constructor = MatchService.class.getConstructor(
             matchRepositoryClass,

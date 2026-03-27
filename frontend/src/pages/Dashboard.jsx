@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { itemsAPI, claimsAPI, securityAPI } from '../services/api';
@@ -198,7 +198,7 @@ const Dashboard = () => {
               onClick={() => setIsPostModalOpen(true)} 
               className="btn-primary btn-posts"
             >
-              ➕ Posts
+              + Posts
             </button>
           )}
         </div>
@@ -216,34 +216,13 @@ const Dashboard = () => {
         )}
 
         {/* Found Items Feed Section */}
-<<<<<<< HEAD
-        {(user?.role === 'student' || user?.role === 'staff') && foundItems.length > 0 && foundItems.some(i => i) && (
-=======
         {(user?.role === 'student' || user?.role === 'staff') && (
->>>>>>> develop-i
           <div className="found-items-section">
             <div className="section-header">
               <h2>Recently Found Items</h2>
-              <Link to="/found-items" className="link-more">View All →</Link>
+              <Link to="/found-items" className="link-more">View All -&gt;</Link>
             </div>
             <div className="found-items-grid">
-<<<<<<< HEAD
-              {foundItems.map((item) => (
-                <FoundItemCard
-                  key={item.id}
-                  item={item}
-                  onClaim={() => {
-                    claimsAPI.create(item.id).then(() => {
-                      navigate('/my-claims');
-                    }).catch((err) => {
-                      console.error('Claim error:', err);
-                    });
-                  }}
-                  onHandover={handleHandoverRequest}
-                  handoverInProgress={!!handoverLoadingById[item.id]}
-                />
-              ))}
-=======
               {foundItems.length === 0 ? (
                 <p>No found items available right now.</p>
               ) : (
@@ -263,7 +242,6 @@ const Dashboard = () => {
                   />
                 ))
               )}
->>>>>>> develop-i
             </div>
           </div>
         )}
@@ -273,7 +251,7 @@ const Dashboard = () => {
             <div className="section" style={{ marginTop: '2rem' }}>
               <div className="section-header" style={{ borderBottom: 'none', marginBottom: '0.25rem' }}>
                 <h2>Found</h2>
-                <Link to="/admin/items/found" className="link-more">View All →</Link>
+                <Link to="/admin/items/found" className="link-more">View All -&gt;</Link>
               </div>
               <div className="table-container">
                 <table>
@@ -310,7 +288,7 @@ const Dashboard = () => {
             <div className="section" style={{ marginTop: '2rem' }}>
               <div className="section-header" style={{ borderBottom: 'none', marginBottom: '0.25rem' }}>
                 <h2>Receive</h2>
-                <Link to="/admin/items/receive" className="link-more">View All →</Link>
+                <Link to="/admin/items/receive" className="link-more">View All -&gt;</Link>
               </div>
               <div className="table-container">
                 <table>
@@ -349,7 +327,7 @@ const Dashboard = () => {
             <div className="section" style={{ marginTop: '2rem' }}>
               <div className="section-header" style={{ borderBottom: 'none', marginBottom: '0.25rem' }}>
                 <h2>Release</h2>
-                <Link to="/admin/items/release" className="link-more">View All →</Link>
+                <Link to="/admin/items/release" className="link-more">View All -&gt;</Link>
               </div>
               <div className="table-container">
                 <table>

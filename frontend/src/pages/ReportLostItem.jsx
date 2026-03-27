@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { itemsAPI } from '../services/api';
@@ -187,36 +187,21 @@ const ReportLostItem = () => {
     if (category === 'NIC') {
       item_name = `NIC - ${formData.nicName}`;
       description = `NIC Number: ${normalizeNic(formData.nicNumber)}`;
-<<<<<<< HEAD
-      location = [formData.nicLocation1, formData.nicLocation2].filter(Boolean).join(', ');
-=======
       location = [formData.nicLocation1, formData.nicLocation2, formData.nicLocation3].filter(Boolean).join(', ');
->>>>>>> develop-i
       date = formData.nicDateLost;
       time = formData.nicFromTime;
       image = null;
     } else if (category === 'Student / Staff ID') {
-<<<<<<< HEAD
-      const idType = formData.idHolderType || 'Student';
-      item_name = `${idType} ID - ${formData.idName}`;
-      description = `ID Type: ${idType} | Name: ${formData.idName || 'Unknown'} | ID Number: ${formData.studentOrStaffId}`;
-      location = [formData.idLocation1, formData.idLocation2].filter(Boolean).join(', ');
-=======
       item_name = `Student/Staff ID - ${formData.idName}`;
       description = `ID: ${formData.studentOrStaffId}`;
       location = [formData.idLocation1, formData.idLocation2, formData.idLocation3].filter(Boolean).join(', ');
->>>>>>> develop-i
       date = formData.idDateLost;
       time = formData.idFromTime;
       image = null;
     } else if (category === 'Bank Card') {
       item_name = `${formData.cardType} Card - ${formData.bankName}`;
       description = formData.cardNumber ? `Last 4 digits: ${formData.cardNumber.slice(-4)}` : '';
-<<<<<<< HEAD
-      location = [formData.bankLocation1].filter(Boolean).join(', ');
-=======
       location = [formData.bankLocation1, formData.bankLocation2, formData.bankLocation3].filter(Boolean).join(', ');
->>>>>>> develop-i
       date = formData.bankDateLost;
       time = formData.bankFromTime;
       image = null;
@@ -474,8 +459,6 @@ const ReportLostItem = () => {
                   {errors.bankLocation1 && <p className="report-lost-error">{errors.bankLocation1}</p>}
                 </div>
                 <div className="report-lost-form-group">
-<<<<<<< HEAD
-=======
                   <label>Field 2 (optional)</label>
                   <input name="bankLocation2" value={formData.bankLocation2} onChange={handleInputChange} />
                 </div>
@@ -484,7 +467,6 @@ const ReportLostItem = () => {
                   <input name="bankLocation3" value={formData.bankLocation3} onChange={handleInputChange} />
                 </div>
                 <div className="report-lost-form-group">
->>>>>>> develop-i
                   <label className="required">What date did you lose it?</label>
                   <input type="date" name="bankDateLost" value={formData.bankDateLost} onChange={handleInputChange} />
                   {errors.bankDateLost && <p className="report-lost-error">{errors.bankDateLost}</p>}
@@ -523,7 +505,7 @@ const ReportLostItem = () => {
               </div>
 
               <div className="report-lost-photo-box">
-                <div className="report-lost-photo-emoji">👛</div>
+                <div className="report-lost-photo-emoji">[Bag]</div>
                 <p>Open purse preview</p>
               </div>
 

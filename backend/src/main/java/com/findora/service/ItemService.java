@@ -1,4 +1,4 @@
-package com.findora.service;
+﻿package com.findora.service;
 
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -264,11 +264,7 @@ public class ItemService {
             item.getItemName(),
             toApiCategory(item.getCategory()),
             item.getType() != null ? item.getType().toString().toLowerCase() : null,
-<<<<<<< HEAD
-            sanitizeDescriptionForClient(item.getDescription()),
-=======
             sanitizeDescriptionForClient(item.getDescription(), item.getCategory()),
->>>>>>> develop-i
             item.getLocation(),
             item.getDate() != null ? item.getDate().format(DATE_FORMATTER) : null,
             item.getTime() != null ? item.getTime().format(TIME_FORMATTER) : null,
@@ -282,25 +278,16 @@ public class ItemService {
         return dto;
     }
 
-<<<<<<< HEAD
-    private String sanitizeDescriptionForClient(String rawDescription) {
-=======
     private String sanitizeDescriptionForClient(String rawDescription, ItemCategory category) {
         if (category == ItemCategory.WALLET || category == ItemCategory.OTHER) {
             return "";
         }
 
->>>>>>> develop-i
         if (rawDescription == null || rawDescription.isBlank()) {
             return rawDescription;
         }
 
-<<<<<<< HEAD
-        String sanitized = PRIVATE_BANK_MARKER_PATTERN.matcher(rawDescription).replaceAll("").trim();
-        return sanitized;
-=======
         return PRIVATE_BANK_MARKER_PATTERN.matcher(rawDescription).replaceAll("").trim();
->>>>>>> develop-i
     }
 
     private ItemCategory parseCategory(String category) {

@@ -1,4 +1,4 @@
-package com.findora.controller;
+﻿package com.findora.controller;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -206,11 +206,7 @@ public class SecurityController {
     @GetMapping("/stats")
     public ResponseEntity<?> getSecurityStats() {
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-<<<<<<< HEAD
-            .body(Map.of("message", "Security stats endpoint not yet implemented"));
-=======
             .body(Map.of("message", "Security stats are not implemented yet"));
->>>>>>> develop-i
     }
 
     /**
