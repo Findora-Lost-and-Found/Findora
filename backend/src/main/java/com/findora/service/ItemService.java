@@ -262,7 +262,7 @@ public class ItemService {
             item.getItemName(),
             toApiCategory(item.getCategory()),
             item.getType() != null ? item.getType().toString().toLowerCase() : null,
-            sanitizeDescriptionForClient(item.getDescription()),
+            sanitizeDescriptionForClient(item.getDescription(), item.getCategory()),
             item.getLocation(),
             item.getStatus() != null ? item.getStatus().toString().toLowerCase() : null,
             item.getImageUrl(),
@@ -274,13 +274,16 @@ public class ItemService {
         return dto;
     }
 
-    private String sanitizeDescriptionForClient(String rawDescription) {
+    private String sanitizeDescriptionForClient(String rawDescription, ItemCategory category) {
+        if (category == ItemCategory.WALLET || category == ItemCategory.OTHER) {
+            return "";
+        }
+
         if (rawDescription == null || rawDescription.isBlank()) {
             return rawDescription;
         }
 
-        String sanitized = PRIVATE_BANK_MARKER_PATTERN.matcher(rawDescription).replaceAll("").trim();
-        return sanitized;
+        return PRIVATE_BANK_MARKER_PATTERN.matcher(rawDescription).replaceAll("").trim();
     }
 
     private ItemCategory parseCategory(String category) {
