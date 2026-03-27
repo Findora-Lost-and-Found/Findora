@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import { itemsAPI, securityAPI } from '../services/api';
 import FoundItemCard from '../components/FoundItemCard';
 import Pagination from '../components/Pagination';
+import { sampleFoundItems } from '../data/sampleFoundItems';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT } from '../utils/itemDisplayUtils';
 
@@ -110,22 +111,32 @@ const FoundItems = () => {
       const apiItems = response.data?.content || [];
       console.log('FoundItems fetched from API:', apiItems);
       const normalizedItems = apiItems.map(normalizeItem);
-      setAllItems(normalizedItems);
 
-      setPagination({
-        totalPages: response.data?.totalPages ?? 0,
-        totalElements: response.data?.totalElements ?? 0,
-        pageNumber: response.data?.pageNumber ?? currentPage,
-        pageSize: response.data?.pageSize ?? PAGE_SIZE
-      });
+      if (normalizedItems.length > 0) {
+        setAllItems(normalizedItems);
+        setPagination({
+          totalPages: response.data?.totalPages ?? 0,
+          totalElements: response.data?.totalElements ?? 0,
+          pageNumber: response.data?.pageNumber ?? currentPage,
+          pageSize: response.data?.pageSize ?? PAGE_SIZE
+        });
+      } else {
+        setAllItems(sampleFoundItems);
+        setPagination({
+          totalPages: 1,
+          totalElements: sampleFoundItems.length,
+          pageNumber: 0,
+          pageSize: sampleFoundItems.length
+        });
+      }
     } catch (error) {
       console.error('Error loading found items:', error.response?.data || error.message);
-      setAllItems([]);
+      setAllItems(sampleFoundItems);
       setPagination({
-        totalPages: 0,
-        totalElements: 0,
+        totalPages: 1,
+        totalElements: sampleFoundItems.length,
         pageNumber: 0,
-        pageSize: PAGE_SIZE
+        pageSize: sampleFoundItems.length
       });
     } finally {
       setLoading(false);

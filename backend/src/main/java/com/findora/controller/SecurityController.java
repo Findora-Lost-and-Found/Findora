@@ -30,7 +30,7 @@ import com.findora.service.ItemService;
 import com.findora.service.SecurityService;
 
 /**
- * SecurityController - Security officer endpoints (TODO: Full implementation).
+ * SecurityController - Security officer endpoints.
  */
 @RestController
 @RequestMapping("/api/security")
@@ -206,7 +206,11 @@ public class SecurityController {
     @GetMapping("/stats")
     public ResponseEntity<?> getSecurityStats() {
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-            .body(Map.of("message", "TODO: Implement security stats"));
+<<<<<<< HEAD
+            .body(Map.of("message", "Security stats endpoint not yet implemented"));
+=======
+            .body(Map.of("message", "Security stats are not implemented yet"));
+>>>>>>> develop-i
     }
 
     /**

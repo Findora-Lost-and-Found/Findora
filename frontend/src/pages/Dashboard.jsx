@@ -8,6 +8,7 @@ import FoundItemCard from '../components/FoundItemCard';
 import SecurityDashboard from './SecurityDashboard';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
+import { sampleFoundItems } from '../data/sampleFoundItems';
 
 const ADMIN_PREVIEW_LIMIT = 5;
 const configuredApiUrl = import.meta.env.VITE_API_URL;
@@ -117,10 +118,10 @@ const Dashboard = () => {
             }
           }));
           const sortedFoundItems = sortFoundItems(apiItems, FOUND_ITEM_SORT.LATEST);
-          setFoundItems(sortedFoundItems.slice(0, 6));
+          setFoundItems(sortedFoundItems.length > 0 ? sortedFoundItems.slice(0, 6) : sampleFoundItems);
         } else {
           console.error('Dashboard found items fetch failed:', foundRes.reason?.response?.data || foundRes.reason?.message);
-          setFoundItems([]);
+          setFoundItems(sampleFoundItems);
         }
       } else if (user.role === 'admin') {
         const [foundRes, receivedRes, releasedRes] = await Promise.allSettled([
@@ -214,13 +215,18 @@ const Dashboard = () => {
         )}
 
         {/* Found Items Feed Section */}
-        {(user?.role === 'student' || user?.role === 'staff') && foundItems.length > 0 && (
+<<<<<<< HEAD
+        {(user?.role === 'student' || user?.role === 'staff') && foundItems.length > 0 && foundItems.some(i => i) && (
+=======
+        {(user?.role === 'student' || user?.role === 'staff') && (
+>>>>>>> develop-i
           <div className="found-items-section">
             <div className="section-header">
               <h2>Recently Found Items</h2>
               <Link to="/found-items" className="link-more">View All →</Link>
             </div>
             <div className="found-items-grid">
+<<<<<<< HEAD
               {foundItems.map((item) => (
                 <FoundItemCard
                   key={item.id}
@@ -236,6 +242,27 @@ const Dashboard = () => {
                   handoverInProgress={!!handoverLoadingById[item.id]}
                 />
               ))}
+=======
+              {foundItems.length === 0 ? (
+                <p>No found items available right now.</p>
+              ) : (
+                foundItems.map((item) => (
+                  <FoundItemCard
+                    key={item.id}
+                    item={item}
+                    onClaim={() => {
+                      claimsAPI.create(item.id).then(() => {
+                        navigate('/my-claims');
+                      }).catch((err) => {
+                        console.error('Claim error:', err);
+                      });
+                    }}
+                    onHandover={handleHandoverRequest}
+                    handoverInProgress={!!handoverLoadingById[item.id]}
+                  />
+                ))
+              )}
+>>>>>>> develop-i
             </div>
           </div>
         )}

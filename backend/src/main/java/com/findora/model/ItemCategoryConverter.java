@@ -12,13 +12,23 @@ public class ItemCategoryConverter implements AttributeConverter<ItemCategory, S
             return null;
         }
 
-        return switch (attribute) {
-            case NIC -> "NIC";
-            case STUDENT_ID -> "Student ID";
-            case BANK_CARD -> "Bank Card";
-            case WALLET -> "Wallet";
-            case OTHER -> "Other";
-        };
+        if (attribute == ItemCategory.NIC) {
+            return "NIC";
+        }
+        if (attribute == ItemCategory.STUDENT_ID) {
+            return "Student ID";
+        }
+        if (attribute == ItemCategory.BANK_CARD) {
+            return "Bank Card";
+        }
+        if (attribute == ItemCategory.WALLET) {
+            return "Wallet";
+        }
+        if (attribute == ItemCategory.OTHER) {
+            return "Other";
+        }
+
+        throw new IllegalArgumentException("Unsupported item category: " + attribute);
     }
 
     @Override

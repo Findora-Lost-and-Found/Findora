@@ -37,7 +37,7 @@ const ItemCard = ({ item, showActions = false, onDelete }) => {
         )}
       </div>
       <div className="item-details">
-        <span className={`category-badge ${item.type}`}>{normalizedCategory}</span>
+        <span className={`category-badge ${item.type}`}>{badgeLabel}</span>
         <span className={`type-badge ${item.type}`}>{item.type}</span>
         <h3>{item.item_name || 'Unnamed Item'}</h3>
         <p className="item-description">{displayDescription || 'No description provided.'}</p>

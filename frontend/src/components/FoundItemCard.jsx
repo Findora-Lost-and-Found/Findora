@@ -59,6 +59,33 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
   const isWaitingForSecurity = normalizedStatus === 'HANDOVER_REQUESTED';
   const isAlreadyHandedOver = normalizedStatus === 'HELD_BY_SECURITY'
     || normalizedStatus === 'HANDED_TO_SECURITY';
+  const fallbackImage = CATEGORY_FALLBACK_IMAGE[normalizedItem.category] || CATEGORY_FALLBACK_IMAGE.Other;
+  const generatedPreviewImage = useMemo(() => buildIdentityPreviewImage(normalizedItem), [normalizedItem]);
+  const badgeLabel = useMemo(
+    () => getIdentityBadgeLabel(normalizedItem.category, normalizedItem),
+    [normalizedItem.category, normalizedItem.name, normalizedItem.item_name, normalizedItem.description]
+  );
+  const resolvedImage = useMemo(() => {
+    const source = normalizedItem.image ? String(normalizedItem.image).trim() : '';
+    const hasUploadedImage = source
+      && !source.includes('via.placeholder.com')
+      && !source.includes('placeholder.com');
+
+    // Always prefer the actual uploaded item photo when available.
+    if (hasUploadedImage) {
+      if (source.startsWith('http://') || source.startsWith('https://')) {
+        return source;
+      }
+      const normalizedPath = source.replace(/\\/g, '/').replace(/\/+/g, '/').replace(/^\/+/, '');
+      return `${API_ORIGIN}/${normalizedPath}`;
+    }
+
+    if (generatedPreviewImage) {
+      return generatedPreviewImage;
+    }
+
+    return fallbackImage;
+  }, [normalizedItem.image, generatedPreviewImage, fallbackImage]);
   
   const formatDate = (dateString) => {
     const options = { month: 'short', day: 'numeric', year: 'numeric' };
@@ -89,6 +116,7 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
           <SampleItemImage category={normalizedItem.category} item={normalizedItem} />
         )}
         <div className="card-badge">{normalizedItem.category}</div>
+>>>>>>> develop-i
       </div>
 
       <div className="card-content">

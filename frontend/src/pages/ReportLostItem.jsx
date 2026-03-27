@@ -26,6 +26,7 @@ const ReportLostItem = () => {
   const [formData, setFormData] = useState({
     nicName: '',
     nicNumber: '',
+    idHolderType: '',
     idName: '',
     studentOrStaffId: '',
     cardType: '',
@@ -58,16 +59,19 @@ const ReportLostItem = () => {
     otherToTime: '',
     nicLocation1: '',
     nicLocation2: '',
+    nicLocation3: '',
     nicDateLost: '',
     nicFromTime: '',
     nicToTime: '',
     idLocation1: '',
     idLocation2: '',
+    idLocation3: '',
     idDateLost: '',
     idFromTime: '',
     idToTime: '',
     purseWithIdLocation1: '',
     purseWithIdLocation2: '',
+    purseWithIdLocation3: '',
     purseWithIdDateLost: '',
     purseWithIdFromTime: '',
     purseWithIdToTime: ''
@@ -154,6 +158,7 @@ const ReportLostItem = () => {
     }
 
     if (category === 'Student / Staff ID') {
+      if (!formData.idHolderType) nextErrors.idHolderType = 'Please choose Student or Staff.';
       if (!formData.idName.trim()) nextErrors.idName = 'Name is required.';
       if (!formData.studentOrStaffId.trim()) nextErrors.studentOrStaffId = 'Student ID or Staff ID is required.';
       if (formData.studentOrStaffId.trim()) {
@@ -258,13 +263,23 @@ const ReportLostItem = () => {
       item_name = `NIC - ${formData.nicName}`;
       description = `NIC Number: ${normalizeNic(formData.nicNumber)}`;
       location = [formData.nicLocation1, formData.nicLocation2].filter(Boolean).join(', ');
+=======
+      location = [formData.nicLocation1, formData.nicLocation2, formData.nicLocation3].filter(Boolean).join(', ');
+>>>>>>> develop-i
       date = formData.nicDateLost;
       time = formData.nicFromTime;
       image = null;
     } else if (category === 'Student / Staff ID') {
+<<<<<<< HEAD
+      const idType = formData.idHolderType || 'Student';
+      item_name = `${idType} ID - ${formData.idName}`;
+      description = `ID Type: ${idType} | Name: ${formData.idName || 'Unknown'} | ID Number: ${formData.studentOrStaffId}`;
+      location = [formData.idLocation1, formData.idLocation2].filter(Boolean).join(', ');
+=======
       item_name = `Student/Staff ID - ${formData.idName}`;
       description = `ID: ${formData.studentOrStaffId}`;
-      location = [formData.idLocation1, formData.idLocation2].filter(Boolean).join(', ');
+      location = [formData.idLocation1, formData.idLocation2, formData.idLocation3].filter(Boolean).join(', ');
+>>>>>>> develop-i
       date = formData.idDateLost;
       time = formData.idFromTime;
       image = null;
@@ -273,6 +288,7 @@ const ReportLostItem = () => {
       const last4 = getCardLast4(formData.cardNumber);
       description = `Card: ${maskCardNumber(formData.cardNumber) || '**** **** **** ****'}${last4 ? ` (last 4: ${last4})` : ''}`;
       location = [formData.bankLocation1, formData.bankLocation2, formData.bankLocation3].filter(Boolean).join(', ');
+>>>>>>> develop-i
       date = formData.bankDateLost;
       time = formData.bankFromTime;
       image = null;
@@ -280,7 +296,7 @@ const ReportLostItem = () => {
       item_name = 'Purse / Wallet';
       if (purseOption === 'with-id') {
         description = `Contains ID/NIC: ${formData.purseIdNumber}`;
-        location = [formData.purseWithIdLocation1, formData.purseWithIdLocation2].filter(Boolean).join(', ');
+        location = [formData.purseWithIdLocation1, formData.purseWithIdLocation2, formData.purseWithIdLocation3].filter(Boolean).join(', ');
         date = formData.purseWithIdDateLost;
         time = formData.purseWithIdFromTime;
       } else {
@@ -379,6 +395,10 @@ const ReportLostItem = () => {
                   <input name="nicLocation2" value={formData.nicLocation2} onChange={handleInputChange} />
                 </div>
                 <div className="report-lost-form-group">
+                  <label>Field 3 (optional)</label>
+                  <input name="nicLocation3" value={formData.nicLocation3} onChange={handleInputChange} />
+                </div>
+                <div className="report-lost-form-group">
                   <label className="required">What date did you lose it?</label>
                   <input type="date" name="nicDateLost" value={formData.nicDateLost} onChange={handleInputChange} />
                   {errors.nicDateLost && <p className="report-lost-error">{errors.nicDateLost}</p>}
@@ -406,6 +426,15 @@ const ReportLostItem = () => {
             <div className="report-lost-section">
               <h3>Student / Staff ID</h3>
               <div className="report-lost-form-group">
+                <label className="required">Student or Staff</label>
+                <select name="idHolderType" value={formData.idHolderType} onChange={handleInputChange}>
+                  <option value="">Select one</option>
+                  <option value="Student">Student</option>
+                  <option value="Staff">Staff</option>
+                </select>
+                {errors.idHolderType && <p className="report-lost-error">{errors.idHolderType}</p>}
+              </div>
+              <div className="report-lost-form-group">
                 <label className="required">Name</label>
                 <input name="idName" value={formData.idName} onChange={handleInputChange} />
                 {errors.idName && <p className="report-lost-error">{errors.idName}</p>}
@@ -432,6 +461,10 @@ const ReportLostItem = () => {
                 <div className="report-lost-form-group">
                   <label>Field 2 (optional)</label>
                   <input name="idLocation2" value={formData.idLocation2} onChange={handleInputChange} />
+                </div>
+                <div className="report-lost-form-group">
+                  <label>Field 3 (optional)</label>
+                  <input name="idLocation3" value={formData.idLocation3} onChange={handleInputChange} />
                 </div>
                 <div className="report-lost-form-group">
                   <label className="required">What date did you lose it?</label>
@@ -593,6 +626,10 @@ const ReportLostItem = () => {
                     <div className="report-lost-form-group">
                       <label>Field 2 (optional)</label>
                       <input name="purseWithIdLocation2" value={formData.purseWithIdLocation2} onChange={handleInputChange} />
+                    </div>
+                    <div className="report-lost-form-group">
+                      <label>Field 3 (optional)</label>
+                      <input name="purseWithIdLocation3" value={formData.purseWithIdLocation3} onChange={handleInputChange} />
                     </div>
                     <div className="report-lost-form-group">
                       <label className="required">What date did you lose it?</label>
