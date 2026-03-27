@@ -97,13 +97,13 @@ public class ItemController {
      */
     @GetMapping
     public ResponseEntity<?> getAllItems(
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(defaultValue = "createdAt,desc") String sort,
-            @RequestParam(required = false) String category,
-            @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) String type,
-            @RequestParam(required = false) String status) {
+            @RequestParam(name = "page", defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "10") Integer size,
+            @RequestParam(name = "sort", defaultValue = "createdAt,desc") String sort,
+            @RequestParam(name = "category", required = false) String category,
+            @RequestParam(name = "keyword", required = false) String keyword,
+            @RequestParam(name = "type", required = false) String type,
+            @RequestParam(name = "status", required = false) String status) {
 
         try {
             log.debug("GET /api/items: page={}, size={}, category={}, keyword={}", page, size, category, keyword);
@@ -154,12 +154,21 @@ public class ItemController {
      */
     @GetMapping("/my/items")
     public ResponseEntity<?> getMyItems(
+<<<<<<< HEAD
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String keyword) {
+=======
+            @RequestParam(name = "page", defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "10") Integer size,
+            @RequestParam(name = "type", required = false) String type,
+            @RequestParam(name = "status", required = false) String status,
+            @RequestParam(name = "category", required = false) String category,
+            @RequestParam(name = "keyword", required = false) String keyword) {
+>>>>>>> develop-i
 
         try {
             Long userId = getCurrentUserId();
@@ -269,8 +278,13 @@ public class ItemController {
     }
 
     /**
+<<<<<<< HEAD
      * PUT /api/items/:id/status - Update item status.
      * Requires authorization to modify item.
+=======
+     * PUT /api/items/:id/status - Update item status (admin only).
+     * Allows admin to update item status to CLOSED (hidden from public view).
+>>>>>>> develop-i
      */
     @PutMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
@@ -308,12 +322,16 @@ public class ItemController {
 
     /**
      * DELETE /api/items/:id - Delete item.
+<<<<<<< HEAD
      * Requires authorization to delete item.
+=======
+      * Pending: add authorization check.
+>>>>>>> develop-i
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteItem(@PathVariable Long id) {
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-            .body(Map.of("message", "TODO: Implement item deletion"));
+            .body(Map.of("message", "Item deletion is not implemented yet"));
     }
 
     /**

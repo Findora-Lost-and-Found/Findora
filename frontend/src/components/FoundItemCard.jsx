@@ -5,12 +5,17 @@ import './FoundItemCard.css';
 import ClaimModal from './ClaimModal';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { maskSensitiveDescription } from '../utils/itemDisplayUtils';
+<<<<<<< HEAD
 import { buildIdentityPreviewImage } from '../utils/cardPreviewUtils';
+=======
+import SampleItemImage from './SampleItemImage';
+>>>>>>> develop-i
 
 const configuredApiUrl = import.meta.env.VITE_API_URL;
 const API_ORIGIN = (configuredApiUrl?.includes('localhost:5000')
   ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')
   : configuredApiUrl || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
+<<<<<<< HEAD
 
 const CATEGORY_FALLBACK_IMAGE = {
   'Bank Card': '/assets/card-commercial.svg',
@@ -26,6 +31,8 @@ const getIdentityBadgeLabel = (normalizedCategory, item) => {
   const combinedText = `${item?.name || item?.item_name || ''} ${item?.description || ''}`;
   return /id\s*type\s*:\s*staff|staff\s*id|\bsf[-\s]?\d+/i.test(combinedText) ? 'STAFF ID' : 'STUDENT ID';
 };
+=======
+>>>>>>> develop-i
 
 const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }) => {
   const navigate = useNavigate();
@@ -46,6 +53,32 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
   const isOwnItem = Number.isFinite(currentUserId)
     && Number.isFinite(ownerId)
     && currentUserId === ownerId;
+<<<<<<< HEAD
+=======
+
+  const rawImage = normalizedItem.image || normalizedItem.image_url || normalizedItem.imageUrl || '';
+  const normalizedRawImage = String(rawImage || '').trim();
+  const hasRealImage =
+    normalizedRawImage !== ''
+    && !normalizedRawImage.includes('placeholder.com')
+    && !normalizedRawImage.includes('via.placeholder');
+
+  const resolvedImageSrc = useMemo(() => {
+    if (!hasRealImage) {
+      return '';
+    }
+
+    const source = normalizedRawImage.replace(/\\/g, '/');
+    if (source.startsWith('http://') || source.startsWith('https://')) {
+      return source;
+    }
+
+    const normalizedPath = source.replace(/\/+/g, '/').replace(/^\/+/, '');
+    return `${API_ORIGIN}/${normalizedPath}`;
+  }, [hasRealImage, normalizedRawImage]);
+
+  const showOriginalPhotoNote = normalizedItem.category === 'Other' && hasRealImage && !imageLoadFailed;
+>>>>>>> develop-i
 
   const normalizedStatus = useMemo(() => String(normalizedItem?.status || '').toUpperCase(), [normalizedItem?.status]);
   const isWaitingForSecurity = normalizedStatus === 'HANDOVER_REQUESTED';
@@ -95,6 +128,7 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
   return (
     <div className="found-item-card" id={`found-item-${normalizedItem.id}`}>
       <div className="card-image-container">
+<<<<<<< HEAD
         <img 
           src={resolvedImage} 
           alt={normalizedItem.name} 
@@ -106,6 +140,21 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
           }}
         />
         <div className="card-badge">{badgeLabel}</div>
+=======
+        {hasRealImage && !imageLoadFailed ? (
+          <img
+            src={resolvedImageSrc}
+            alt={normalizedItem.name}
+            className="card-image"
+            onError={(e) => {
+              setImageLoadFailed(true);
+            }}
+          />
+        ) : (
+          <SampleItemImage category={normalizedItem.category} item={normalizedItem} />
+        )}
+        <div className="card-badge">{normalizedItem.category}</div>
+>>>>>>> develop-i
       </div>
 
       <div className="card-content">

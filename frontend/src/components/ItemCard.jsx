@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useMemo } from 'react';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { buildIdentityPreviewImage } from '../utils/cardPreviewUtils';
@@ -16,10 +17,16 @@ const getIdentityBadgeLabel = (normalizedCategory, item) => {
   const combinedText = `${item?.name || item?.item_name || ''} ${item?.description || ''}`;
   return /id\s*type\s*:\s*staff|staff\s*id|\bsf[-\s]?\d+/i.test(combinedText) ? 'STAFF ID' : 'STUDENT ID';
 };
+=======
+import { normalizeCategory } from '../utils/categoryUtils';
+import SampleItemImage from './SampleItemImage';
+import { maskSensitiveDescription } from '../utils/itemDisplayUtils';
+>>>>>>> develop-i
 
 const ItemCard = ({ item, showActions = false, onDelete }) => {
   if (!item) return null;
 
+<<<<<<< HEAD
   const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
   const normalizedCategory = normalizeCategory(item.category, item.item_name || item.name);
 
@@ -29,7 +36,23 @@ const ItemCard = ({ item, showActions = false, onDelete }) => {
     name: item.name || item.item_name
   };
 
+=======
+  const configuredApiUrl = import.meta.env.VITE_API_URL;
+  const API_URL = configuredApiUrl?.includes('localhost:5000')
+    ? configuredApiUrl.replace('localhost:5000', 'localhost:8080').replace('/api', '')
+    : configuredApiUrl?.replace('/api', '') || 'http://localhost:8080';
+  const normalizedCategory = normalizeCategory(item.category, item.item_name || item.name);
+  const displayDescription = maskSensitiveDescription(item.description, normalizedCategory);
+>>>>>>> develop-i
   const displayDate = item.date ? new Date(item.date).toLocaleDateString() : 'Not provided';
+  const rawImage = item.image_url || item.imageUrl || item.image;
+  const normalizedImage = rawImage ? String(rawImage).trim().replace(/\\/g, '/') : '';
+  const normalizedPath = normalizedImage ? normalizedImage.replace(/\/+/g, '/').replace(/^\/+/, '') : '';
+  const imageSrc = !normalizedImage
+    ? ''
+    : normalizedImage.startsWith('http://') || normalizedImage.startsWith('https://')
+      ? normalizedImage
+      : `${API_URL}/${normalizedPath}`;
 
   const fallbackImage = CATEGORY_FALLBACK_IMAGE[normalizedCategory] || CATEGORY_FALLBACK_IMAGE.Other;
   const generatedPreviewImage = useMemo(() => buildIdentityPreviewImage(normalizedItem), [normalizedItem]);
@@ -61,6 +84,7 @@ const ItemCard = ({ item, showActions = false, onDelete }) => {
 
   return (
     <div className="item-card">
+<<<<<<< HEAD
       <img
         src={resolvedImage}
         alt={item.item_name}
@@ -71,6 +95,15 @@ const ItemCard = ({ item, showActions = false, onDelete }) => {
           e.target.src = fallbackImage;
         }}
       />
+=======
+      <div className="item-image-container">
+        {imageSrc ? (
+          <img src={imageSrc} alt={item.item_name} className="item-image" />
+        ) : (
+          <SampleItemImage category={normalizedCategory} item={item} />
+        )}
+      </div>
+>>>>>>> develop-i
       <div className="item-details">
         <span className={`category-badge ${item.type}`}>{badgeLabel}</span>
         <span className={`type-badge ${item.type}`}>{item.type}</span>
