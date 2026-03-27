@@ -206,7 +206,11 @@ public class SecurityController {
     @GetMapping("/stats")
     public ResponseEntity<?> getSecurityStats() {
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
+<<<<<<< HEAD
+            .body(Map.of("message", "Security stats endpoint not yet implemented"));
+=======
             .body(Map.of("message", "Security stats are not implemented yet"));
+>>>>>>> develop-i
     }
 
     /**

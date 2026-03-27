@@ -13,6 +13,12 @@ const CATEGORY_OPTIONS = [
   'Others'
 ];
 
+<<<<<<< HEAD
+const isValidNicNumber = (value) => isValidNic(value);
+const isValidStudentIdNumber = (value) => /^\d{6}[A-Za-z]$/.test(String(value || '').trim());
+
+=======
+>>>>>>> develop-i
 const ReportFoundItem = () => {
   const navigate = useNavigate();
   const [category, setCategory] = useState('');
@@ -23,9 +29,13 @@ const ReportFoundItem = () => {
   const [formData, setFormData] = useState({
     nicName: '',
     nicNumber: '',
+<<<<<<< HEAD
+    idHolderType: '',
+=======
     nicLocation1: '',
     nicLocation2: '',
     nicLocation3: '',
+>>>>>>> develop-i
     idName: '',
     studentOrStaffId: '',
     idLocation1: '',
@@ -97,10 +107,14 @@ const ReportFoundItem = () => {
       if (!formData.nicName.trim()) nextErrors.nicName = 'Name is required.';
       if (!formData.nicNumber.trim()) nextErrors.nicNumber = 'NIC Number is required.';
       else if (!isValidNic(formData.nicNumber)) nextErrors.nicNumber = NIC_VALIDATION_MESSAGE;
+<<<<<<< HEAD
+=======
       if (!formData.nicLocation1.trim()) nextErrors.nicLocation1 = 'Field 1 is required.';
+>>>>>>> develop-i
     }
 
     if (category === 'Student / Staff ID') {
+      if (!formData.idHolderType) nextErrors.idHolderType = 'Please choose Student or Staff.';
       if (!formData.idName.trim()) nextErrors.idName = 'Name is required.';
       if (!formData.studentOrStaffId.trim()) nextErrors.studentOrStaffId = 'Student ID or Staff ID is required.';
       if (formData.studentOrStaffId.trim() && !isValidStudentIdNumber(formData.studentOrStaffId)) {
@@ -183,6 +197,14 @@ const ReportFoundItem = () => {
     if (category === 'NIC') {
       item_name = `NIC - ${formData.nicName || 'Unknown'}`;
       description = `NIC Number: ${normalizeNic(formData.nicNumber)}`;
+<<<<<<< HEAD
+    }
+
+    if (category === 'Student / Staff ID') {
+      const idType = formData.idHolderType || 'Student';
+      item_name = `${idType} ID - ${formData.idName || 'Unknown'}`;
+      description = `ID Type: ${idType} | Name: ${formData.idName || 'Unknown'} | ID Number: ${formData.studentOrStaffId}`;
+=======
       location = [formData.nicLocation1, formData.nicLocation2, formData.nicLocation3].filter(Boolean).join(', ') || location;
     }
 
@@ -190,12 +212,18 @@ const ReportFoundItem = () => {
       item_name = `Student/Staff ID - ${formData.idName || 'Unknown'}`;
       description = `ID Number: ${formData.studentOrStaffId}`;
       location = [formData.idLocation1, formData.idLocation2, formData.idLocation3].filter(Boolean).join(', ') || location;
+>>>>>>> develop-i
     }
 
     if (category === 'Bank Card') {
       item_name = `${formData.bankName} ${formData.cardType} Card`;
+<<<<<<< HEAD
+      description = `Bank Name: ${formData.bankName} | Card Type: ${formData.cardType} | Last 4 digits: ${formData.cardLast4 || 'N/A'}${formData.cardCvv ? ` | CVV (provided): ${formData.cardCvv}` : ''}`;
+      location = formData.bankPrivateLocation || location;
+=======
       description = `Last 4 digits: ${formData.cardNumber ? formData.cardNumber.slice(-4) : 'N/A'}`;
       location = [formData.bankPrivateLocation, formData.bankPrivateLocation2, formData.bankPrivateLocation3].filter(Boolean).join(', ') || location;
+>>>>>>> develop-i
       date = formData.bankPrivateDate || date;
       time = formData.bankPrivateTime || time;
     }
@@ -205,7 +233,10 @@ const ReportFoundItem = () => {
       image = formData.pursePhoto;
       if (purseOption === 'with-id') {
         description = `Claim with ID: ${formData.purseIdNumber}`;
+<<<<<<< HEAD
+=======
         location = [formData.purseWithIdLocation1, formData.purseWithIdLocation2, formData.purseWithIdLocation3].filter(Boolean).join(', ') || location;
+>>>>>>> develop-i
       } else {
         description = `Items inside: ${formData.purseOtherItems || formData.purseMoney}`;
         location = [formData.pursePrivateLocation, formData.pursePrivateLocation2, formData.pursePrivateLocation3].filter(Boolean).join(', ') || location;
@@ -329,6 +360,15 @@ const ReportFoundItem = () => {
           {category === 'Student / Staff ID' && (
             <div className="category-section">
               <h3>Student / Staff ID Details</h3>
+              <div className="form-group">
+                <label className="required">Student or Staff</label>
+                <select name="idHolderType" value={formData.idHolderType} onChange={handleInputChange}>
+                  <option value="">Select one</option>
+                  <option value="Student">Student</option>
+                  <option value="Staff">Staff</option>
+                </select>
+                {errors.idHolderType && <p className="error-text">{errors.idHolderType}</p>}
+              </div>
               <div className="form-group">
                 <label className="required">Name</label>
                 <input name="idName" value={formData.idName} onChange={handleInputChange} />

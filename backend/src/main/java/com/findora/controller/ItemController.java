@@ -7,6 +7,9 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -55,6 +58,9 @@ import com.findora.service.ItemService;
 @RestController
 @RequestMapping("/api/items")
 public class ItemController {
+
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("uuuu-MM-dd").withResolverStyle(ResolverStyle.STRICT);
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm").withResolverStyle(ResolverStyle.STRICT);
 
     private final ItemService itemService;
     private final ItemRepository itemRepository;
@@ -154,12 +160,21 @@ public class ItemController {
      */
     @GetMapping("/my/items")
     public ResponseEntity<?> getMyItems(
+<<<<<<< HEAD
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "10") Integer size,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String keyword) {
+=======
             @RequestParam(name = "page", defaultValue = "0") Integer page,
             @RequestParam(name = "size", defaultValue = "10") Integer size,
             @RequestParam(name = "type", required = false) String type,
             @RequestParam(name = "status", required = false) String status,
             @RequestParam(name = "category", required = false) String category,
             @RequestParam(name = "keyword", required = false) String keyword) {
+>>>>>>> develop-i
 
         try {
             Long userId = getCurrentUserId();
@@ -209,8 +224,8 @@ public class ItemController {
 
             item.setDescription(finalDescription);
             item.setLocation(location.trim());
-            item.setDate(LocalDate.parse(date));
-            item.setTime(LocalTime.parse(time));
+            item.setDate(parseAndValidateDate(date));
+            item.setTime(parseAndValidateTime(time));
             item.setStatus(ItemStatus.ACTIVE);
 
             if (image != null && !image.isEmpty()) {
@@ -244,6 +259,26 @@ public class ItemController {
         return ItemCategory.valueOf(normalized);
     }
 
+    private LocalDate parseAndValidateDate(String rawDate) {
+        try {
+            LocalDate parsedDate = LocalDate.parse(rawDate.trim(), DATE_FORMATTER);
+            if (parsedDate.isAfter(LocalDate.now())) {
+                throw new IllegalArgumentException("Invalid date. Please select today or a past date.");
+            }
+            return parsedDate;
+        } catch (DateTimeParseException ex) {
+            throw new IllegalArgumentException("Invalid date. Please select today or a past date.");
+        }
+    }
+
+    private LocalTime parseAndValidateTime(String rawTime) {
+        try {
+            return LocalTime.parse(rawTime.trim(), TIME_FORMATTER);
+        } catch (DateTimeParseException ex) {
+            throw new IllegalArgumentException("Invalid time. Please enter a valid time in HH:MM format");
+        }
+    }
+
     private String saveImage(MultipartFile image) throws IOException {
         String original = image.getOriginalFilename();
         String extension = "";
@@ -269,8 +304,13 @@ public class ItemController {
     }
 
     /**
+<<<<<<< HEAD
+     * PUT /api/items/:id/status - Update item status.
+     * Requires authorization to modify item.
+=======
      * PUT /api/items/:id/status - Update item status (admin only).
      * Allows admin to update item status to CLOSED (hidden from public view).
+>>>>>>> develop-i
      */
     @PutMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
@@ -308,7 +348,11 @@ public class ItemController {
 
     /**
      * DELETE /api/items/:id - Delete item.
+<<<<<<< HEAD
+     * Requires authorization to delete item.
+=======
       * Pending: add authorization check.
+>>>>>>> develop-i
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteItem(@PathVariable Long id) {

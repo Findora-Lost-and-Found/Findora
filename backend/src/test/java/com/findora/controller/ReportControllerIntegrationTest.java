@@ -54,7 +54,10 @@ class ReportControllerIntegrationTest {
     private Item item;
 
     @BeforeEach
+<<<<<<< HEAD
+=======
     
+>>>>>>> develop-i
     void setUp() {
         reportRepository.deleteAll();
         itemRepository.deleteAll();

@@ -18,6 +18,7 @@ const ReportLostItem = () => {
   const [formData, setFormData] = useState({
     nicName: '',
     nicNumber: '',
+    idHolderType: '',
     idName: '',
     studentOrStaffId: '',
     cardType: '',
@@ -110,6 +111,7 @@ const ReportLostItem = () => {
     }
 
     if (category === 'Student / Staff ID') {
+      if (!formData.idHolderType) nextErrors.idHolderType = 'Please choose Student or Staff.';
       if (!formData.idName.trim()) nextErrors.idName = 'Name is required.';
       if (!formData.studentOrStaffId.trim()) nextErrors.studentOrStaffId = 'Student ID or Staff ID is required.';
       if (formData.studentOrStaffId.trim() && !isValidStudentIdNumber(formData.studentOrStaffId)) {
@@ -185,21 +187,36 @@ const ReportLostItem = () => {
     if (category === 'NIC') {
       item_name = `NIC - ${formData.nicName}`;
       description = `NIC Number: ${normalizeNic(formData.nicNumber)}`;
+<<<<<<< HEAD
+      location = [formData.nicLocation1, formData.nicLocation2].filter(Boolean).join(', ');
+=======
       location = [formData.nicLocation1, formData.nicLocation2, formData.nicLocation3].filter(Boolean).join(', ');
+>>>>>>> develop-i
       date = formData.nicDateLost;
       time = formData.nicFromTime;
       image = null;
     } else if (category === 'Student / Staff ID') {
+<<<<<<< HEAD
+      const idType = formData.idHolderType || 'Student';
+      item_name = `${idType} ID - ${formData.idName}`;
+      description = `ID Type: ${idType} | Name: ${formData.idName || 'Unknown'} | ID Number: ${formData.studentOrStaffId}`;
+      location = [formData.idLocation1, formData.idLocation2].filter(Boolean).join(', ');
+=======
       item_name = `Student/Staff ID - ${formData.idName}`;
       description = `ID: ${formData.studentOrStaffId}`;
       location = [formData.idLocation1, formData.idLocation2, formData.idLocation3].filter(Boolean).join(', ');
+>>>>>>> develop-i
       date = formData.idDateLost;
       time = formData.idFromTime;
       image = null;
     } else if (category === 'Bank Card') {
       item_name = `${formData.cardType} Card - ${formData.bankName}`;
       description = formData.cardNumber ? `Last 4 digits: ${formData.cardNumber.slice(-4)}` : '';
+<<<<<<< HEAD
+      location = [formData.bankLocation1].filter(Boolean).join(', ');
+=======
       location = [formData.bankLocation1, formData.bankLocation2, formData.bankLocation3].filter(Boolean).join(', ');
+>>>>>>> develop-i
       date = formData.bankDateLost;
       time = formData.bankFromTime;
       image = null;
@@ -335,6 +352,15 @@ const ReportLostItem = () => {
             <div className="report-lost-section">
               <h3>Student / Staff ID</h3>
               <div className="report-lost-form-group">
+                <label className="required">Student or Staff</label>
+                <select name="idHolderType" value={formData.idHolderType} onChange={handleInputChange}>
+                  <option value="">Select one</option>
+                  <option value="Student">Student</option>
+                  <option value="Staff">Staff</option>
+                </select>
+                {errors.idHolderType && <p className="report-lost-error">{errors.idHolderType}</p>}
+              </div>
+              <div className="report-lost-form-group">
                 <label className="required">Name</label>
                 <input name="idName" value={formData.idName} onChange={handleInputChange} />
                 {errors.idName && <p className="report-lost-error">{errors.idName}</p>}
@@ -448,6 +474,8 @@ const ReportLostItem = () => {
                   {errors.bankLocation1 && <p className="report-lost-error">{errors.bankLocation1}</p>}
                 </div>
                 <div className="report-lost-form-group">
+<<<<<<< HEAD
+=======
                   <label>Field 2 (optional)</label>
                   <input name="bankLocation2" value={formData.bankLocation2} onChange={handleInputChange} />
                 </div>
@@ -456,6 +484,7 @@ const ReportLostItem = () => {
                   <input name="bankLocation3" value={formData.bankLocation3} onChange={handleInputChange} />
                 </div>
                 <div className="report-lost-form-group">
+>>>>>>> develop-i
                   <label className="required">What date did you lose it?</label>
                   <input type="date" name="bankDateLost" value={formData.bankDateLost} onChange={handleInputChange} />
                   {errors.bankDateLost && <p className="report-lost-error">{errors.bankDateLost}</p>}
