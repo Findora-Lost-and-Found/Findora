@@ -50,14 +50,15 @@ class MatchServiceTest {
     private MatchService matchService;
 
     @BeforeEach
-    @SuppressWarnings("unused")
     void setUp() throws Exception {
         Clock clock = Clock.fixed(Instant.parse("2026-03-16T10:00:00Z"), ZoneOffset.UTC);
         when(mailSenderProvider.getIfAvailable()).thenReturn(null);
 
         Class<?> matchRepositoryClass = Class.forName("com.findora.repository.MatchRepository");
         Object matchRepositoryProxy = org.mockito.Mockito.mock(matchRepositoryClass);
-        this.matchRepository = (JpaRepository<Match, Long>) matchRepositoryProxy;
+        @SuppressWarnings("unchecked")
+        JpaRepository<Match, Long> castedRepository = (JpaRepository<Match, Long>) matchRepositoryProxy;
+        this.matchRepository = castedRepository;
         Constructor<MatchService> constructor = MatchService.class.getConstructor(
             matchRepositoryClass,
             ItemRepository.class,

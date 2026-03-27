@@ -5,22 +5,7 @@ import './FoundItemCard.css';
 import ClaimModal from './ClaimModal';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { maskSensitiveDescription } from '../utils/itemDisplayUtils';
-import { buildIdentityPreviewImage } from '../utils/cardPreviewUtils';
-
-const CATEGORY_FALLBACK_IMAGE = {
-  'Bank Card': '/assets/card-commercial.svg',
-  NIC: '/assets/nic-card.svg',
-  'Student ID': '/assets/student-id.svg',
-  Wallet: 'https://via.placeholder.com/300x200?text=Wallet+Photo',
-  Other: 'https://via.placeholder.com/300x200?text=Item+Photo'
-};
-
-const getIdentityBadgeLabel = (normalizedCategory, item) => {
-  if (normalizedCategory !== 'Student ID') return normalizedCategory;
-
-  const combinedText = `${item?.name || item?.item_name || ''} ${item?.description || ''}`;
-  return /id\s*type\s*:\s*staff|staff\s*id|\bsf[-\s]?\d+/i.test(combinedText) ? 'STAFF ID' : 'STUDENT ID';
-};
+import SampleItemImage from './SampleItemImage';
 
 const configuredApiUrl = import.meta.env.VITE_API_URL;
 const API_ORIGIN = (configuredApiUrl?.includes('localhost:5000')
@@ -74,33 +59,6 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
   const isWaitingForSecurity = normalizedStatus === 'HANDOVER_REQUESTED';
   const isAlreadyHandedOver = normalizedStatus === 'HELD_BY_SECURITY'
     || normalizedStatus === 'HANDED_TO_SECURITY';
-  const fallbackImage = CATEGORY_FALLBACK_IMAGE[normalizedItem.category] || CATEGORY_FALLBACK_IMAGE.Other;
-  const generatedPreviewImage = useMemo(() => buildIdentityPreviewImage(normalizedItem), [normalizedItem]);
-  const badgeLabel = useMemo(
-    () => getIdentityBadgeLabel(normalizedItem.category, normalizedItem),
-    [normalizedItem.category, normalizedItem.name, normalizedItem.item_name, normalizedItem.description]
-  );
-  const resolvedImage = useMemo(() => {
-    const source = normalizedItem.image ? String(normalizedItem.image).trim() : '';
-    const hasUploadedImage = source
-      && !source.includes('via.placeholder.com')
-      && !source.includes('placeholder.com');
-
-    // Always prefer the actual uploaded item photo when available.
-    if (hasUploadedImage) {
-      if (source.startsWith('http://') || source.startsWith('https://')) {
-        return source;
-      }
-      const normalizedPath = source.replace(/\\/g, '/').replace(/\/+/g, '/').replace(/^\/+/, '');
-      return `${API_ORIGIN}/${normalizedPath}`;
-    }
-
-    if (generatedPreviewImage) {
-      return generatedPreviewImage;
-    }
-
-    return fallbackImage;
-  }, [normalizedItem.image, generatedPreviewImage, fallbackImage]);
   
   const formatDate = (dateString) => {
     const options = { month: 'short', day: 'numeric', year: 'numeric' };
@@ -118,17 +76,19 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
   return (
     <div className="found-item-card" id={`found-item-${normalizedItem.id}`}>
       <div className="card-image-container">
-        <img 
-          src={resolvedImage} 
-          alt={normalizedItem.name} 
-          className="card-image"
-          onError={(e) => {
-            if (e.target.dataset.fallbackApplied === 'true') return;
-            e.target.dataset.fallbackApplied = 'true';
-            e.target.src = fallbackImage;
-          }}
-        />
-        <div className="card-badge">{badgeLabel}</div>
+        {hasRealImage && !imageLoadFailed ? (
+          <img
+            src={resolvedImageSrc}
+            alt={normalizedItem.name}
+            className="card-image"
+            onError={(e) => {
+              setImageLoadFailed(true);
+            }}
+          />
+        ) : (
+          <SampleItemImage category={normalizedItem.category} item={normalizedItem} />
+        )}
+        <div className="card-badge">{normalizedItem.category}</div>
       </div>
 
       <div className="card-content">

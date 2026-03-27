@@ -13,9 +13,6 @@ const CATEGORY_OPTIONS = [
   'Others'
 ];
 
-const isValidNicNumber = (value) => isValidNic(value);
-const isValidStudentIdNumber = (value) => /^\d{6}[A-Za-z]$/.test(String(value || '').trim());
-
 const ReportFoundItem = () => {
   const navigate = useNavigate();
   const [category, setCategory] = useState('');
@@ -26,7 +23,6 @@ const ReportFoundItem = () => {
   const [formData, setFormData] = useState({
     nicName: '',
     nicNumber: '',
-    idHolderType: '',
     idName: '',
     studentOrStaffId: '',
     cardType: '',
@@ -89,7 +85,6 @@ const ReportFoundItem = () => {
     }
 
     if (category === 'Student / Staff ID') {
-      if (!formData.idHolderType) nextErrors.idHolderType = 'Please choose Student or Staff.';
       if (!formData.idName.trim()) nextErrors.idName = 'Name is required.';
       if (!formData.studentOrStaffId.trim()) nextErrors.studentOrStaffId = 'Student ID or Staff ID is required.';
       if (formData.studentOrStaffId.trim() && !isValidStudentIdNumber(formData.studentOrStaffId)) {
@@ -173,9 +168,8 @@ const ReportFoundItem = () => {
     }
 
     if (category === 'Student / Staff ID') {
-      const idType = formData.idHolderType || 'Student';
-      item_name = `${idType} ID - ${formData.idName || 'Unknown'}`;
-      description = `ID Type: ${idType} | Name: ${formData.idName || 'Unknown'} | ID Number: ${formData.studentOrStaffId}`;
+      item_name = `Student/Staff ID - ${formData.idName || 'Unknown'}`;
+      description = `ID Number: ${formData.studentOrStaffId}`;
     }
 
     if (category === 'Bank Card') {
@@ -298,15 +292,6 @@ const ReportFoundItem = () => {
           {category === 'Student / Staff ID' && (
             <div className="category-section">
               <h3>Student / Staff ID Details</h3>
-              <div className="form-group">
-                <label className="required">Student or Staff</label>
-                <select name="idHolderType" value={formData.idHolderType} onChange={handleInputChange}>
-                  <option value="">Select one</option>
-                  <option value="Student">Student</option>
-                  <option value="Staff">Staff</option>
-                </select>
-                {errors.idHolderType && <p className="error-text">{errors.idHolderType}</p>}
-              </div>
               <div className="form-group">
                 <label className="required">Name</label>
                 <input name="idName" value={formData.idName} onChange={handleInputChange} />

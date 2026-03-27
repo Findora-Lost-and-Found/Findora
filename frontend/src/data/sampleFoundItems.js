@@ -2,12 +2,12 @@
 export const sampleFoundItems = [
   {
     id: 1,
-    name: 'Commercial Bank ATM / Debit Card',
-    description: 'Blue Commercial Bank Visa debit card. Bank: Commercial Bank of Ceylon PLC. Card holder name visible on front. Card number ending in 4521.',
+    name: 'Apple AirPods Pro',
+    description: 'White AirPods Pro with charging case, found near the library',
     location: 'Library Building, 2nd Floor',
     date_found: '2026-03-08',
-    image: '/assets/card-commercial.svg',
-    category: 'Bank Card',
+    image: 'https://via.placeholder.com/300x200?text=AirPods+Pro',
+    category: 'Other',
     type: 'found',
     status: 'active',
     posted_by: {
@@ -17,12 +17,12 @@ export const sampleFoundItems = [
   },
   {
     id: 2,
-    name: 'Bank of Ceylon (BOC) ATM Card',
-    description: 'Green Bank of Ceylon Mastercard. Bank: Bank of Ceylon (BOC). Card holder name visible on front. Card number ending in 7832.',
+    name: 'Black Wallet',
+    description: 'Leather wallet with ID inside, found at the cafeteria',
     location: 'Cafeteria, Main Campus',
     date_found: '2026-03-07',
-    image: '/assets/card-boc.svg',
-    category: 'Bank Card',
+    image: 'https://via.placeholder.com/300x200?text=Black+Wallet',
+    category: 'Wallet',
     type: 'found',
     status: 'active',
     posted_by: {
@@ -32,12 +32,12 @@ export const sampleFoundItems = [
   },
   {
     id: 3,
-    name: 'Seylan Bank Credit Card',
-    description: 'Maroon and white Seylan Bank Mastercard credit card. Bank: Seylan Bank PLC. Card holder name visible on front. Card number ending in 9043.',
+    name: 'Blue Backpack',
+    description: 'Navy blue school backpack with laptop compartment, found at the entrance',
     location: 'Main Entrance Gate',
     date_found: '2026-03-06',
-    image: '/assets/card-seylan.svg',
-    category: 'Bank Card',
+    image: 'https://via.placeholder.com/300x200?text=Blue+Backpack',
+    category: 'Other',
     type: 'found',
     status: 'active',
     posted_by: {
@@ -47,12 +47,12 @@ export const sampleFoundItems = [
   },
   {
     id: 4,
-    name: "People's Bank Visa Debit Card",
-    description: "Red People's Bank Visa debit card. Bank: People's Bank. Card holder name visible on front. Card number ending in 2867.",
+    name: 'Car Keys with Keychain',
+    description: 'Silver car keys with red keychain, found in parking lot B',
     location: 'Parking Lot B',
     date_found: '2026-03-05',
-    image: '/assets/card-peoples.svg',
-    category: 'Bank Card',
+    image: 'https://via.placeholder.com/300x200?text=Car+Keys',
+    category: 'Other',
     type: 'found',
     status: 'active',
     posted_by: {
@@ -62,12 +62,12 @@ export const sampleFoundItems = [
   },
   {
     id: 5,
-    name: 'Sri Lanka National Identity Card (NIC)',
-    description: 'National Identity Card. NIC No: XXXXXXXXX1234. Name: KAMAL ASANKA PERERA. DOB: 1990 MAY 15. Sex: MALE. Address: No. 45, Galle Road, Colombo 06.',
+    name: 'Silver Laptop',
+    description: 'Dell XPS laptop with charger, found in the computer lab',
     location: 'Computer Lab, Building A',
     date_found: '2026-03-04',
-    image: '/assets/nic-card.svg',
-    category: 'NIC',
+    image: 'https://via.placeholder.com/300x200?text=Laptop',
+    category: 'Other',
     type: 'found',
     status: 'active',
     posted_by: {
@@ -77,32 +77,17 @@ export const sampleFoundItems = [
   },
   {
     id: 6,
-    name: 'University of Moratuwa Student ID',
-    description: 'University of Moratuwa Student Identity Card. Faculty of Engineering. Name: R. A. FERNANDO. Registration No: 190234E. Valid Until: 31st October 2027.',
+    name: 'Smart Watch',
+    description: 'Apple Watch Series 7 with black band, found in the gym',
     location: 'Gymnasium',
     date_found: '2026-03-03',
-    image: '/assets/student-id.svg',
-    category: 'Student ID',
+    image: 'https://via.placeholder.com/300x200?text=Smart+Watch',
+    category: 'Other',
     type: 'found',
     status: 'active',
     posted_by: {
       id: 10,
       full_name: 'Robert Taylor'
-    }
-  },
-  {
-    id: 7,
-    name: 'University of Moratuwa Staff ID',
-    description: 'University of Moratuwa Staff Identity Card. Faculty of Computing. Name: Prof. S. K. JAYAWARDENA. Staff ID: SF-2019-0342. Designation: Senior Lecturer. Department: Dept. of Computer Science.',
-    location: 'Faculty of Computing Building',
-    date_found: '2026-03-02',
-    image: '/assets/staff-id.svg',
-    category: 'Student ID',
-    type: 'found',
-    status: 'active',
-    posted_by: {
-      id: 11,
-      full_name: 'Priya Mendis'
     }
   }
 ];

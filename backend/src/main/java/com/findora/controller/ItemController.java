@@ -268,14 +268,6 @@ public class ItemController {
         return base + "\n__PRIVATE_CARD__=" + cardNumber;
     }
 
-    private String appendPrivateCardMarker(String description, String cardNumber) {
-        String base = description == null ? "" : description.trim();
-        if (base.isEmpty()) {
-            return "__PRIVATE_CARD__=" + cardNumber;
-        }
-        return base + "\n__PRIVATE_CARD__=" + cardNumber;
-    }
-
     /**
      * PUT /api/items/:id/status - Update item status (admin only).
      * Allows admin to update item status to CLOSED (hidden from public view).
@@ -316,7 +308,7 @@ public class ItemController {
 
     /**
      * DELETE /api/items/:id - Delete item.
-        * Pending: add authorization check.
+      * Pending: add authorization check.
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteItem(@PathVariable Long id) {

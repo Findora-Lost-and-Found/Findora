@@ -45,7 +45,7 @@ export const maskNicNumber = (value = '') => {
   const normalized = String(value).trim();
   if (!normalized) return '';
   if (normalized.length <= 4) return normalized;
-  return `${'X'.repeat(normalized.length - 4)}${normalized.slice(-4)}`;
+  return `${'*'.repeat(normalized.length - 4)}${normalized.slice(-4)}`;
 };
 
 export const maskNicInText = (text = '') => {

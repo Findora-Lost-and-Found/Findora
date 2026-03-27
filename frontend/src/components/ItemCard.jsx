@@ -1,22 +1,6 @@
-import { useMemo } from 'react';
 import { normalizeCategory } from '../utils/categoryUtils';
-import { buildIdentityPreviewImage } from '../utils/cardPreviewUtils';
+import SampleItemImage from './SampleItemImage';
 import { maskSensitiveDescription } from '../utils/itemDisplayUtils';
-
-const CATEGORY_FALLBACK_IMAGE = {
-  'Bank Card': '/assets/card-commercial.svg',
-  NIC: '/assets/nic-card.svg',
-  'Student ID': '/assets/student-id.svg',
-  Wallet: 'https://via.placeholder.com/300x200?text=Wallet+Photo',
-  Other: 'https://via.placeholder.com/300x200?text=Item+Photo'
-};
-
-const getIdentityBadgeLabel = (normalizedCategory, item) => {
-  if (normalizedCategory !== 'Student ID') return normalizedCategory;
-
-  const combinedText = `${item?.name || item?.item_name || ''} ${item?.description || ''}`;
-  return /id\s*type\s*:\s*staff|staff\s*id|\bsf[-\s]?\d+/i.test(combinedText) ? 'STAFF ID' : 'STUDENT ID';
-};
 
 const ItemCard = ({ item, showActions = false, onDelete }) => {
   if (!item) return null;
@@ -27,57 +11,27 @@ const ItemCard = ({ item, showActions = false, onDelete }) => {
     : configuredApiUrl?.replace('/api', '') || 'http://localhost:8080';
   const normalizedCategory = normalizeCategory(item.category, item.item_name || item.name);
   const displayDescription = maskSensitiveDescription(item.description, normalizedCategory);
-
-  const normalizedItem = {
-    ...item,
-    category: normalizedCategory,
-    name: item.name || item.item_name
-  };
-
   const displayDate = item.date ? new Date(item.date).toLocaleDateString() : 'Not provided';
-
-  const fallbackImage = CATEGORY_FALLBACK_IMAGE[normalizedCategory] || CATEGORY_FALLBACK_IMAGE.Other;
-  const generatedPreviewImage = useMemo(() => buildIdentityPreviewImage(normalizedItem), [normalizedItem]);
-  const badgeLabel = useMemo(
-    () => getIdentityBadgeLabel(normalizedCategory, normalizedItem),
-    [normalizedCategory, normalizedItem.name, normalizedItem.item_name, normalizedItem.description]
-  );
-  const resolvedImage = useMemo(() => {
-    if (item.image_url) {
-      const normalizedPath = String(item.image_url).trim().replace(/\\/g, '/').replace(/\/+/g, '/').replace(/^\/+/, '');
-      return `${API_URL}/${normalizedPath}`;
-    }
-
-    if (item.image) {
-      const source = String(item.image).trim().replace(/\\/g, '/');
-      if (source.startsWith('http://') || source.startsWith('https://')) {
-        return source;
-      }
-      const normalizedPath = source.replace(/\/+/g, '/').replace(/^\/+/, '');
-      return `${API_URL}/${normalizedPath}`;
-    }
-
-    if (generatedPreviewImage) {
-      return generatedPreviewImage;
-    }
-
-    return fallbackImage;
-  }, [generatedPreviewImage, item.image_url, item.image, API_URL, fallbackImage]);
+  const rawImage = item.image_url || item.imageUrl || item.image;
+  const normalizedImage = rawImage ? String(rawImage).trim().replace(/\\/g, '/') : '';
+  const normalizedPath = normalizedImage ? normalizedImage.replace(/\/+/g, '/').replace(/^\/+/, '') : '';
+  const imageSrc = !normalizedImage
+    ? ''
+    : normalizedImage.startsWith('http://') || normalizedImage.startsWith('https://')
+      ? normalizedImage
+      : `${API_URL}/${normalizedPath}`;
 
   return (
     <div className="item-card">
-      <img
-        src={resolvedImage}
-        alt={item.item_name}
-        className="item-image"
-        onError={(e) => {
-          if (e.target.dataset.fallbackApplied === 'true') return;
-          e.target.dataset.fallbackApplied = 'true';
-          e.target.src = fallbackImage;
-        }}
-      />
+      <div className="item-image-container">
+        {imageSrc ? (
+          <img src={imageSrc} alt={item.item_name} className="item-image" />
+        ) : (
+          <SampleItemImage category={normalizedCategory} item={item} />
+        )}
+      </div>
       <div className="item-details">
-        <span className={`category-badge ${item.type}`}>{badgeLabel}</span>
+        <span className={`category-badge ${item.type}`}>{normalizedCategory}</span>
         <span className={`type-badge ${item.type}`}>{item.type}</span>
         <h3>{item.item_name || 'Unnamed Item'}</h3>
         <p className="item-description">{displayDescription || 'No description provided.'}</p>
