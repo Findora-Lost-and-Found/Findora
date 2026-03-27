@@ -3,6 +3,7 @@ import { toast } from 'react-toastify';
 import { adminAPI } from '../../services/api';
 import MobileWarning from '../../components/MobileWarning';
 import ReportDetailsModal from '../../components/admin/ReportDetailsModal';
+import { maskSensitiveDescription } from '../../utils/itemDisplayUtils';
 import './AdminReports.css';
 
 const formatDateTime = (value) => {
@@ -107,8 +108,10 @@ const AdminReports = () => {
                 </td>
               </tr>
             ) : (
-              reports.map((report) => (
-                <tr key={report.id} className={`report-row status-${report.status}`}>
+              reports.map((report) => {
+                const maskedReason = maskSensitiveDescription(report.reason || '');
+                return (
+                  <tr key={report.id} className={`report-row status-${report.status}`}>
                   <td>
                     <button
                       className="item-link"
@@ -130,8 +133,8 @@ const AdminReports = () => {
                   </td>
                   <td>
                     <div className="reason-cell">
-                      {report.reason?.split('\n')[0] || 'N/A'}
-                      {report.reason && report.reason.length > 50 && '...'}
+                      {maskedReason.split('\n')[0] || 'N/A'}
+                      {maskedReason.length > 50 && '...'}
                     </div>
                   </td>
                   <td>
@@ -166,8 +169,9 @@ const AdminReports = () => {
                       Details
                     </button>
                   </td>
-                </tr>
-              ))
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

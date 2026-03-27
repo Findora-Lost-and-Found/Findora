@@ -358,7 +358,7 @@ const BankCardSVG = ({ last4, cardType, bankName }) => (
 
     {/* Card number */}
     <text x="20" y="122" fill={theme.split ? '#8B1A1A' : 'rgba(255,255,255,0.88)'} fontSize="17" fontFamily="Courier New,monospace" letterSpacing="2.5">
-      XXXX  XXXX  XXXX  {last4}
+      **** **** **** {last4}
     </text>
 
     {/* Valid thru */}

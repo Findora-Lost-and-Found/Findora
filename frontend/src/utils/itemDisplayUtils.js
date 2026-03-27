@@ -1,3 +1,5 @@
+import { maskCardDigitsForDisplay } from './cardUtils';
+
 export const FOUND_ITEM_SORT = {
   LATEST: 'latest',
   NAME_ASC: 'name-asc',
@@ -61,12 +63,12 @@ export const maskCvvInText = (text = '') => {
 export const maskCardInText = (text = '') => {
   const withMaskedRawCards = String(text).replace(/\b(?:\d[ -]?){13,19}\b/g, (token) => {
     const digits = token.replace(/\D/g, '');
-    if (digits.length !== 16) return token;
-    return `**** **** **** ${digits.slice(-4)}`;
+    if (digits.length < 4) return token;
+    return maskCardDigitsForDisplay(digits);
   });
 
   // If backend stores private marker in description, keep only masked last 4 for display.
-  return withMaskedRawCards.replace(/__PRIVATE_CARD__=(\d{16})/gi, (_, cardNumber) => `Card: **** **** **** ${cardNumber.slice(-4)}`);
+  return withMaskedRawCards.replace(/__PRIVATE_CARD__=(\d{13,19})/gi, (_, cardNumber) => `Card: ${maskCardDigitsForDisplay(cardNumber)}`);
 };
 
 export const maskSensitiveDescription = (text = '', category = '') => {
