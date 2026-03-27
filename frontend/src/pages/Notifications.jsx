@@ -92,7 +92,7 @@ const Notifications = () => {
                 )}
                 {notification.type === 'claim' && (
                   <Link
-                    to="/my-claims"
+                    to={notification.claim_id ? `/my-claims?claimId=${notification.claim_id}` : '/my-claims'}
                     className="btn-link"
                     onClick={() => {
                       if (!notification.is_read) {
