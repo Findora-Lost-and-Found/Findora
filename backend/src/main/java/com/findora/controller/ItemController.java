@@ -167,14 +167,6 @@ public class ItemController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String keyword) {
-=======
-            @RequestParam(name = "page", defaultValue = "0") Integer page,
-            @RequestParam(name = "size", defaultValue = "10") Integer size,
-            @RequestParam(name = "type", required = false) String type,
-            @RequestParam(name = "status", required = false) String status,
-            @RequestParam(name = "category", required = false) String category,
-            @RequestParam(name = "keyword", required = false) String keyword) {
->>>>>>> develop-i
 
         try {
             Long userId = getCurrentUserId();
@@ -304,13 +296,8 @@ public class ItemController {
     }
 
     /**
-<<<<<<< HEAD
-     * PUT /api/items/:id/status - Update item status.
-     * Requires authorization to modify item.
-=======
      * PUT /api/items/:id/status - Update item status (admin only).
      * Allows admin to update item status to CLOSED (hidden from public view).
->>>>>>> develop-i
      */
     @PutMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")

@@ -162,13 +162,14 @@
 .btn-collect {
   background: linear-gradient(135deg, #16A34A 0%, #22C55E 100%);
   color: white;
-  padding: 1rem;
+  padding: 0.85rem 1.1rem;
   border: none;
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+  min-height: 44px;
   width: 100%;
 }
 
@@ -211,16 +212,19 @@
 /* Form Actions */
 .form-actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 1rem;
-  justify-content: center;
+  justify-content: flex-end;
   margin-top: 1.5rem;
   padding-top: 1rem;
   border-top: 1px solid #E5E7EB;
 }
 
-.form-actions button {
-  padding: 0.75rem 1.5rem;
-  min-width: 140px;
+.claim-modal .form-actions button {
+  min-height: 44px;
+  padding: 0.7rem 1.2rem;
+  min-width: 150px;
   border: none;
   border-radius: 8px;
   font-size: 0.95rem;
@@ -229,22 +233,22 @@
   transition: all 0.2s ease;
 }
 
-.btn-secondary {
+.claim-modal .btn-secondary {
   background: #F3F4F6;
   color: #1F2937;
   border: 2px solid #E5E7EB;
 }
 
-.btn-secondary:hover {
+.claim-modal .btn-secondary:hover {
   background: #E5E7EB;
 }
 
-.btn-primary {
+.claim-modal .btn-primary {
   background: linear-gradient(135deg, #16A34A 0%, #22C55E 100%);
   color: white;
 }
 
-.btn-primary:hover {
+.claim-modal .btn-primary:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
 }
@@ -268,8 +272,9 @@
     flex-direction: column-reverse;
   }
 
-  .form-actions button {
+  .claim-modal .form-actions button {
     width: 100%;
+    min-width: 100%;
   }
 
   .template-image {

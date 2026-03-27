@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
 import { toast } from 'react-toastify';
+import PhoneNumberUpdate from '../components/profile/PhoneNumberUpdate';
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, loadUser } = useAuth();
   const [theme, setTheme] = useState('light');
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -116,6 +117,8 @@ const Profile = () => {
   }
 
   const memberSince = user.createdAt || user.created_at;
+  const isPhoneVerified = Boolean(user.is_phone_verified ?? true);
+  const hasPendingPhoneVerification = Boolean(user.pending_phone);
 
   return (
     <div className="container">
@@ -162,6 +165,18 @@ const Profile = () => {
                   <span>{user.phone}</span>
                 </div>
               )}
+              {user.pending_phone && (
+                <div className="detail-row">
+                  <strong>Pending Phone:</strong>
+                  <span className="pending">{user.pending_phone}</span>
+                </div>
+              )}
+              <div className="detail-row">
+                <strong>Phone Verified:</strong>
+                <span className={isPhoneVerified ? 'verified' : 'not-verified'}>
+                  {isPhoneVerified ? '✓ Verified' : '✗ Not Verified'}
+                </span>
+              </div>
               <div className="detail-row">
                 <strong>Email Verified:</strong>
                 <span className={user.is_verified ? 'verified' : 'not-verified'}>
@@ -189,10 +204,22 @@ const Profile = () => {
           <p style={{ marginBottom: '1rem', color: '#6B7280' }}>
             Manage your account security settings.
           </p>
-          <button type="button" className="btn-primary" onClick={() => setIsPasswordModalOpen(true)}>
+          {hasPendingPhoneVerification && (
+            <p style={{ marginBottom: '0.75rem', color: '#B45309', fontWeight: 600 }}>
+              Phone verification is pending. Complete OTP verification below to re-enable phone-verified actions.
+            </p>
+          )}
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => setIsPasswordModalOpen(true)}
+            disabled={hasPendingPhoneVerification}
+          >
             Change Password
           </button>
         </div>
+
+        <PhoneNumberUpdate user={user} onVerified={loadUser} />
 
         {isPasswordModalOpen && (
           <div className="profile-password-overlay" onClick={closePasswordModal}>

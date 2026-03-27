@@ -10,11 +10,19 @@ export const formatCardNumber = (value = '') => {
   return digits.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
 };
 
+export const maskCardDigitsForDisplay = (value = '') => {
+  const digits = String(value).replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.length <= 4) return digits;
+
+  const maskedPrefix = '*'.repeat(Math.max(digits.length - 4, 0));
+  const maskedGroups = maskedPrefix.match(/.{1,4}/g) || [];
+  return [...maskedGroups, digits.slice(-4)].join(' ');
+};
+
 export const maskCardNumber = (value = '') => {
   const digits = normalizeCardNumber(value);
-  if (!digits) return '';
-  const last4 = digits.slice(-4).padStart(4, '*');
-  return `**** **** **** ${last4}`;
+  return maskCardDigitsForDisplay(digits);
 };
 
 export const getCardCursorPosition = (formattedValue = '', digitsBeforeCursor = 0) => {

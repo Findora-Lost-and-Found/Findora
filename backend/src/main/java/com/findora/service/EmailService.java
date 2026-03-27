@@ -34,6 +34,12 @@ public class EmailService {
         sendOtp(toEmail, fullName, otp, "Password Reset OTP", "reset your password");
     }
 
+    public void sendPhoneChangeOtp(String toEmail, String fullName, String otp, String pendingPhone) {
+        String action = "verify your new phone number ending with "
+            + (pendingPhone != null && pendingPhone.length() >= 4 ? pendingPhone.substring(pendingPhone.length() - 4) : "XXXX");
+        sendOtp(toEmail, fullName, otp, "Phone Update Verification OTP", action);
+    }
+
     private void sendOtp(String toEmail, String fullName, String otp, String subject, String actionText) {
         validateMailConfiguration();
                 validateRequest(toEmail, otp);

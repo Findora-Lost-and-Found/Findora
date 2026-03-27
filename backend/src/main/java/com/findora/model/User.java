@@ -53,6 +53,18 @@ public class User {
     @Column(length = 20)
     private String phone;
 
+    @Column(name = "pending_phone", length = 20)
+    private String pendingPhone;
+
+    @Column(name = "phone_verification_otp", length = 6)
+    private String phoneVerificationOtp;
+
+    @Column(name = "phone_otp_expiry")
+    private LocalDateTime phoneOtpExpiry;
+
+    @Column(name = "is_phone_verified", nullable = false)
+    private Boolean isPhoneVerified = true;
+
     @Column(name = "is_verified", nullable = false)
     private Boolean isVerified = false;
 
@@ -96,6 +108,7 @@ public class User {
     }
 
     public User(Long id, String username, String email, String password, String fullName, UserRole role, String phone,
+                String pendingPhone, String phoneVerificationOtp, LocalDateTime phoneOtpExpiry, Boolean isPhoneVerified,
                 Boolean isVerified, Boolean isApproved, Boolean isBanned, Boolean isSuspended, String verificationOtp,
                 String resetOtp, LocalDateTime otpExpiry, LocalDateTime createdAt, LocalDateTime updatedAt,
                 List<Item> items, List<Notification> notifications) {
@@ -106,6 +119,10 @@ public class User {
         this.fullName = fullName;
         this.role = role;
         this.phone = phone;
+        this.pendingPhone = pendingPhone;
+        this.phoneVerificationOtp = phoneVerificationOtp;
+        this.phoneOtpExpiry = phoneOtpExpiry;
+        this.isPhoneVerified = isPhoneVerified;
         this.isVerified = isVerified;
         this.isApproved = isApproved;
         this.isBanned = isBanned;
@@ -173,6 +190,38 @@ public class User {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    public String getPendingPhone() {
+        return pendingPhone;
+    }
+
+    public void setPendingPhone(String pendingPhone) {
+        this.pendingPhone = pendingPhone;
+    }
+
+    public String getPhoneVerificationOtp() {
+        return phoneVerificationOtp;
+    }
+
+    public void setPhoneVerificationOtp(String phoneVerificationOtp) {
+        this.phoneVerificationOtp = phoneVerificationOtp;
+    }
+
+    public LocalDateTime getPhoneOtpExpiry() {
+        return phoneOtpExpiry;
+    }
+
+    public void setPhoneOtpExpiry(LocalDateTime phoneOtpExpiry) {
+        this.phoneOtpExpiry = phoneOtpExpiry;
+    }
+
+    public Boolean getIsPhoneVerified() {
+        return isPhoneVerified;
+    }
+
+    public void setIsPhoneVerified(Boolean isPhoneVerified) {
+        this.isPhoneVerified = isPhoneVerified;
     }
 
     public Boolean getIsVerified() {

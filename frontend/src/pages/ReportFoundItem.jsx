@@ -2,7 +2,18 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { itemsAPI } from '../services/api';
 import { toast } from 'react-toastify';
-import { NIC_HELPER_TEXT, NIC_VALIDATION_MESSAGE, isValidNic, normalizeNic, sanitizeNicInput } from '../utils/nicUtils';
+import { NIC_HELPER_TEXT, NIC_VALIDATION_MESSAGE, isValidNic, isValidNicNumber, normalizeNic, normalizeNicNumber, sanitizeNicInput } from '../utils/nicUtils';
+import { isValidStudentIdNumber, normalizeStudentIdNumber, validateStudentID } from '../utils/studentIdUtils';
+import {
+  formatCardNumber,
+  getCardCursorPosition,
+  getCardLast4,
+  isValidCardNumber,
+  maskCardNumber,
+  normalizeCardNumber
+} from '../utils/cardUtils';
+import { validateLostTimeWithDate } from '../utils/timeUtils';
+import { BANK_OPTIONS } from '../data/bankOptions';
 import './ReportFoundItem.css';
 
 const CATEGORY_OPTIONS = [
@@ -13,12 +24,6 @@ const CATEGORY_OPTIONS = [
   'Others'
 ];
 
-<<<<<<< HEAD
-const isValidNicNumber = (value) => isValidNic(value);
-const isValidStudentIdNumber = (value) => /^\d{6}[A-Za-z]$/.test(String(value || '').trim());
-
-=======
->>>>>>> develop-i
 const ReportFoundItem = () => {
   const navigate = useNavigate();
   const [category, setCategory] = useState('');
@@ -80,13 +85,30 @@ const ReportFoundItem = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    let nextValue = value;
-    if (name === 'nicNumber') {
-      nextValue = sanitizeNicInput(value);
-    }
+    const inputEl = e.target;
+    const normalizePurseId = (rawValue) => String(rawValue).trim().toUpperCase();
+
+    const nextValue =
+      name === 'nicNumber'
+        ? sanitizeNicInput(value)
+        : name === 'studentOrStaffId'
+          ? normalizeStudentIdNumber(value)
+          : name === 'purseIdNumber'
+            ? normalizePurseId(value)
+          : name === 'cardNumber'
+            ? formatCardNumber(value)
+          : value;
+
     if (name === 'cardNumber') {
-      nextValue = String(value).replace(/\D/g, '').slice(0, 16);
+      const cursor = inputEl.selectionStart ?? value.length;
+      const digitsBeforeCursor = value.slice(0, cursor).replace(/\D/g, '').length;
+
+      requestAnimationFrame(() => {
+        const nextCursor = getCardCursorPosition(nextValue, digitsBeforeCursor);
+        inputEl.setSelectionRange(nextCursor, nextCursor);
+      });
     }
+
     setFormData((prev) => ({ ...prev, [name]: nextValue }));
   };
 
@@ -100,6 +122,23 @@ const ReportFoundItem = () => {
 
   const validate = () => {
     const nextErrors = {};
+    const isFutureDate = (dateValue) => {
+      if (!dateValue) return false;
+      const selectedDate = new Date(`${dateValue}T00:00:00`);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return selectedDate > today;
+    };
+    const assignInvalidTimeError = (fieldName, dateValue, timeValue) => {
+      if (!timeValue) {
+        return;
+      }
+
+      const validationResult = validateLostTimeWithDate(dateValue, timeValue);
+      if (validationResult !== true) {
+        nextErrors[fieldName] = validationResult;
+      }
+    };
 
     if (!category) nextErrors.category = 'Please select a category.';
 
@@ -107,18 +146,17 @@ const ReportFoundItem = () => {
       if (!formData.nicName.trim()) nextErrors.nicName = 'Name is required.';
       if (!formData.nicNumber.trim()) nextErrors.nicNumber = 'NIC Number is required.';
       else if (!isValidNic(formData.nicNumber)) nextErrors.nicNumber = NIC_VALIDATION_MESSAGE;
-<<<<<<< HEAD
-=======
-      if (!formData.nicLocation1.trim()) nextErrors.nicLocation1 = 'Field 1 is required.';
->>>>>>> develop-i
     }
 
     if (category === 'Student / Staff ID') {
       if (!formData.idHolderType) nextErrors.idHolderType = 'Please choose Student or Staff.';
       if (!formData.idName.trim()) nextErrors.idName = 'Name is required.';
       if (!formData.studentOrStaffId.trim()) nextErrors.studentOrStaffId = 'Student ID or Staff ID is required.';
-      if (formData.studentOrStaffId.trim() && !isValidStudentIdNumber(formData.studentOrStaffId)) {
-        nextErrors.studentOrStaffId = 'Student ID must be 6 digits followed by 1 letter.';
+      if (formData.studentOrStaffId.trim()) {
+        const validationResult = validateStudentID(formData.studentOrStaffId);
+        if (validationResult !== true) {
+          nextErrors.studentOrStaffId = validationResult;
+        }
       }
       if (!formData.idLocation1.trim()) nextErrors.idLocation1 = 'Field 1 is required.';
     }
@@ -126,10 +164,14 @@ const ReportFoundItem = () => {
     if (category === 'Bank Card') {
       if (!formData.cardType) nextErrors.cardType = 'Card Type is required.';
       if (!formData.bankName.trim()) nextErrors.bankName = 'Name of the Bank is required.';
-      if (!/^\d{16}$/.test(formData.cardNumber)) nextErrors.cardNumber = 'Full 16-digit card number is required.';
+      if (!isValidCardNumber(formData.cardNumber)) nextErrors.cardNumber = 'Please enter a valid 16-digit card number.';
       if (!formData.bankPrivateLocation.trim()) nextErrors.bankPrivateLocation = 'Location is required.';
       if (!formData.bankPrivateDate) nextErrors.bankPrivateDate = 'Date is required.';
+      if (formData.bankPrivateDate && isFutureDate(formData.bankPrivateDate)) {
+        nextErrors.bankPrivateDate = 'Invalid date. Please select today or a past date.';
+      }
       if (!formData.bankPrivateTime) nextErrors.bankPrivateTime = 'Time is required.';
+      assignInvalidTimeError('bankPrivateTime', formData.bankPrivateDate, formData.bankPrivateTime);
     }
 
     if (category === 'Purse') {
@@ -151,7 +193,11 @@ const ReportFoundItem = () => {
         if (!formData.purseOtherItems.trim()) nextErrors.purseOtherItems = 'Other items inside purse are required.';
         if (!formData.pursePrivateLocation.trim()) nextErrors.pursePrivateLocation = 'Location is required.';
         if (!formData.pursePrivateDate) nextErrors.pursePrivateDate = 'Date is required.';
+        if (formData.pursePrivateDate && isFutureDate(formData.pursePrivateDate)) {
+          nextErrors.pursePrivateDate = 'Invalid date. Please select today or a past date.';
+        }
         if (!formData.pursePrivateTime) nextErrors.pursePrivateTime = 'Time is required.';
+        assignInvalidTimeError('pursePrivateTime', formData.pursePrivateDate, formData.pursePrivateTime);
       }
     }
 
@@ -160,7 +206,11 @@ const ReportFoundItem = () => {
       if (!formData.otherPhoto) nextErrors.otherPhoto = 'Photo upload is required.';
       if (!formData.otherPrivateLocation.trim()) nextErrors.otherPrivateLocation = 'Location is required.';
       if (!formData.otherPrivateDate) nextErrors.otherPrivateDate = 'Date is required.';
+      if (formData.otherPrivateDate && isFutureDate(formData.otherPrivateDate)) {
+        nextErrors.otherPrivateDate = 'Invalid date. Please select today or a past date.';
+      }
       if (!formData.otherPrivateTime) nextErrors.otherPrivateTime = 'Time is required.';
+      assignInvalidTimeError('otherPrivateTime', formData.otherPrivateDate, formData.otherPrivateTime);
     }
 
     setErrors(nextErrors);
@@ -197,28 +247,17 @@ const ReportFoundItem = () => {
     if (category === 'NIC') {
       item_name = `NIC - ${formData.nicName || 'Unknown'}`;
       description = `NIC Number: ${normalizeNic(formData.nicNumber)}`;
-<<<<<<< HEAD
-    }
-
-    if (category === 'Student / Staff ID') {
-      const idType = formData.idHolderType || 'Student';
-      item_name = `${idType} ID - ${formData.idName || 'Unknown'}`;
-      description = `ID Type: ${idType} | Name: ${formData.idName || 'Unknown'} | ID Number: ${formData.studentOrStaffId}`;
-=======
-      location = [formData.nicLocation1, formData.nicLocation2, formData.nicLocation3].filter(Boolean).join(', ') || location;
     }
 
     if (category === 'Student / Staff ID') {
       item_name = `Student/Staff ID - ${formData.idName || 'Unknown'}`;
       description = `ID Number: ${formData.studentOrStaffId}`;
-      location = [formData.idLocation1, formData.idLocation2, formData.idLocation3].filter(Boolean).join(', ') || location;
->>>>>>> develop-i
     }
 
     if (category === 'Bank Card') {
       item_name = `${formData.bankName} ${formData.cardType} Card`;
-<<<<<<< HEAD
-      description = `Bank Name: ${formData.bankName} | Card Type: ${formData.cardType} | Last 4 digits: ${formData.cardLast4 || 'N/A'}${formData.cardCvv ? ` | CVV (provided): ${formData.cardCvv}` : ''}`;
+      const last4 = getCardLast4(formData.cardNumber);
+      description = `Card: ${maskCardNumber(formData.cardNumber) || '**** **** **** ****'}${last4 ? ` (last 4: ${last4})` : ''}`;
       location = formData.bankPrivateLocation || location;
 =======
       description = `Last 4 digits: ${formData.cardNumber ? formData.cardNumber.slice(-4) : 'N/A'}`;
@@ -233,10 +272,6 @@ const ReportFoundItem = () => {
       image = formData.pursePhoto;
       if (purseOption === 'with-id') {
         description = `Claim with ID: ${formData.purseIdNumber}`;
-<<<<<<< HEAD
-=======
-        location = [formData.purseWithIdLocation1, formData.purseWithIdLocation2, formData.purseWithIdLocation3].filter(Boolean).join(', ') || location;
->>>>>>> develop-i
       } else {
         description = `Items inside: ${formData.purseOtherItems || formData.purseMoney}`;
         location = [formData.pursePrivateLocation, formData.pursePrivateLocation2, formData.pursePrivateLocation3].filter(Boolean).join(', ') || location;
@@ -266,7 +301,7 @@ const ReportFoundItem = () => {
     };
 
     if (category === 'Bank Card') {
-      payload.private_card_number = formData.cardNumber;
+      payload.private_card_number = normalizeCardNumber(formData.cardNumber);
     }
 
     return payload;
@@ -326,7 +361,9 @@ const ReportFoundItem = () => {
                 {errors.nicName && <p className="error-text">{errors.nicName}</p>}
               </div>
               <div className="form-group">
+                {/* OTP note only for fields where user might expect OTP */}
                 <label className="required">NIC Number</label>
+                <small style={{ color: '#A1A5AB', fontSize: '0.75rem', marginBottom: '0.5rem', display: 'block', opacity: 0.85 }}>Not used for OTP</small>
                 <input
                   name="nicNumber"
                   value={formData.nicNumber}
@@ -375,13 +412,14 @@ const ReportFoundItem = () => {
                 {errors.idName && <p className="error-text">{errors.idName}</p>}
               </div>
               <div className="form-group">
+                {/* OTP note only for fields where user might expect OTP */}
                 <label className="required">Student ID or Staff ID</label>
+                <small style={{ color: '#A1A5AB', fontSize: '0.75rem', marginBottom: '0.5rem', display: 'block', opacity: 0.85 }}>Not used for OTP</small>
                 <input
                   name="studentOrStaffId"
                   value={formData.studentOrStaffId}
                   onChange={handleInputChange}
                   placeholder="e.g. 123456A"
-                  maxLength={7}
                 />
                 {errors.studentOrStaffId && <p className="error-text">{errors.studentOrStaffId}</p>}
               </div>
@@ -421,24 +459,9 @@ const ReportFoundItem = () => {
                 <label className="required">Name of the Bank</label>
                 <select name="bankName" value={formData.bankName} onChange={handleInputChange}>
                   <option value="">-- Select Bank --</option>
-                  <option>Bank of Ceylon</option>
-                  <option>People's Bank</option>
-                  <option>Commercial Bank of Ceylon</option>
-                  <option>Hatton National Bank (HNB)</option>
-                  <option>Sampath Bank</option>
-                  <option>Seylan Bank</option>
-                  <option>Nations Trust Bank (NTB)</option>
-                  <option>National Savings Bank (NSB)</option>
-                  <option>Pan Asia Banking Corporation</option>
-                  <option>Union Bank of Colombo</option>
-                  <option>DFCC Bank</option>
-                  <option>Cargills Bank</option>
-                  <option>Amana Bank</option>
-                  <option>MCB Bank</option>
-                  <option>Citibank Sri Lanka</option>
-                  <option>Standard Chartered Bank</option>
-                  <option>HSBC Sri Lanka</option>
-                  <option>Other</option>
+                  {BANK_OPTIONS.map((bank) => (
+                    <option key={bank} value={bank}>{bank}</option>
+                  ))}
                 </select>
                 {errors.bankName && <p className="error-text">{errors.bankName}</p>}
               </div>
@@ -448,10 +471,13 @@ const ReportFoundItem = () => {
                   name="cardNumber"
                   value={formData.cardNumber}
                   onChange={handleInputChange}
-                  placeholder="Enter full 16-digit card number"
-                  maxLength={16}
+                  placeholder="xxxx xxxx xxxx xxxx"
+                  maxLength={19}
+                  autoComplete="off"
                   inputMode="numeric"
+                  pattern="[0-9 ]*"
                 />
+                <small className="helper-text">Enter 16 digits. The number is grouped automatically as xxxx xxxx xxxx xxxx.</small>
                 {errors.cardNumber && <p className="error-text">{errors.cardNumber}</p>}
               </div>
 
@@ -526,13 +552,14 @@ const ReportFoundItem = () => {
                     {errors.purseName && <p className="error-text">{errors.purseName}</p>}
                   </div>
                   <div className="form-group">
+                    {/* OTP note only for fields where user might expect OTP */}
                     <label className="required">Student ID or NIC number</label>
+                    <small style={{ color: '#A1A5AB', fontSize: '0.75rem', marginBottom: '0.5rem', display: 'block', opacity: 0.85 }}>Not used for OTP</small>
                     <input
                       name="purseIdNumber"
                       value={formData.purseIdNumber}
                       onChange={handleInputChange}
                       placeholder="NIC: 200012345678 / Student ID: 123456A"
-                      maxLength={12}
                     />
                     {errors.purseIdNumber && <p className="error-text">{errors.purseIdNumber}</p>}
                   </div>

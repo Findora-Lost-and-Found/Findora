@@ -220,10 +220,15 @@
 }
 
 .btn-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: var(--primary-color, #3498db);
   color: white;
   border: none;
-  padding: 0.4rem 0.8rem;
+  min-height: 38px;
+  min-width: 104px;
+  padding: 0.45rem 0.85rem;
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.85rem;
@@ -395,6 +400,8 @@ body.light-mode .container {
   }
 
   .btn-action {
+    min-height: 34px;
+    min-width: 92px;
     padding: 0.35rem 0.6rem;
     font-size: 0.75rem;
   }

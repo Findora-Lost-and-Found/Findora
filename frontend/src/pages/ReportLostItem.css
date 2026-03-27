@@ -119,6 +119,7 @@
 .report-lost-actions {
   margin-top: 1rem;
   display: flex;
+  gap: 0.75rem;
   justify-content: flex-end;
 }
 
@@ -153,21 +154,6 @@
 .report-lost-status p {
   margin: 0;
   font-weight: 600;
-}
-
-.btn-primary {
-  border: none;
-  border-radius: 8px;
-  padding: 0.72rem 1.1rem;
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #ffffff;
-  background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
-  cursor: pointer;
-}
-
-.btn-primary:hover {
-  filter: brightness(1.06);
 }
 
 body.dark-mode .report-lost-page {

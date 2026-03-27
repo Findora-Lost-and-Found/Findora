@@ -34,56 +34,60 @@ const Navbar = () => {
   return (
     <nav className="navbar">
       <div className="nav-container">
-        {user ? (
-          <span className="nav-logo">Findora</span>
-        ) : (
-          <Link to="/" className="nav-logo">
-            Findora
-          </Link>
-        )}
+        <div className="nav-header" aria-label="Application header">
+          {user ? (
+            <span className="nav-logo" aria-label="Findora home title">Findora</span>
+          ) : (
+            <Link to="/" className="nav-logo" aria-label="Findora home title">
+              Findora
+            </Link>
+          )}
+        </div>
 
         {user && (
-          <div className="nav-menu">
-            <Link to="/dashboard" className="nav-link">Dashboard</Link>
-            
-            {(user.role === 'student' || user.role === 'staff' || user.role === 'security') && (
-              <>
-                <Link to="/lost-items" className="nav-link">My Lost Items</Link>
-                <Link to="/found-items" className="nav-link">Found Items</Link>
-              </>
-            )}
+          <div className="nav-actions" aria-label="Navigation actions">
+            <div className="nav-menu">
+              <Link to="/dashboard" className="nav-link">Dashboard</Link>
 
-            {(user.role === 'student' || user.role === 'staff') && (
-              <>
-                <Link to="/my-claims" className="nav-link">My Claims</Link>
-              </>
-            )}
+              {(user.role === 'student' || user.role === 'staff' || user.role === 'security') && (
+                <>
+                  <Link to="/lost-items" className="nav-link">My Lost Items</Link>
+                  <Link to="/found-items" className="nav-link">Found Items</Link>
+                </>
+              )}
 
-            {user.role === 'security' && (
-              <>
-                <Link to="/security/receive" className="nav-link">Receive Item</Link>
-                <Link to="/security/pending-claims" className="nav-link">Pending Claims</Link>
-                <Link to="/security/transactions" className="nav-link">Transactions</Link>
-              </>
-            )}
+              {(user.role === 'student' || user.role === 'staff') && (
+                <>
+                  <Link to="/my-claims" className="nav-link">My Claims</Link>
+                </>
+              )}
 
-            {user.role === 'admin' && (
-              <>
-                <Link to="/admin-panel" className="nav-link">Admin Panel</Link>
-                <Link to="/admin/users" className="nav-link">Users</Link>
-                <Link to="/admin/pending-approvals" className="nav-link">Pending Approvals</Link>
-                <Link to="/admin/items" className="nav-link">Items</Link>
-                <Link to="/admin/reports" className="nav-link">Reports</Link>
-              </>
-            )}
+              {user.role === 'security' && (
+                <>
+                  <Link to="/security/receive" className="nav-link">Receive Item</Link>
+                  <Link to="/security/pending-claims" className="nav-link">Pending Claims</Link>
+                  <Link to="/security/transactions" className="nav-link">Transactions</Link>
+                </>
+              )}
 
-            <Link to="/notifications" className="nav-link notification-link">
-              Notifications
-              {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
-            </Link>
+              {user.role === 'admin' && (
+                <>
+                  <Link to="/admin-panel" className="nav-link">Admin Panel</Link>
+                  <Link to="/admin/users" className="nav-link">Users</Link>
+                  <Link to="/admin/pending-approvals" className="nav-link">Pending Approvals</Link>
+                  <Link to="/admin/items" className="nav-link">Items</Link>
+                  <Link to="/admin/reports" className="nav-link">Reports</Link>
+                </>
+              )}
 
-            <Link to="/profile" className="nav-link">Profile</Link>
-            <button onClick={handleLogout} className="nav-link logout-btn">Logout</button>
+              <Link to="/notifications" className="nav-link notification-link">
+                Notifications
+                {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
+              </Link>
+
+              <Link to="/profile" className="nav-link">Profile</Link>
+              <button onClick={handleLogout} className="nav-link logout-btn">Logout</button>
+            </div>
           </div>
         )}
       </div>
