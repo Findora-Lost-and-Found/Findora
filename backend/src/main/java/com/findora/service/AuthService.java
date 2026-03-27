@@ -252,6 +252,68 @@ public class AuthService {
         log.info("Verification OTP regenerated for user {}", user.getUsername());
     }
 
+    public void requestPhoneUpdate(String username, String newPhone) {
+        User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+        String normalizedPhone = normalizePhone(newPhone);
+        if (normalizedPhone == null || normalizedPhone.isBlank()) {
+            throw new RuntimeException("Phone number is required");
+        }
+
+        if (!isValidPhone(normalizedPhone)) {
+            throw new RuntimeException("Phone number invalid format");
+        }
+
+        if (normalizedPhone.equals(user.getPhone())) {
+            throw new RuntimeException("New phone number must be different from current phone");
+        }
+
+        if (userRepository.existsByPhone(normalizedPhone) || userRepository.existsByPendingPhone(normalizedPhone)) {
+            throw new RuntimeException("Phone number already in use");
+        }
+
+        String otp = generateOtp();
+        user.setPendingPhone(normalizedPhone);
+        user.setPhoneVerificationOtp(otp);
+        user.setPhoneOtpExpiry(LocalDateTime.now().plusMinutes(15));
+        user.setIsPhoneVerified(false);
+        userRepository.save(user);
+
+        emailService.sendPhoneChangeOtp(user.getEmail(), user.getFullName(), otp, normalizedPhone);
+        log.info("Phone update OTP generated for user {}", user.getUsername());
+    }
+
+    public void verifyPhoneOtp(String username, String otp) {
+        User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getPendingPhone() == null || user.getPendingPhone().isBlank()) {
+            throw new RuntimeException("No pending phone update request found");
+        }
+
+        if (otp == null || otp.isBlank()) {
+            throw new RuntimeException("OTP is required");
+        }
+
+        if (user.getPhoneOtpExpiry() == null || LocalDateTime.now().isAfter(user.getPhoneOtpExpiry())) {
+            throw new RuntimeException("OTP expired");
+        }
+
+        if (!otp.equals(user.getPhoneVerificationOtp())) {
+            throw new RuntimeException("Invalid OTP");
+        }
+
+        user.setPhone(user.getPendingPhone());
+        user.setPendingPhone(null);
+        user.setPhoneVerificationOtp(null);
+        user.setPhoneOtpExpiry(null);
+        user.setIsPhoneVerified(true);
+        userRepository.save(user);
+
+        log.info("Phone number updated and verified for user {}", user.getUsername());
+    }
+
     /**
      * Generate and send OTP for password reset.
      * Returns generated OTP for development/testing workflows when needed.
@@ -359,6 +421,8 @@ public class AuthService {
             user.getRole().name().toLowerCase(),
             user.getEmail(),
             user.getPhone(),
+            user.getPendingPhone(),
+            user.getIsPhoneVerified(),
             user.getIsVerified(),
             user.getIsApproved(),
             user.getIsBanned(),

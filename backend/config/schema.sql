@@ -13,18 +13,24 @@ CREATE TABLE users (
   full_name VARCHAR(100) NOT NULL,
   role ENUM('student', 'staff', 'security', 'admin') NOT NULL,
   phone VARCHAR(20),
+  pending_phone VARCHAR(20),
   is_verified BOOLEAN DEFAULT FALSE,
+  is_phone_verified BOOLEAN DEFAULT TRUE,
   is_approved BOOLEAN DEFAULT TRUE,
   is_banned BOOLEAN DEFAULT FALSE,
   is_suspended BOOLEAN DEFAULT FALSE,
   verification_otp VARCHAR(6),
   reset_otp VARCHAR(6),
+  phone_verification_otp VARCHAR(6),
   otp_expiry DATETIME,
+  phone_otp_expiry DATETIME,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_email (email),
   INDEX idx_username (username),
-  INDEX idx_role (role)
+  INDEX idx_role (role),
+  UNIQUE INDEX uq_users_phone (phone),
+  UNIQUE INDEX uq_users_pending_phone (pending_phone)
 );
 
 -- Items Table (Lost and Found)

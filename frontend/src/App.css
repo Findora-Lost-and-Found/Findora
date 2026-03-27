@@ -857,6 +857,21 @@ body:not(.dark-mode) .item-card .category-badge {
   border-bottom: 1px solid var(--border-soft);
 }
 
+.detail-row .verified {
+  color: #166534;
+  font-weight: 700;
+}
+
+.detail-row .not-verified {
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+.detail-row .pending {
+  color: #b45309;
+  font-weight: 700;
+}
+
 .theme-switcher {
   display: flex;
   align-items: center;
