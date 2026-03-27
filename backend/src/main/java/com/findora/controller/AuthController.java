@@ -78,7 +78,7 @@ public class AuthController {
     /**
      * POST /api/auth/register
      * Register new user.
-     * Request: { username, email, password, fullName, role }
+        * Request: { username, email, password, fullName, role, phone? }
      * Response: { token, user: {...}, message }
      */
     @PostMapping("/register")
@@ -87,6 +87,7 @@ public class AuthController {
             String username = registerRequest.get("username");
             String email = registerRequest.get("email");
             String password = registerRequest.get("password");
+            String phone = registerRequest.get("phone");
             String fullName = firstNonBlank(registerRequest.get("fullName"), registerRequest.get("full_name"));
             String role = registerRequest.getOrDefault("role", "STUDENT");
 
@@ -95,7 +96,7 @@ public class AuthController {
                     .body(Map.of("success", false, "message", "Missing required fields"));
             }
 
-            AuthResponse response = authService.register(username, email, password, fullName, role);
+            AuthResponse response = authService.register(username, email, password, fullName, role, phone);
 
             log.info("User registered: {}", username);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);

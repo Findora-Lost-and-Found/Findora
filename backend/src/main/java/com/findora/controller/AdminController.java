@@ -1,7 +1,6 @@
 package com.findora.controller;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -17,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -192,8 +192,60 @@ public class AdminController {
 
     @PutMapping("/reports/{id}")
     public ResponseEntity<?> updateReport(@PathVariable Long id, @RequestBody Map<String, String> updateData) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-            .body(Map.of("success", false, "message", "Report update is not implemented yet"));
+        try {
+            Report report = reportRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Report not found"));
+
+            String adminNotes = updateData.get("admin_notes");
+            if (adminNotes != null && !adminNotes.isBlank()) {
+                report.setAdminNotes(adminNotes);
+            }
+
+            String statusStr = updateData.get("status");
+            if (statusStr != null && !statusStr.isBlank()) {
+                report.setStatus(Report.ReportStatus.fromDatabaseValue(statusStr));
+            }
+
+            reportRepository.save(report);
+
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Report updated successfully",
+                "report", toReportPayload(report)
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/reports/{id}/hide-item")
+    public ResponseEntity<?> hideReportedItem(@PathVariable Long id) {
+        try {
+            Report report = reportRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Report not found"));
+
+            if (report.getItem() == null) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Item not found for this report"));
+            }
+
+            Item item = report.getItem();
+            item.setStatus(ItemStatus.CLOSED);
+            itemRepository.save(item);
+
+            report.setStatus(Report.ReportStatus.REVIEWED);
+            reportRepository.save(report);
+
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Item hidden from public view",
+                "report", toReportPayload(report)
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("success", false, "message", e.getMessage()));
+        }
     }
 
     @GetMapping("/items")
@@ -204,22 +256,27 @@ public class AdminController {
         String normalizedStatus = status == null ? "found" : status.trim().toLowerCase(Locale.ROOT);
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        List<Map<String, Object>> items;
-        if ("released".equals(normalizedStatus)) {
-            items = itemRepository.findPaginatedItems(null, null, null, ItemStatus.CLOSED, pageable)
+        List<Map<String, Object>> items = switch (normalizedStatus) {
+            case "released", "release" -> itemRepository.findPaginatedItems(null, null, null, ItemStatus.CLOSED, pageable)
                 .stream()
                 .map(item -> toAdminItemPayload(item, "released"))
                 .toList();
-        } else if ("received".equals(normalizedStatus)) {
-            items = itemRepository.findPaginatedItems(null, null, null, ItemStatus.CLAIMED, pageable)
+            case "received", "receive" -> itemRepository.findPaginatedItems(null, null, null, ItemStatus.CLAIMED, pageable)
                 .stream()
                 .map(item -> toAdminItemPayload(item, "received"))
                 .toList();
-        } else {
-            items = itemRepository.findPaginatedItems(null, null, ItemType.FOUND, null, pageable)
+            case "found" -> itemRepository.findPaginatedItems(null, null, ItemType.FOUND, null, pageable)
                 .stream()
                 .map(item -> toAdminItemPayload(item, "found"))
                 .toList();
+            default -> null;
+        };
+
+        if (items == null) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", "Invalid status. Use one of: found, received, released"
+            ));
         }
 
         return ResponseEntity.ok(Map.of(
@@ -317,8 +374,12 @@ public class AdminController {
         payload.put("reporter_name", report.getReporter() == null ? null : report.getReporter().getFullName());
         payload.put("item_id", report.getItemId());
         payload.put("item_name", report.getItem() == null ? null : report.getItem().getItemName());
+        payload.put("posted_by_user_id", report.getItem() == null ? null : report.getItem().getUserId());
+        payload.put("posted_by_username", report.getItem() == null || report.getItem().getUser() == null ? null : report.getItem().getUser().getUsername());
+        payload.put("posted_by_name", report.getItem() == null || report.getItem().getUser() == null ? null : report.getItem().getUser().getFullName());
         payload.put("reason", report.getReason());
         payload.put("status", report.getStatus() == null ? null : report.getStatus().name().toLowerCase(Locale.ROOT));
+        payload.put("item_status", report.getItem() == null || report.getItem().getStatus() == null ? null : report.getItem().getStatus().name().toLowerCase(Locale.ROOT));
         payload.put("admin_notes", report.getAdminNotes());
         payload.put("created_at", report.getCreatedAt() == null ? null : report.getCreatedAt().toString());
         payload.put("resolved_at", report.getResolvedAt() == null ? null : report.getResolvedAt().toString());

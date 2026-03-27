@@ -1,16 +1,18 @@
 import { useState } from 'react';
+import {
+  formatCardNumber,
+  getCardCursorPosition,
+  normalizeCardNumber
+} from '../../utils/cardUtils';
 
 const BankCardClaim = ({ item, onSubmit, onCancel }) => {
   const [step, setStep] = useState('template');
   const [formData, setFormData] = useState({
     location1: '',
-    location2: '',
-    location3: '',
     fromTime: '',
     toTime: '',
-    cvv: '',
+    cardNumber: '',
     foundFromDate: '',
-    foundToDate: ''
   });
 
   const handleCollectClick = () => {
@@ -19,7 +21,22 @@ const BankCardClaim = ({ item, onSubmit, onCancel }) => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    const inputEl = e.target;
+    const nextValue = name === 'cardNumber'
+      ? formatCardNumber(value)
+      : value;
+
+    if (name === 'cardNumber') {
+      const cursor = inputEl.selectionStart ?? value.length;
+      const digitsBeforeCursor = value.slice(0, cursor).replace(/\D/g, '').length;
+
+      requestAnimationFrame(() => {
+        const nextCursor = getCardCursorPosition(nextValue, digitsBeforeCursor);
+        inputEl.setSelectionRange(nextCursor, nextCursor);
+      });
+    }
+
+    setFormData({ ...formData, [name]: nextValue });
   };
 
   const handleSubmit = () => {
@@ -31,7 +48,19 @@ const BankCardClaim = ({ item, onSubmit, onCancel }) => {
       alert('Please enter the date you lost the item');
       return;
     }
-    onSubmit({ ...formData, itemId: item.id });
+    const normalizedCardNumber = normalizeCardNumber(formData.cardNumber);
+    if (!/^\d{16}$/.test(normalizedCardNumber)) {
+      alert('Please enter a valid full 16-digit card number');
+      return;
+    }
+    onSubmit({
+      itemId: item.id,
+      cardNumber: normalizedCardNumber,
+      location1: formData.location1,
+      fromTime: formData.fromTime,
+      toTime: formData.toTime,
+      foundFromDate: formData.foundFromDate
+    });
   };
 
   return (
@@ -47,7 +76,7 @@ const BankCardClaim = ({ item, onSubmit, onCancel }) => {
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>💳</div>
               <div style={{ fontSize: '1.2rem', letterSpacing: '0.2em', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-                XXXXXXXX1234
+                **** **** **** 1234
               </div>
               <div style={{ fontSize: '0.9rem', color: '#6B7280' }}>
                 Bank Card (Masked Number)
@@ -73,22 +102,6 @@ const BankCardClaim = ({ item, onSubmit, onCancel }) => {
               placeholder="Primary location"
               value={formData.location1}
               onChange={handleInputChange}
-            />
-            <input
-              type="text"
-              name="location2"
-              placeholder="Secondary location (optional)"
-              value={formData.location2}
-              onChange={handleInputChange}
-              style={{ marginTop: '0.5rem' }}
-            />
-            <input
-              type="text"
-              name="location3"
-              placeholder="Additional details (optional)"
-              value={formData.location3}
-              onChange={handleInputChange}
-              style={{ marginTop: '0.5rem' }}
             />
           </div>
 
@@ -117,39 +130,28 @@ const BankCardClaim = ({ item, onSubmit, onCancel }) => {
           </div>
 
           <div className="form-group">
-            <label className="required">When was the item lost? (approximate date range)</label>
-            <div className="form-row">
-              <div>
-                <label style={{ fontSize: '0.9rem' }}>From Date</label>
-                <input
-                  type="date"
-                  name="foundFromDate"
-                  value={formData.foundFromDate}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: '0.9rem' }}>To Date</label>
-                <input
-                  type="date"
-                  name="foundToDate"
-                  value={formData.foundToDate}
-                  onChange={handleInputChange}
-                />
-              </div>
-            </div>
+            <label className="required">When was the item lost?</label>
+            <input
+              type="date"
+              name="foundFromDate"
+              value={formData.foundFromDate}
+              onChange={handleInputChange}
+            />
           </div>
 
           <div className="form-group">
-            <label htmlFor="cvv">CVV Number (Optional)</label>
+            <label htmlFor="cardNumber" className="required">Full Card Number</label>
             <input
-              id="cvv"
-              type="password"
-              name="cvv"
-              placeholder="Last 3 digits if you remember"
-              value={formData.cvv}
+              id="cardNumber"
+              type="text"
+              name="cardNumber"
+              placeholder="xxxx xxxx xxxx xxxx"
+              value={formData.cardNumber}
               onChange={handleInputChange}
-              maxLength="3"
+              maxLength="19"
+              autoComplete="off"
+              inputMode="numeric"
+              pattern="[0-9 ]*"
             />
           </div>
 

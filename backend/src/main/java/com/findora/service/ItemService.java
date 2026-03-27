@@ -34,6 +34,10 @@ public class ItemService {
     private final ItemRepository itemRepository;
     private static final Logger log = LoggerFactory.getLogger(ItemService.class);
     private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_DATE_TIME;
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
+    private static final Pattern PRIVATE_BANK_MARKER_PATTERN =
+        Pattern.compile("\\n?__PRIVATE_(?:CVV|CARD)__=\\d{3,16}");
     private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
 
     public ItemService(ItemRepository itemRepository) {
@@ -260,8 +264,10 @@ public class ItemService {
             item.getItemName(),
             toApiCategory(item.getCategory()),
             item.getType() != null ? item.getType().toString().toLowerCase() : null,
-            item.getDescription(),
+            sanitizeDescriptionForClient(item.getDescription()),
             item.getLocation(),
+            item.getDate() != null ? item.getDate().format(DATE_FORMATTER) : null,
+            item.getTime() != null ? item.getTime().format(TIME_FORMATTER) : null,
             item.getStatus() != null ? item.getStatus().toString().toLowerCase() : null,
             item.getImageUrl(),
             item.getCreatedAt() != null ? item.getCreatedAt().format(ISO_FORMATTER) : null,
@@ -270,6 +276,15 @@ public class ItemService {
         );
         dto.setUserId(item.getUserId());
         return dto;
+    }
+
+    private String sanitizeDescriptionForClient(String rawDescription) {
+        if (rawDescription == null || rawDescription.isBlank()) {
+            return rawDescription;
+        }
+
+        String sanitized = PRIVATE_BANK_MARKER_PATTERN.matcher(rawDescription).replaceAll("").trim();
+        return sanitized;
     }
 
     private ItemCategory parseCategory(String category) {

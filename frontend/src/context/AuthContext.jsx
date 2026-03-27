@@ -59,7 +59,7 @@ export const AuthProvider = ({ children }) => {
       toast.success(response.data.message);
       const role = String(user?.role || '').toLowerCase();
       const isVerified = Boolean(user?.is_verified ?? user?.isVerified);
-      const requiresVerification = Boolean(token) && (role === 'student' || role === 'staff') && !isVerified;
+      const requiresVerification = Boolean(token) && (role === 'student' || role === 'staff' || role === 'security') && !isVerified;
       const pendingApproval = !token && (role === 'security' || role === 'admin');
       return { success: true, user, requiresVerification, pendingApproval };
     } catch (error) {
