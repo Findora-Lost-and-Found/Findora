@@ -21,6 +21,15 @@
   --radius-md: 12px;
   --shadow-sm: 0 1px 3px rgba(17, 24, 39, 0.08);
   --shadow-md: 0 8px 24px rgba(17, 24, 39, 0.09);
+  --font-family-base: 'Manrope', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  --font-family-display: 'Manrope', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+
+  --btn-min-height: 44px;
+  --btn-padding-y: 0.7rem;
+  --btn-padding-x: 1.2rem;
+  --btn-font-size: 0.95rem;
+  --btn-gap: 0.45rem;
+  --btn-min-width: 140px;
 }
 
 * {
@@ -42,7 +51,7 @@ body {
   padding: 0;
   background: radial-gradient(circle at top right, #e5edf8 0%, var(--bg-page) 42%);
   color: var(--text-primary);
-  font-family: 'Manrope', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--font-family-base);
 }
 
 #root {
@@ -78,15 +87,32 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 1rem;
   width: 100%;
 }
 
+.nav-header {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
 .nav-logo {
+  font-family: var(--font-family-display);
   font-size: 1.35rem;
   font-weight: 800;
   color: var(--brand);
-  letter-spacing: 0.2px;
+  letter-spacing: 0.32px;
+  line-height: 1.1;
   text-decoration: none;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 1;
+  min-width: 0;
 }
 
 .nav-menu {
@@ -288,18 +314,50 @@ body {
 
 .form-actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
   gap: 1rem;
   margin-top: 2rem;
 }
 
+.form-actions > button {
+  min-width: var(--btn-min-width);
+}
+
 /* Buttons */
-.btn-primary, .btn-secondary, .btn-danger, .btn-success, .btn-warning {
-  padding: 0.75rem 1.5rem;
+button.btn,
+button.btn-primary,
+button.btn-secondary,
+button.btn-danger,
+button.btn-success,
+button.btn-warning {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--btn-gap);
+  min-height: var(--btn-min-height);
+  padding: var(--btn-padding-y) var(--btn-padding-x);
+  min-width: var(--btn-min-width);
   border-radius: var(--radius-sm);
   border: none;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: var(--btn-font-size);
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-align: center;
   transition: all 0.2s;
+}
+
+button.btn:focus-visible,
+button.btn-primary:focus-visible,
+button.btn-secondary:focus-visible,
+button.btn-danger:focus-visible,
+button.btn-success:focus-visible,
+button.btn-warning:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--brand) 55%, #ffffff);
+  outline-offset: 2px;
 }
 
 .btn-primary {
@@ -332,8 +390,10 @@ body {
 }
 
 .btn-small {
-  padding: 0.4rem 0.8rem;
-  font-size: 0.875rem;
+  min-height: 36px;
+  min-width: 100px;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.85rem;
 }
 
 button:disabled {
@@ -390,10 +450,9 @@ button:disabled {
 }
 
 .btn-posts {
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
+  min-width: 150px;
   white-space: nowrap;
-  align-self: flex-start;
+  align-self: center;
 }
 
 .role-badge {
@@ -762,6 +821,10 @@ body:not(.dark-mode) .item-card .category-badge {
   border: none;
   color: var(--brand);
   cursor: pointer;
+  min-height: auto;
+  min-width: auto;
+  padding: 0;
+  font-weight: 600;
   text-decoration: underline;
 }
 
@@ -1112,7 +1175,14 @@ tbody tr:hover {
 
 .action-buttons {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 0.5rem;
+}
+
+.action-buttons > :is(button, .btn-small, .btn-primary, .btn-secondary, .btn-danger, .btn-success, .btn-warning) {
+  min-width: 108px;
+  justify-content: center;
 }
 
 .badge {
@@ -1257,7 +1327,16 @@ tbody tr:hover {
 
   .dashboard-top {
     flex-direction: column;
+    align-items: stretch;
     gap: 1rem;
+  }
+
+  .nav-header {
+    justify-content: center;
+  }
+
+  .nav-actions {
+    justify-content: center;
   }
 
   .btn-posts {
@@ -1318,8 +1397,15 @@ tbody tr:hover {
     padding: 0.5rem;
   }
 
-  .btn {
-    padding: 0.5rem 1rem;
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger,
+  .btn-success,
+  .btn-warning {
+    min-height: 42px;
+    min-width: 128px;
+    padding: 0.6rem 1rem;
     font-size: 0.9rem;
   }
 
@@ -1333,8 +1419,9 @@ tbody tr:hover {
     gap: 0.5rem;
   }
 
-  .form-actions .btn {
+  .form-actions > button {
     width: 100%;
+    min-width: 100%;
   }
 }
 

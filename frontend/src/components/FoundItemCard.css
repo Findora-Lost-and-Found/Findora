@@ -149,6 +149,7 @@
 .card-actions .btn-claim,
 .card-actions .btn-secondary {
   flex: 1;
+  min-width: 0;
 }
 
 .report-icon-btn {
@@ -189,7 +190,8 @@
   opacity: 1;
 }
 
-.btn {
+.found-item-card .btn {
+  min-height: 44px;
   padding: 0.65rem 1rem;
   border: none;
   border-radius: 8px;
@@ -204,28 +206,28 @@
   white-space: nowrap;
 }
 
-.btn-claim {
+.found-item-card .btn-claim {
   background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
   color: white;
 }
 
-.btn-claim:hover {
+.found-item-card .btn-claim:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(15, 118, 110, 0.3);
 }
 
-.btn-view {
+.found-item-card .btn-view {
   background: #f9fafb;
   color: #2563eb;
   border: 2px solid #d1d5db;
 }
 
-.btn-view:hover {
+.found-item-card .btn-view:hover {
   background: #eff6ff;
   border-color: #2563eb;
 }
 
-.btn:active {
+.found-item-card .btn:active {
   transform: scale(0.98);
 }
 
@@ -320,7 +322,7 @@ body.dark-mode .report-icon-btn:hover {
     gap: 0.5rem;
   }
 
-  .btn {
+  .found-item-card .btn {
     padding: 0.6rem 0.8rem;
     font-size: 0.8rem;
   }
@@ -348,7 +350,7 @@ body.dark-mode .report-icon-btn:hover {
     font-size: 0.8rem;
   }
 
-  .btn {
+  .found-item-card .btn {
     padding: 0.5rem 0.6rem;
     font-size: 0.75rem;
     gap: 0.3rem;
