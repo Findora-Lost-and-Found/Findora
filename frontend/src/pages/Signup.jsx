@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getHomeRouteForUser } from '../utils/navigation';
 import { isValidEmail, isValidPhone, normalizeEmail, normalizePhone } from '../utils/contactValidation';
+import PasswordInput from '../components/PasswordInput';
 
 const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d])\S{8,64}$/;
 const PASSWORD_REQUIREMENTS = 'Password must be 8-64 characters and include uppercase, lowercase, number, and special character.';
@@ -17,8 +18,6 @@ const Signup = () => {
     role: 'student',
     phone: ''
   });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [phoneError, setPhoneError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
@@ -192,48 +191,28 @@ const Signup = () => {
 
           <div className="form-group">
             <label>Password</label>
-            <div className="password-input-wrapper">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                minLength="8"
-                placeholder="Enter password"
-              />
-              <button
-                type="button"
-                className="password-toggle-btn"
-                onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? '🙈' : '👁️'}
-              </button>
-            </div>
+            <PasswordInput
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              minLength="8"
+              placeholder="Enter password"
+              autoComplete="new-password"
+            />
             {passwordError && <small style={{ color: '#DC2626' }}>{passwordError}</small>}
           </div>
 
           <div className="form-group">
             <label>Confirm Password</label>
-            <div className="password-input-wrapper">
-              <input
-                type={showConfirmPassword ? 'text' : 'password'}
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                required
-                placeholder="Confirm password"
-              />
-              <button
-                type="button"
-                className="password-toggle-btn"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-              >
-                {showConfirmPassword ? '🙈' : '👁️'}
-              </button>
-            </div>
+            <PasswordInput
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              required
+              placeholder="Confirm password"
+              autoComplete="new-password"
+            />
             {confirmPasswordError && <small style={{ color: '#DC2626' }}>{confirmPasswordError}</small>}
           </div>
 
