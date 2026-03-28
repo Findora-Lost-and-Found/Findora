@@ -1,19 +1,22 @@
 package com.findora.controller;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,12 +40,14 @@ import com.findora.repository.UserRepository;
  */
 @RestController
 @RequestMapping("/api/admin")
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
 
     private final UserRepository userRepository;
     private final ItemRepository itemRepository;
     private final ReportRepository reportRepository;
     private final SecurityTransactionRepository securityTransactionRepository;
+    private static final Logger log = LoggerFactory.getLogger(AdminController.class);
 
     public AdminController(
             UserRepository userRepository,
@@ -57,8 +62,8 @@ public class AdminController {
 
     @GetMapping("/users")
     public ResponseEntity<?> getUsers(
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "50") Integer size) {
+            @RequestParam(name = "page", defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "50") Integer size) {
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "createdAt"));
 
         List<Map<String, Object>> users = userRepository.findAll(pageable)
@@ -74,13 +79,14 @@ public class AdminController {
 
     @GetMapping("/pending-approvals")
     public ResponseEntity<?> getPendingApprovals(
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "100") Integer size) {
+            @RequestParam(name = "page", defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "100") Integer size) {
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "createdAt"));
 
         List<Map<String, Object>> approvals = userRepository.findAll(pageable)
             .stream()
             .filter(user -> !Boolean.TRUE.equals(user.getIsApproved())
+                && !Boolean.TRUE.equals(user.getIsSuspended())
                 && user.getRole() != User.UserRole.STUDENT)
             .map(this::toUserPayload)
             .toList();
@@ -108,6 +114,26 @@ public class AdminController {
         return ResponseEntity.ok(Map.of("success", true, "message", "User approved"));
     }
 
+    @PutMapping("/decline-user/{id}")
+    public ResponseEntity<?> declineUser(@PathVariable Long id) {
+        User user = userRepository.findById(id)
+            .orElse(null);
+
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("success", false, "message", "User not found"));
+        }
+
+        // Suspension acts as the persisted decline marker without introducing a schema change.
+        user.setIsApproved(false);
+        user.setIsSuspended(true);
+        userRepository.save(user);
+
+        log.info("admin declined user id={} username={}", user.getId(), user.getUsername());
+
+        return ResponseEntity.ok(Map.of("success", true, "message", "User declined"));
+    }
+
     @PutMapping("/ban-user/{id}")
     public ResponseEntity<?> banUser(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
         User user = userRepository.findById(id)
@@ -120,6 +146,10 @@ public class AdminController {
 
         boolean banned = parseBoolean(body != null ? body.get("banned") : null, true);
         user.setIsBanned(banned);
+        if (!banned) {
+            // Keep revert behavior explicit: unban clears permanent lock.
+            user.setIsBanned(false);
+        }
         userRepository.save(user);
 
         return ResponseEntity.ok(Map.of("success", true, "message", banned ? "User banned" : "User unbanned"));
@@ -137,6 +167,13 @@ public class AdminController {
 
         boolean suspended = parseBoolean(body != null ? body.get("suspended") : null, true);
         user.setIsSuspended(suspended);
+        if (suspended) {
+            // Suspension period is fixed to 6 months from now.
+            user.setOtpExpiry(LocalDateTime.now().plusMonths(6));
+        } else {
+            // Revert option: lifting suspension clears suspension expiry.
+            user.setOtpExpiry(null);
+        }
         userRepository.save(user);
 
         return ResponseEntity.ok(Map.of("success", true, "message", suspended ? "User suspended" : "User unsuspended"));
@@ -144,16 +181,21 @@ public class AdminController {
 
     @GetMapping("/reports")
     public ResponseEntity<?> getReports(
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "20") Integer size) {
+            @RequestParam(name = "status", required = false) String status,
+            @RequestParam(name = "page", defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "20") Integer size) {
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        List<Report> reportRows = status == null || status.isBlank()
+            ? reportRepository.findAll(pageable).getContent()
+            : reportRepository.findByStatus(Report.ReportStatus.valueOf(status.trim().toUpperCase(Locale.ROOT)), pageable).getContent();
 
         long pendingReports = reportRepository.countByStatus(Report.ReportStatus.PENDING);
 
         return ResponseEntity.ok(Map.of(
             "success", true,
             "pendingReports", pendingReports,
-            "reports", new ArrayList<>(),
+            "reports", reportRows.stream().map(this::toReportPayload).toList(),
             "page", pageable.getPageNumber(),
             "size", pageable.getPageSize()
         ));
@@ -161,34 +203,91 @@ public class AdminController {
 
     @PutMapping("/reports/{id}")
     public ResponseEntity<?> updateReport(@PathVariable Long id, @RequestBody Map<String, String> updateData) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-            .body(Map.of("success", false, "message", "Report update is not implemented yet"));
+        try {
+            Report report = reportRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Report not found"));
+
+            String adminNotes = updateData.get("admin_notes");
+            if (adminNotes != null && !adminNotes.isBlank()) {
+                report.setAdminNotes(adminNotes);
+            }
+
+            String statusStr = updateData.get("status");
+            if (statusStr != null && !statusStr.isBlank()) {
+                report.setStatus(Report.ReportStatus.fromDatabaseValue(statusStr));
+            }
+
+            reportRepository.save(report);
+
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Report updated successfully",
+                "report", toReportPayload(report)
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/reports/{id}/hide-item")
+    public ResponseEntity<?> hideReportedItem(@PathVariable Long id) {
+        try {
+            Report report = reportRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Report not found"));
+
+            if (report.getItem() == null) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Item not found for this report"));
+            }
+
+            Item item = report.getItem();
+            item.setStatus(ItemStatus.CLOSED);
+            itemRepository.save(item);
+
+            report.setStatus(Report.ReportStatus.REVIEWED);
+            reportRepository.save(report);
+
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Item hidden from public view",
+                "report", toReportPayload(report)
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("success", false, "message", e.getMessage()));
+        }
     }
 
     @GetMapping("/items")
     public ResponseEntity<?> getItems(
-            @RequestParam(defaultValue = "found") String status,
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "100") Integer size) {
+            @RequestParam(name = "status", defaultValue = "found") String status,
+            @RequestParam(name = "page", defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "100") Integer size) {
         String normalizedStatus = status == null ? "found" : status.trim().toLowerCase(Locale.ROOT);
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        List<Map<String, Object>> items;
-        if ("released".equals(normalizedStatus)) {
-            items = itemRepository.findPaginatedItems(null, null, null, ItemStatus.CLOSED, pageable)
+        List<Map<String, Object>> items = switch (normalizedStatus) {
+            case "released", "release" -> itemRepository.findPaginatedItems(null, null, null, ItemStatus.CLOSED, pageable)
                 .stream()
                 .map(item -> toAdminItemPayload(item, "released"))
                 .toList();
-        } else if ("received".equals(normalizedStatus)) {
-            items = itemRepository.findPaginatedItems(null, null, null, ItemStatus.CLAIMED, pageable)
+            case "received", "receive" -> itemRepository.findPaginatedItems(null, null, null, ItemStatus.CLAIMED, pageable)
                 .stream()
                 .map(item -> toAdminItemPayload(item, "received"))
                 .toList();
-        } else {
-            items = itemRepository.findPaginatedItems(null, null, ItemType.FOUND, null, pageable)
+            case "found" -> itemRepository.findPaginatedItems(null, null, ItemType.FOUND, null, pageable)
                 .stream()
                 .map(item -> toAdminItemPayload(item, "found"))
                 .toList();
+            default -> null;
+        };
+
+        if (items == null) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", "Invalid status. Use one of: found, received, released"
+            ));
         }
 
         return ResponseEntity.ok(Map.of(
@@ -259,6 +358,7 @@ public class AdminController {
         payload.put("is_approved", user.getIsApproved());
         payload.put("is_banned", user.getIsBanned());
         payload.put("is_suspended", user.getIsSuspended());
+        payload.put("suspended_until", Boolean.TRUE.equals(user.getIsSuspended()) && user.getOtpExpiry() != null ? user.getOtpExpiry().toString() : null);
         payload.put("created_at", user.getCreatedAt() == null ? null : user.getCreatedAt().toString());
         return payload;
     }
@@ -278,12 +378,32 @@ public class AdminController {
         return payload;
     }
 
+    private Map<String, Object> toReportPayload(Report report) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("id", report.getId());
+        payload.put("reporter_id", report.getReporterId());
+        payload.put("reporter_username", report.getReporter() == null ? null : report.getReporter().getUsername());
+        payload.put("reporter_name", report.getReporter() == null ? null : report.getReporter().getFullName());
+        payload.put("item_id", report.getItemId());
+        payload.put("item_name", report.getItem() == null ? null : report.getItem().getItemName());
+        payload.put("posted_by_user_id", report.getItem() == null ? null : report.getItem().getUserId());
+        payload.put("posted_by_username", report.getItem() == null || report.getItem().getUser() == null ? null : report.getItem().getUser().getUsername());
+        payload.put("posted_by_name", report.getItem() == null || report.getItem().getUser() == null ? null : report.getItem().getUser().getFullName());
+        payload.put("reason", report.getReason());
+        payload.put("status", report.getStatus() == null ? null : report.getStatus().name().toLowerCase(Locale.ROOT));
+        payload.put("item_status", report.getItem() == null || report.getItem().getStatus() == null ? null : report.getItem().getStatus().name().toLowerCase(Locale.ROOT));
+        payload.put("admin_notes", report.getAdminNotes());
+        payload.put("created_at", report.getCreatedAt() == null ? null : report.getCreatedAt().toString());
+        payload.put("resolved_at", report.getResolvedAt() == null ? null : report.getResolvedAt().toString());
+        return payload;
+    }
+
     private boolean parseBoolean(Object rawValue, boolean defaultValue) {
         if (rawValue == null) {
             return defaultValue;
         }
-        if (rawValue instanceof Boolean) {
-            return (Boolean) rawValue;
+        if (rawValue instanceof Boolean boolValue) {
+            return boolValue;
         }
         String value = String.valueOf(rawValue).trim().toLowerCase(Locale.ROOT);
         if ("true".equals(value) || "1".equals(value) || "yes".equals(value)) {

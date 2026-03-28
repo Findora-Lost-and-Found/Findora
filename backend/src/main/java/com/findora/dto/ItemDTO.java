@@ -9,32 +9,38 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class ItemDTO {
     private Long id;
+    private Long userId;               // Owner's user ID
     private String name;               // Maps from itemName in DB
     private String category;           // e.g., "NIC", "Wallet"
     private String type;               // e.g., "lost", "found"
     private String description;
     private String location;
+    private String date;
+    private String time;
     private String status;             // e.g., "active", "claimed"
     private String imageUrl;           // Maps from image_url in DB
     private String createdAt;          // ISO 8601 timestamp string
-    private Long userId;
     private String fullName;
+    private String username;
 
     public ItemDTO() {
     }
 
-    public ItemDTO(Long id, String name, String category, String type, String description, String location, String status, String imageUrl, String createdAt, Long userId, String fullName) {
+    public ItemDTO(Long id, String name, String category, String type, String description, String location, String date, String time, String status, String imageUrl, String createdAt, Long userId, String fullName, String username) {
         this.id = id;
         this.name = name;
         this.category = category;
         this.type = type;
         this.description = description;
         this.location = location;
+        this.date = date;
+        this.time = time;
         this.status = status;
         this.imageUrl = imageUrl;
         this.createdAt = createdAt;
         this.userId = userId;
         this.fullName = fullName;
+        this.username = username;
     }
 
     public Long getId() {
@@ -43,6 +49,16 @@ public class ItemDTO {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    @JsonProperty("user_id")
+    public Long getUserId() {
+        return userId;
+    }
+
+    @JsonProperty("user_id")
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
     public String getName() {
@@ -85,6 +101,22 @@ public class ItemDTO {
         this.location = location;
     }
 
+    public String getDate() {
+        return date;
+    }
+
+    public void setDate(String date) {
+        this.date = date;
+    }
+
+    public String getTime() {
+        return time;
+    }
+
+    public void setTime(String time) {
+        this.time = time;
+    }
+
     public String getStatus() {
         return status;
     }
@@ -93,10 +125,12 @@ public class ItemDTO {
         this.status = status;
     }
 
+    @JsonProperty("image_url")
     public String getImageUrl() {
         return imageUrl;
     }
 
+    @JsonProperty("image_url")
     public void setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
     }
@@ -109,14 +143,6 @@ public class ItemDTO {
         this.createdAt = createdAt;
     }
 
-    public Long getUserId() {
-        return userId;
-    }
-
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
-
     public String getFullName() {
         return fullName;
     }
@@ -125,15 +151,23 @@ public class ItemDTO {
         this.fullName = fullName;
     }
 
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
     // Frontend legacy aliases kept for compatibility.
     @JsonProperty("item_name")
     public String getItemName() {
         return name;
     }
 
-    @JsonProperty("image_url")
-    public String getImageUrlLegacy() {
-        return imageUrl;
+    @JsonProperty("item_name")
+    public void setItemName(String itemName) {
+        this.name = itemName;
     }
 
     @JsonProperty("created_at")
@@ -141,13 +175,28 @@ public class ItemDTO {
         return createdAt;
     }
 
-    @JsonProperty("user_id")
-    public Long getUserIdLegacy() {
-        return userId;
+    @JsonProperty("created_at")
+    public void setCreatedAtLegacy(String createdAt) {
+        this.createdAt = createdAt;
     }
 
     @JsonProperty("full_name")
     public String getFullNameLegacy() {
         return fullName;
+    }
+
+    @JsonProperty("full_name")
+    public void setFullNameLegacy(String fullName) {
+        this.fullName = fullName;
+    }
+
+    @JsonProperty("founder_username")
+    public String getFounderUsername() {
+        return username;
+    }
+
+    @JsonProperty("posted_by_username")
+    public String getPostedByUsername() {
+        return username;
     }
 }

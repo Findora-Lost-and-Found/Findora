@@ -3,7 +3,7 @@ import { itemsAPI } from '../services/api';
 import ItemCard from '../components/ItemCard';
 import Pagination from '../components/Pagination';
 
-const PAGE_SIZE = 4;
+const PAGE_SIZE = 8;
 
 const LostItems = () => {
   const [items, setItems] = useState([]);

@@ -1,14 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { itemsAPI, claimsAPI } from '../services/api';
+import { itemsAPI, claimsAPI, securityAPI } from '../services/api';
+import { toast } from 'react-toastify';
 import PostModal from '../components/PostModal';
 import FoundItemCard from '../components/FoundItemCard';
+import SampleItemImage from '../components/SampleItemImage';
+import SecurityDashboard from './SecurityDashboard';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
+import { sampleFoundItems } from '../data/sampleFoundItems';
 
 const ADMIN_PREVIEW_LIMIT = 5;
-const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
+const configuredApiUrl = import.meta.env.VITE_API_URL;
+const API_ORIGIN = (configuredApiUrl?.includes('localhost:5000')
+  ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')
+  : configuredApiUrl || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
 
 const readFirst = (obj, keys, fallback = '') => {
   for (const key of keys) {
@@ -21,11 +28,21 @@ const readFirst = (obj, keys, fallback = '') => {
 };
 
 const toImageUrl = (rawImage) => {
-  if (!rawImage) return 'https://via.placeholder.com/120x80?text=No+Image';
-  if (rawImage.startsWith('http://') || rawImage.startsWith('https://')) {
-    return rawImage;
+  if (!rawImage) return '';
+
+  const normalized = String(rawImage).trim().replace(/\\/g, '/');
+  if (!normalized || normalized === 'null' || normalized === 'undefined') {
+    return '';
   }
-  return `${API_ORIGIN}${rawImage.startsWith('/') ? rawImage : `/${rawImage}`}`;
+
+  if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+    return normalized.includes('localhost:5000')
+      ? normalized.replace('localhost:5000', 'localhost:8080')
+      : normalized;
+  }
+
+  const normalizedPath = normalized.replace(/\/+/g, '/').replace(/^\/+/, '');
+  return `${API_ORIGIN}/${normalizedPath}`;
 };
 
 const toTimestamp = (value) => {
@@ -52,6 +69,8 @@ const normalizeAdminDashboardItem = (item, section) => {
     id: item.id,
     itemName: readFirst(item, ['name', 'item_name', 'itemName'], 'Unnamed Item'),
     itemImage: toImageUrl(readFirst(item, ['image', 'image_url', 'imageUrl'])),
+    category: normalizeCategory(readFirst(item, ['category'], 'Other'), readFirst(item, ['name', 'item_name', 'itemName'], '')),
+    description: readFirst(item, ['description'], ''),
     founder: readFirst(item, ['founder_username', 'founderUsername', 'found_by_username', 'posted_by_username', 'username'], 'Unknown'),
     security: readFirst(item, ['security_username', 'securityUsername', 'received_by_username', 'released_by_username'], 'Unknown'),
     receiver: readFirst(item, ['receiver_username', 'receiverUsername', 'claimer_username', 'owner_username'], 'Unknown'),
@@ -68,9 +87,16 @@ const Dashboard = () => {
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [foundItems, setFoundItems] = useState([]);
   const [adminSections, setAdminSections] = useState({ found: [], received: [], released: [] });
+  const [brokenAdminImages, setBrokenAdminImages] = useState({});
+  const [handoverLoadingById, setHandoverLoadingById] = useState({});
 
   useEffect(() => {
     if (user) {
+      if (user.role === 'security') {
+        setLoading(false);
+        return;
+      }
+
       loadDashboardData();
     }
   }, [user]);
@@ -82,7 +108,7 @@ const Dashboard = () => {
           itemsAPI.getMy(),
           claimsAPI.getMy(),
           // Dashboard keeps a latest preview, while Found Items page shows complete list.
-          itemsAPI.getAll({ type: 'found', status: 'active' })
+          itemsAPI.getAll({ type: 'found' })
         ]);
 
         setStats({
@@ -91,23 +117,23 @@ const Dashboard = () => {
         });
 
         if (foundRes.status === 'fulfilled') {
-          console.log('Dashboard found items fetched:', foundRes.value.data.items || []);
-          const apiItems = (foundRes.value.data.items || []).map((item) => ({
+          console.log('Dashboard found items fetched:', foundRes.value.data.items || foundRes.value.data.content || []);
+          const apiItems = (foundRes.value.data.items || foundRes.value.data.content || []).map((item) => ({
             ...item,
             name: item.name || item.item_name,
             date_found: item.date_found || item.date || item.created_at,
-            image: item.image || (item.image_url ? `http://localhost:8080${item.image_url}` : 'https://via.placeholder.com/300x200?text=Item+Image'),
+            image: toImageUrl(readFirst(item, ['image', 'image_url', 'imageUrl'])),
             category: normalizeCategory(item.category, item.name || item.item_name),
             posted_by: item.posted_by || {
-              id: item.user_id,
+              id: item.userId || item.user_id,
               full_name: item.full_name || item.username || 'Unknown User'
             }
           }));
           const sortedFoundItems = sortFoundItems(apiItems, FOUND_ITEM_SORT.LATEST);
-          setFoundItems(sortedFoundItems.slice(0, 6));
+          setFoundItems(sortedFoundItems.length > 0 ? sortedFoundItems.slice(0, 6) : sampleFoundItems);
         } else {
           console.error('Dashboard found items fetch failed:', foundRes.reason?.response?.data || foundRes.reason?.message);
-          setFoundItems([]);
+          setFoundItems(sampleFoundItems);
         }
       } else if (user.role === 'admin') {
         const [foundRes, receivedRes, releasedRes] = await Promise.allSettled([
@@ -146,8 +172,29 @@ const Dashboard = () => {
     }
   };
 
+  const handleHandoverRequest = async (itemId) => {
+    try {
+      setHandoverLoadingById((prev) => ({ ...prev, [itemId]: true }));
+      await securityAPI.handoverRequest(itemId);
+      setFoundItems((prev) =>
+        prev.map((item) =>
+          item.id === itemId ? { ...item, status: 'handover_requested' } : item
+        )
+      );
+      toast.success('Handover request submitted successfully');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to submit handover request');
+    } finally {
+      setHandoverLoadingById((prev) => ({ ...prev, [itemId]: false }));
+    }
+  };
+
   if (loading) {
     return <div className="loading">Loading...</div>;
+  }
+
+  if (user?.role === 'security') {
+    return <SecurityDashboard />;
   }
 
   return (
@@ -156,7 +203,6 @@ const Dashboard = () => {
         <div className="dashboard-top">
           <div>
             <h1>Welcome, {user?.full_name}!</h1>
-            <p className="role-badge">Role: {user?.role}</p>
           </div>
           {(user?.role === 'student' || user?.role === 'staff') && (
             <button 
@@ -181,26 +227,32 @@ const Dashboard = () => {
         )}
 
         {/* Found Items Feed Section */}
-        {(user?.role === 'student' || user?.role === 'staff') && foundItems.length > 0 && (
+        {(user?.role === 'student' || user?.role === 'staff') && (
           <div className="found-items-section">
             <div className="section-header">
               <h2>Recently Found Items</h2>
               <Link to="/found-items" className="link-more">View All →</Link>
             </div>
             <div className="found-items-grid">
-              {foundItems.map((item) => (
-                <FoundItemCard
-                  key={item.id}
-                  item={item}
-                  onClaim={() => {
-                    claimsAPI.create(item.id).then(() => {
-                      navigate('/my-claims');
-                    }).catch((err) => {
-                      console.error('Claim error:', err);
-                    });
-                  }}
-                />
-              ))}
+              {foundItems.length === 0 ? (
+                <p>No found items available right now.</p>
+              ) : (
+                foundItems.map((item) => (
+                  <FoundItemCard
+                    key={item.id}
+                    item={item}
+                    onClaim={() => {
+                      claimsAPI.create(item.id).then(() => {
+                        navigate('/my-claims');
+                      }).catch((err) => {
+                        console.error('Claim error:', err);
+                      });
+                    }}
+                    onHandover={handleHandoverRequest}
+                    handoverInProgress={!!handoverLoadingById[item.id]}
+                  />
+                ))
+              )}
             </div>
           </div>
         )}
@@ -233,7 +285,25 @@ const Dashboard = () => {
                           <td>{item.founder}</td>
                           <td>{item.itemName}</td>
                           <td>
-                            <img src={item.itemImage} alt={item.itemName} style={{ width: '88px', height: '56px', objectFit: 'cover', borderRadius: '6px' }} />
+                            {item.itemImage && !brokenAdminImages[`found-${item.id}`] ? (
+                              <img
+                                src={item.itemImage}
+                                alt={item.itemName}
+                                onError={() => setBrokenAdminImages((prev) => ({ ...prev, [`found-${item.id}`]: true }))}
+                                style={{ width: '88px', height: '56px', objectFit: 'cover', borderRadius: '6px' }}
+                              />
+                            ) : (
+                              <div style={{ width: '88px', height: '56px', overflow: 'hidden', borderRadius: '6px' }}>
+                                <SampleItemImage
+                                  category={item.category}
+                                  item={{
+                                    name: item.itemName,
+                                    item_name: item.itemName,
+                                    description: item.description
+                                  }}
+                                />
+                              </div>
+                            )}
                           </td>
                           <td>{formatDateTime(item.dateTime)}</td>
                         </tr>
@@ -272,7 +342,25 @@ const Dashboard = () => {
                           <td>{item.founder}</td>
                           <td>{item.itemName}</td>
                           <td>
-                            <img src={item.itemImage} alt={item.itemName} style={{ width: '88px', height: '56px', objectFit: 'cover', borderRadius: '6px' }} />
+                            {item.itemImage && !brokenAdminImages[`received-${item.id}`] ? (
+                              <img
+                                src={item.itemImage}
+                                alt={item.itemName}
+                                onError={() => setBrokenAdminImages((prev) => ({ ...prev, [`received-${item.id}`]: true }))}
+                                style={{ width: '88px', height: '56px', objectFit: 'cover', borderRadius: '6px' }}
+                              />
+                            ) : (
+                              <div style={{ width: '88px', height: '56px', overflow: 'hidden', borderRadius: '6px' }}>
+                                <SampleItemImage
+                                  category={item.category}
+                                  item={{
+                                    name: item.itemName,
+                                    item_name: item.itemName,
+                                    description: item.description
+                                  }}
+                                />
+                              </div>
+                            )}
                           </td>
                           <td>{formatDateTime(item.dateTime)}</td>
                         </tr>
@@ -311,7 +399,25 @@ const Dashboard = () => {
                           <td>{item.receiver}</td>
                           <td>{item.itemName}</td>
                           <td>
-                            <img src={item.itemImage} alt={item.itemName} style={{ width: '88px', height: '56px', objectFit: 'cover', borderRadius: '6px' }} />
+                            {item.itemImage && !brokenAdminImages[`released-${item.id}`] ? (
+                              <img
+                                src={item.itemImage}
+                                alt={item.itemName}
+                                onError={() => setBrokenAdminImages((prev) => ({ ...prev, [`released-${item.id}`]: true }))}
+                                style={{ width: '88px', height: '56px', objectFit: 'cover', borderRadius: '6px' }}
+                              />
+                            ) : (
+                              <div style={{ width: '88px', height: '56px', overflow: 'hidden', borderRadius: '6px' }}>
+                                <SampleItemImage
+                                  category={item.category}
+                                  item={{
+                                    name: item.itemName,
+                                    item_name: item.itemName,
+                                    description: item.description
+                                  }}
+                                />
+                              </div>
+                            )}
                           </td>
                           <td>{formatDateTime(item.dateTime)}</td>
                         </tr>

@@ -1,7 +1,10 @@
 package com.findora.service;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Locale;
 import java.util.Random;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,7 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.findora.dto.AuthResponse;
 import com.findora.dto.UserDTO;
+import com.findora.model.Notification;
 import com.findora.model.User;
+import com.findora.repository.NotificationRepository;
 import com.findora.repository.UserRepository;
 import com.findora.security.JwtTokenProvider;
 
@@ -27,18 +32,27 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final EmailService emailService;
+    private final NotificationRepository notificationRepository;
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private static final Random RANDOM = new Random();
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
+    private static final Pattern PHONE_PATTERN = Pattern.compile("^\\d{10}$");
+    private static final String APPEAL_COOLDOWN_TITLE = "Appeal blocked for inappropriate language";
+    private static final List<String> BLOCKED_WORDS = List.of(
+        "fuck", "fucking", "shit", "bitch", "asshole", "bastard", "damn", "idiot", "stupid"
+    );
 
     public AuthService(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             JwtTokenProvider jwtTokenProvider,
-            EmailService emailService) {
+            EmailService emailService,
+            NotificationRepository notificationRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.emailService = emailService;
+        this.notificationRepository = notificationRepository;
     }
 
     /**
@@ -57,7 +71,9 @@ public class AuthService {
             .orElseThrow(() -> new RuntimeException("User not found"));
 
         if (Boolean.FALSE.equals(user.getIsVerified())
-                && (user.getRole() == User.UserRole.STUDENT || user.getRole() == User.UserRole.STAFF)) {
+                && (user.getRole() == User.UserRole.STUDENT
+                    || user.getRole() == User.UserRole.STAFF
+                    || user.getRole() == User.UserRole.SECURITY)) {
             throw new RuntimeException("Please verify your email with OTP before login");
         }
 
@@ -70,11 +86,21 @@ public class AuthService {
         }
 
         if (user.getIsBanned()) {
-            throw new RuntimeException("User is banned");
+            throw new RuntimeException("Your account is banned permanently. Submit a petition to request review.");
         }
 
         if (user.getIsSuspended()) {
-            throw new RuntimeException("User account is suspended");
+            LocalDateTime suspensionEndsAt = user.getOtpExpiry();
+            if (suspensionEndsAt != null && LocalDateTime.now().isAfter(suspensionEndsAt)) {
+                // Auto-lift suspension when the 6-month period has elapsed.
+                user.setIsSuspended(false);
+                user.setOtpExpiry(null);
+                userRepository.save(user);
+            } else if (suspensionEndsAt != null) {
+                throw new RuntimeException("Your account is suspended until " + suspensionEndsAt + ". Submit a petition to request early review.");
+            } else {
+                throw new RuntimeException("Your account is suspended. Submit a petition to request review.");
+            }
         }
 
         // Generate JWT token
@@ -93,49 +119,95 @@ public class AuthService {
 
     /**
      * Register new user.
-     * TODO: Add validation, email verification OTP, etc.
+        * Includes validation and email verification OTP flow.
      */
-    public AuthResponse register(String username, String email, String password, String fullName, String role) {
+    public AuthResponse register(String username, String email, String password, String fullName, String role, String phone) {
+        String normalizedEmail = normalizeEmail(email);
+        String normalizedPhone = normalizePhone(phone);
+
+        if (!isValidEmail(normalizedEmail)) {
+            throw new RuntimeException("Invalid email format");
+        }
+
+        if (normalizedPhone != null && !isValidPhone(normalizedPhone)) {
+            throw new RuntimeException("Phone number invalid format");
+        }
+
         if (userRepository.existsByUsername(username)) {
             throw new RuntimeException("Username already exists");
         }
 
-        if (userRepository.existsByEmail(email)) {
+        if (userRepository.existsByEmail(normalizedEmail)) {
             throw new RuntimeException("Email already exists");
         }
 
         User user = new User();
         user.setUsername(username);
-        user.setEmail(email);
+        user.setEmail(normalizedEmail);
         user.setPassword(passwordEncoder.encode(password));
         user.setFullName(fullName);
+        user.setPhone(normalizedPhone);
         User.UserRole userRole = User.UserRole.valueOf(role.toUpperCase());
-        if (userRole != User.UserRole.STUDENT && userRole != User.UserRole.STAFF) {
-            throw new RuntimeException("Signup is only available for Student and Staff roles");
-        }
         user.setRole(userRole);
-        user.setIsVerified(false);
-        // Students are auto-approved; staff/security/admin roles require admin approval
+        boolean requiresEmailVerification = (userRole == User.UserRole.STUDENT
+            || userRole == User.UserRole.STAFF
+            || userRole == User.UserRole.SECURITY);
+        user.setIsVerified(!requiresEmailVerification);
+        // Students are auto-approved; staff/security/admin require admin approval.
         boolean autoApproved = (userRole == User.UserRole.STUDENT);
         user.setIsApproved(autoApproved);
-        user.setVerificationOtp(generateOtp());
-        user.setOtpExpiry(LocalDateTime.now().plusHours(24));
+        if (requiresEmailVerification) {
+            user.setVerificationOtp(generateOtp());
+            user.setOtpExpiry(LocalDateTime.now().plusHours(24));
+        }
 
         User savedUser = userRepository.save(user);
 
-        emailService.sendVerificationOtp(savedUser.getEmail(), savedUser.getFullName(), savedUser.getVerificationOtp());
+        if (requiresEmailVerification) {
+            emailService.sendVerificationOtp(savedUser.getEmail(), savedUser.getFullName(), savedUser.getVerificationOtp());
+        }
 
-        String token = jwtTokenProvider.generateToken(
-            savedUser.getUsername(),
-            savedUser.getId().toString(),
-            savedUser.getRole().name()
-        );
+        String token = null;
+        if (requiresEmailVerification) {
+            token = jwtTokenProvider.generateToken(
+                savedUser.getUsername(),
+                savedUser.getId().toString(),
+                savedUser.getRole().name()
+            );
+        }
 
         UserDTO userDTO = convertToUserDTO(savedUser);
+        String message;
+        if (userRole == User.UserRole.SECURITY) {
+            message = "Signup successful. Verify your email with OTP. After verification, your account will be sent for admin approval";
+        } else if (requiresEmailVerification) {
+            message = "Signup successful. Please verify your email with OTP";
+        } else {
+            message = "Signup request submitted. Please wait for admin approval";
+        }
 
         log.info("User {} registered successfully", username);
 
-        return new AuthResponse(token, userDTO, "Signup successful. Please verify your email with OTP");
+        return new AuthResponse(token, userDTO, message);
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String normalizePhone(String phone) {
+        if (phone == null || phone.isBlank()) {
+            return null;
+        }
+        return phone.replaceAll("\\D", "");
+    }
+
+    private boolean isValidEmail(String email) {
+        return email != null && EMAIL_PATTERN.matcher(email).matches();
+    }
+
+    private boolean isValidPhone(String phone) {
+        return phone != null && PHONE_PATTERN.matcher(phone).matches();
     }
 
     /**
@@ -158,6 +230,10 @@ public class AuthService {
         user.setOtpExpiry(null);
         userRepository.save(user);
 
+        if (user.getRole() == User.UserRole.SECURITY && Boolean.FALSE.equals(user.getIsApproved())) {
+            notifyAdminsOfSecurityApprovalRequest(user);
+        }
+
         log.info("User {} email verified", user.getUsername());
     }
 
@@ -174,7 +250,7 @@ public class AuthService {
 
     /**
      * Regenerate verification OTP.
-     * TODO: Integrate with mail sender and send the OTP to the user email.
+        * Sends the generated OTP to the user email.
      */
     public void resendVerificationOtp(String usernameOrEmail) {
         User user = userRepository.findByUsername(usernameOrEmail)
@@ -190,13 +266,79 @@ public class AuthService {
         log.info("Verification OTP regenerated for user {}", user.getUsername());
     }
 
+    public void requestPhoneUpdate(String username, String newPhone) {
+        User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+        String normalizedPhone = normalizePhone(newPhone);
+        if (normalizedPhone == null || normalizedPhone.isBlank()) {
+            throw new RuntimeException("Phone number is required");
+        }
+
+        if (!isValidPhone(normalizedPhone)) {
+            throw new RuntimeException("Phone number invalid format");
+        }
+
+        if (normalizedPhone.equals(user.getPhone())) {
+            throw new RuntimeException("New phone number must be different from current phone");
+        }
+
+        if (userRepository.existsByPhone(normalizedPhone) || userRepository.existsByPendingPhone(normalizedPhone)) {
+            throw new RuntimeException("Phone number already in use");
+        }
+
+        String otp = generateOtp();
+        user.setPendingPhone(normalizedPhone);
+        user.setPhoneVerificationOtp(otp);
+        user.setPhoneOtpExpiry(LocalDateTime.now().plusMinutes(15));
+        user.setIsPhoneVerified(false);
+        userRepository.save(user);
+
+        emailService.sendPhoneChangeOtp(user.getEmail(), user.getFullName(), otp, normalizedPhone);
+        log.info("Phone update OTP generated for user {}", user.getUsername());
+    }
+
+    public void verifyPhoneOtp(String username, String otp) {
+        User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getPendingPhone() == null || user.getPendingPhone().isBlank()) {
+            throw new RuntimeException("No pending phone update request found");
+        }
+
+        if (otp == null || otp.isBlank()) {
+            throw new RuntimeException("OTP is required");
+        }
+
+        if (user.getPhoneOtpExpiry() == null || LocalDateTime.now().isAfter(user.getPhoneOtpExpiry())) {
+            throw new RuntimeException("OTP expired");
+        }
+
+        if (!otp.equals(user.getPhoneVerificationOtp())) {
+            throw new RuntimeException("Invalid OTP");
+        }
+
+        user.setPhone(user.getPendingPhone());
+        user.setPendingPhone(null);
+        user.setPhoneVerificationOtp(null);
+        user.setPhoneOtpExpiry(null);
+        user.setIsPhoneVerified(true);
+        userRepository.save(user);
+
+        log.info("Phone number updated and verified for user {}", user.getUsername());
+    }
+
     /**
      * Generate and send OTP for password reset.
-     * TODO: Integrate with email service
+     * Returns generated OTP for development/testing workflows when needed.
      */
-    public void initiatePasswordReset(String email) {
-        User user = userRepository.findByEmail(email)
-            .orElseThrow(() -> new RuntimeException("User not found"));
+    public String initiatePasswordReset(String email) {
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null) {
+            // Do not leak account existence through API error messages.
+            log.info("Password reset requested for non-existing email: {}", email);
+            return null;
+        }
 
         String otp = generateOtp();
         user.setResetOtp(otp);
@@ -206,6 +348,112 @@ public class AuthService {
         emailService.sendPasswordResetOtp(user.getEmail(), user.getFullName(), otp);
 
         log.info("Password reset OTP generated for user {}", user.getUsername());
+        // OTP is sent via emailService.sendPasswordResetOtp above.
+        return otp;
+    }
+
+    /**
+     * Submit petition for suspended or banned account review.
+     * This endpoint is intentionally unauthenticated so blocked users can request review.
+     */
+    @Transactional(noRollbackFor = AppealBlockedException.class)
+    public void submitAccessPetition(String emailOrUsername, String petitionType, String reason) {
+        if (emailOrUsername == null || emailOrUsername.isBlank()) {
+            throw new RuntimeException("Email or username is required");
+        }
+
+        if (petitionType == null || petitionType.isBlank()) {
+            throw new RuntimeException("Petition type is required (suspend or ban)");
+        }
+
+        if (reason == null || reason.isBlank()) {
+            throw new RuntimeException("Petition reason is required");
+        }
+
+        String normalizedType = petitionType.trim().toLowerCase(Locale.ROOT);
+        if (!"suspend".equals(normalizedType) && !"ban".equals(normalizedType)) {
+            throw new RuntimeException("Invalid petition type. Use suspend or ban");
+        }
+
+        User user = userRepository.findByEmail(emailOrUsername)
+            .or(() -> userRepository.findByUsername(emailOrUsername))
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (isAppealCooldownActive(user.getId())) {
+            throw new AppealBlockedException("Appeal is temporarily blocked for 24 hours due to inappropriate language in a previous appeal.");
+        }
+
+        if (containsBlockedWords(reason)) {
+            Notification blockedAppeal = new Notification();
+            blockedAppeal.setUserId(user.getId());
+            blockedAppeal.setType(Notification.NotificationType.SYSTEM);
+            blockedAppeal.setTitle(APPEAL_COOLDOWN_TITLE);
+            blockedAppeal.setMessage("Your appeal contains inappropriate language. You can submit another appeal after 24 hours.");
+            blockedAppeal.setRelatedId(user.getId());
+            notificationRepository.save(blockedAppeal);
+
+            throw new AppealBlockedException("Appeal contains inappropriate language. You can submit again after 24 hours.");
+        }
+
+        if ("ban".equals(normalizedType) && !Boolean.TRUE.equals(user.getIsBanned())) {
+            throw new RuntimeException("This account is not currently banned");
+        }
+
+        if ("suspend".equals(normalizedType) && !Boolean.TRUE.equals(user.getIsSuspended())) {
+            throw new RuntimeException("This account is not currently suspended");
+        }
+
+        List<User> admins = userRepository.findByRole(User.UserRole.ADMIN);
+        for (User admin : admins) {
+            Notification notification = new Notification();
+            notification.setUserId(admin.getId());
+            notification.setType(Notification.NotificationType.SYSTEM);
+            notification.setTitle("Access petition submitted");
+            notification.setMessage(
+                "User "
+                    + user.getFullName()
+                    + " (@"
+                    + user.getUsername()
+                    + ", "
+                    + user.getEmail()
+                    + ") submitted a "
+                    + normalizedType
+                    + " petition. Reason: "
+                    + reason
+            );
+            notification.setRelatedId(user.getId());
+            notificationRepository.save(notification);
+        }
+
+        log.info("Access petition submitted by user {} for type {}", user.getUsername(), normalizedType);
+    }
+
+    private boolean containsBlockedWords(String text) {
+        String normalized = text == null ? "" : text.toLowerCase(Locale.ROOT);
+        for (String word : BLOCKED_WORDS) {
+            if (normalized.contains(word)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isAppealCooldownActive(Long userId) {
+        return notificationRepository
+            .findTopByUserIdAndTypeAndTitleOrderByCreatedAtDesc(
+                userId,
+                Notification.NotificationType.SYSTEM,
+                APPEAL_COOLDOWN_TITLE
+            )
+            .map(notification -> notification.getCreatedAt() != null
+                && notification.getCreatedAt().plusHours(24).isAfter(LocalDateTime.now()))
+            .orElse(false);
+    }
+
+    private static class AppealBlockedException extends RuntimeException {
+        AppealBlockedException(String message) {
+            super(message);
+        }
     }
 
     /**
@@ -259,6 +507,25 @@ public class AuthService {
         return String.format("%06d", RANDOM.nextInt(1000000));
     }
 
+    private void notifyAdminsOfSecurityApprovalRequest(User securityUser) {
+        List<User> admins = userRepository.findByRole(User.UserRole.ADMIN);
+        for (User admin : admins) {
+            Notification notification = new Notification();
+            notification.setUserId(admin.getId());
+            notification.setType(Notification.NotificationType.APPROVAL);
+            notification.setTitle("Security approval requested");
+            notification.setMessage(
+                "Security user "
+                    + securityUser.getFullName()
+                    + " ("
+                    + securityUser.getEmail()
+                    + ") has verified email and is waiting for admin approval."
+            );
+            notification.setRelatedId(securityUser.getId());
+            notificationRepository.save(notification);
+        }
+    }
+
     /**
      * Convert User entity to UserDTO.
      * Frontend expects: { id, username, name, role, email }
@@ -272,10 +539,13 @@ public class AuthService {
             user.getRole().name().toLowerCase(),
             user.getEmail(),
             user.getPhone(),
+            user.getPendingPhone(),
+            user.getIsPhoneVerified(),
             user.getIsVerified(),
             user.getIsApproved(),
             user.getIsBanned(),
-            user.getIsSuspended()
+            user.getIsSuspended(),
+            user.getCreatedAt() == null ? null : user.getCreatedAt().toString()
         );
     }
 }

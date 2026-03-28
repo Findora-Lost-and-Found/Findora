@@ -4,10 +4,44 @@ import { toast } from 'react-toastify';
 import { itemsAPI, securityAPI } from '../services/api';
 import FoundItemCard from '../components/FoundItemCard';
 import Pagination from '../components/Pagination';
+import { sampleFoundItems } from '../data/sampleFoundItems';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT } from '../utils/itemDisplayUtils';
 
-const PAGE_SIZE = 4;
+const PAGE_SIZE = 8;
+const configuredApiUrl = import.meta.env.VITE_API_URL;
+const API_ORIGIN = (configuredApiUrl?.includes('localhost:5000')
+  ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')
+  : configuredApiUrl || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
+
+const readFirst = (obj, keys, fallback = '') => {
+  for (const key of keys) {
+    const value = obj?.[key];
+    if (value !== undefined && value !== null && String(value).trim() !== '') {
+      return value;
+    }
+  }
+  return fallback;
+};
+
+const toImageUrl = (rawImage) => {
+  if (!rawImage) {
+    return 'https://via.placeholder.com/300x200?text=Item+Image';
+  }
+
+  const normalized = String(rawImage).trim().replace(/\\/g, '/');
+
+  if (!normalized || normalized === 'null' || normalized === 'undefined') {
+    return 'https://via.placeholder.com/300x200?text=Item+Image';
+  }
+
+  if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+    return normalized;
+  }
+
+  const normalizedPath = normalized.replace(/\/+/g, '/').replace(/^\/+/, '');
+  return `${API_ORIGIN}/${normalizedPath}`;
+};
 
 const FoundItems = () => {
   const location = useLocation();
@@ -27,6 +61,7 @@ const FoundItems = () => {
     search: '',
     sortBy: FOUND_ITEM_SORT.LATEST
   });
+  const [searchInput, setSearchInput] = useState('');
 
   const normalizeItem = (item) => ({
     id: item.id,
@@ -34,14 +69,14 @@ const FoundItems = () => {
     description: item.description || '',
     location: item.location || 'Unknown location',
     date_found: item.date_found || item.date || item.created_at,
-    image: item.image || (item.image_url ? `http://localhost:8080${item.image_url}` : 'https://via.placeholder.com/300x200?text=Item+Image'),
+    image: toImageUrl(readFirst(item, ['image', 'image_url', 'imageUrl'])),
     category: normalizeCategory(item.category, item.name || item.item_name),
     type: item.type || 'found',
     status: item.status || 'active',
     created_at: item.created_at || null,
     posted_time: item.posted_time || item.created_at || item.date_found || item.date || null,
     posted_by: item.posted_by || {
-      id: item.user_id,
+      id: item.userId || item.user_id,
       full_name: item.full_name || item.username || 'Unknown User'
     }
   });
@@ -70,28 +105,38 @@ const FoundItems = () => {
         size: PAGE_SIZE,
         sort: sortParam,
         category: filters.category || undefined,
-        keyword: filters.search || undefined
+        keyword: filters.search.trim() || undefined
       });
 
       const apiItems = response.data?.content || [];
       console.log('FoundItems fetched from API:', apiItems);
       const normalizedItems = apiItems.map(normalizeItem);
-      setAllItems(normalizedItems);
 
-      setPagination({
-        totalPages: response.data?.totalPages ?? 0,
-        totalElements: response.data?.totalElements ?? 0,
-        pageNumber: response.data?.pageNumber ?? currentPage,
-        pageSize: response.data?.pageSize ?? PAGE_SIZE
-      });
+      if (normalizedItems.length > 0) {
+        setAllItems(normalizedItems);
+        setPagination({
+          totalPages: response.data?.totalPages ?? 0,
+          totalElements: response.data?.totalElements ?? 0,
+          pageNumber: response.data?.pageNumber ?? currentPage,
+          pageSize: response.data?.pageSize ?? PAGE_SIZE
+        });
+      } else {
+        setAllItems(sampleFoundItems);
+        setPagination({
+          totalPages: 1,
+          totalElements: sampleFoundItems.length,
+          pageNumber: 0,
+          pageSize: sampleFoundItems.length
+        });
+      }
     } catch (error) {
       console.error('Error loading found items:', error.response?.data || error.message);
-      setAllItems([]);
+      setAllItems(sampleFoundItems);
       setPagination({
-        totalPages: 0,
-        totalElements: 0,
+        totalPages: 1,
+        totalElements: sampleFoundItems.length,
         pageNumber: 0,
-        pageSize: PAGE_SIZE
+        pageSize: sampleFoundItems.length
       });
     } finally {
       setLoading(false);
@@ -118,6 +163,17 @@ const FoundItems = () => {
   const handleFilterChange = (e) => {
     setFilters({ ...filters, [e.target.name]: e.target.value });
     setCurrentPage(0);
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    const nextSearch = searchInput.trim();
+
+    setCurrentPage(0);
+    setFilters((prev) => ({
+      ...prev,
+      search: nextSearch
+    }));
   };
 
   useEffect(() => {
@@ -154,13 +210,20 @@ const FoundItems = () => {
           <option value="Other">Other</option>
         </select>
 
-        <input
-          type="text"
-          name="search"
-          placeholder="Search items..."
-          value={filters.search}
-          onChange={handleFilterChange}
-        />
+        <form className="search-form" onSubmit={handleSearchSubmit}>
+          <input
+            type="text"
+            name="search"
+            placeholder="Search items..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+          />
+          <button type="submit" className="search-icon-btn" aria-label="Search found items">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+              <path d="M10.5 3a7.5 7.5 0 0 1 5.93 12.1l4.24 4.23a1 1 0 1 1-1.41 1.42l-4.24-4.24A7.5 7.5 0 1 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11a5.5 5.5 0 0 0 0-11z" fill="currentColor"/>
+            </svg>
+          </button>
+        </form>
 
         <select name="sortBy" value={filters.sortBy} onChange={handleFilterChange}>
           <option value={FOUND_ITEM_SORT.LATEST}>Latest</option>

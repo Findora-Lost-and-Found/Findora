@@ -1,9 +1,6 @@
 import axios from 'axios';
 
-const configuredApiUrl = import.meta.env.VITE_API_URL;
-const API_URL = configuredApiUrl?.includes('localhost:5000')
-  ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')
-  : configuredApiUrl || 'http://localhost:8080/api';
+const API_URL = 'http://localhost:8081/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -11,6 +8,8 @@ const api = axios.create({
     'Content-Type': 'application/json'
   }
 });
+
+let isHandlingSuspension = false;
 
 // Add token to requests
 api.interceptors.request.use(
@@ -26,6 +25,32 @@ api.interceptors.request.use(
   }
 );
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    const message = String(error?.response?.data?.message || '').toLowerCase();
+    const requestUrl = String(error?.config?.url || '');
+    const hasToken = Boolean(localStorage.getItem('token'));
+    const isAuthRoute = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/petition');
+
+    if (
+      status === 403
+      && hasToken
+      && !isAuthRoute
+      && message.includes('suspended')
+      && !isHandlingSuspension
+    ) {
+      isHandlingSuspension = true;
+      localStorage.removeItem('token');
+      sessionStorage.setItem('suspensionNotice', error.response.data.message || 'Your account is suspended.');
+      window.location.href = '/login';
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 // Auth API
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
@@ -34,6 +59,7 @@ export const authAPI = {
   resendOTP: (payload) => api.post('/auth/resend-otp', payload),
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
   resetPassword: (data) => api.post('/auth/reset-password', data),
+  submitPetition: (data) => api.post('/auth/petition', data),
   changePassword: (data) => api.put('/auth/change-password', data),
   getMe: () => api.get('/auth/me')
 };
@@ -101,7 +127,9 @@ export const notificationsAPI = {
   getUnreadCount: () => api.get('/notifications/unread-count'),
   markAsRead: (id) => api.put(`/notifications/${id}/read`),
   markAllAsRead: () => api.put('/notifications/read-all'),
-  delete: (id) => api.delete(`/notifications/${id}`)
+  delete: (id) => api.delete(`/notifications/${id}`),
+  getPetitionDetails: (id) => api.get(`/notifications/${id}/petition-details`),
+  reviewPetition: (id, decision) => api.put(`/notifications/${id}/petition-review`, null, { params: { decision } })
 };
 
 // Reports API

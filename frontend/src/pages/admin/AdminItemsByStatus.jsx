@@ -2,8 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { adminAPI } from '../../services/api';
 import MobileWarning from '../../components/MobileWarning';
+import SampleItemImage from '../../components/SampleItemImage';
+import { normalizeCategory } from '../../utils/categoryUtils';
 
-const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
+const configuredApiUrl = import.meta.env.VITE_API_URL;
+const API_ORIGIN = (configuredApiUrl?.includes('localhost:5000')
+  ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')
+  : configuredApiUrl || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
 
 const STATUS_PAGE_CONFIG = {
   found: {
@@ -37,11 +42,21 @@ const readFirst = (obj, keys, fallback = '') => {
 };
 
 const toImageUrl = (rawImage) => {
-  if (!rawImage) return 'https://via.placeholder.com/120x80?text=No+Image';
-  if (rawImage.startsWith('http://') || rawImage.startsWith('https://')) {
-    return rawImage;
+  if (!rawImage) return '';
+
+  const normalized = String(rawImage).trim().replace(/\\/g, '/');
+  if (!normalized || normalized === 'null' || normalized === 'undefined') {
+    return '';
   }
-  return `${API_ORIGIN}${rawImage.startsWith('/') ? rawImage : `/${rawImage}`}`;
+
+  if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+    return normalized.includes('localhost:5000')
+      ? normalized.replace('localhost:5000', 'localhost:8080')
+      : normalized;
+  }
+
+  const normalizedPath = normalized.replace(/\/+/g, '/').replace(/^\/+/, '');
+  return `${API_ORIGIN}/${normalizedPath}`;
 };
 
 const toTimestamp = (value) => {
@@ -71,6 +86,8 @@ const normalizeItem = (item, status) => {
     receiver: readFirst(item, ['receiver_username', 'receiverUsername', 'claimer_username', 'owner_username', 'claimed_by_username'], 'Unknown'),
     itemName: readFirst(item, ['name', 'item_name', 'itemName'], 'Unnamed Item'),
     itemImage: toImageUrl(readFirst(item, ['image', 'image_url', 'imageUrl'])),
+    category: normalizeCategory(readFirst(item, ['category'], 'Other'), readFirst(item, ['name', 'item_name', 'itemName'], '')),
+    description: readFirst(item, ['description'], ''),
     dateTime,
     timestamp: toTimestamp(dateTime)
   };
@@ -81,6 +98,7 @@ const AdminItemsByStatus = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([]);
+  const [brokenImages, setBrokenImages] = useState({});
 
   const config = STATUS_PAGE_CONFIG[section] || STATUS_PAGE_CONFIG.found;
 
@@ -171,11 +189,25 @@ const AdminItemsByStatus = () => {
                   <td>{config.apiStatus === 'released' ? item.receiver : item.founder}</td>
                   <td>{item.itemName}</td>
                   <td>
-                    <img
-                      src={item.itemImage}
-                      alt={item.itemName}
-                      style={{ width: '88px', height: '56px', objectFit: 'cover', borderRadius: '6px' }}
-                    />
+                    {item.itemImage && !brokenImages[item.id] ? (
+                      <img
+                        src={item.itemImage}
+                        alt={item.itemName}
+                        onError={() => setBrokenImages((prev) => ({ ...prev, [item.id]: true }))}
+                        style={{ width: '88px', height: '56px', objectFit: 'cover', borderRadius: '6px' }}
+                      />
+                    ) : (
+                      <div style={{ width: '88px', height: '56px', overflow: 'hidden', borderRadius: '6px' }}>
+                        <SampleItemImage
+                          category={item.category}
+                          item={{
+                            name: item.itemName,
+                            item_name: item.itemName,
+                            description: item.description
+                          }}
+                        />
+                      </div>
+                    )}
                   </td>
                   <td>{formatDateTime(item.dateTime)}</td>
                 </tr>

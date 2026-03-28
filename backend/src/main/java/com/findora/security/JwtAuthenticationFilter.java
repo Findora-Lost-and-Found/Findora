@@ -1,6 +1,7 @@
 package com.findora.security;
 
 import java.io.IOException;
+import java.time.format.DateTimeFormatter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +14,9 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
+
+import com.findora.model.User;
+import com.findora.repository.UserRepository;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -28,11 +32,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final UserDetailsService userDetailsService;
+    private final UserRepository userRepository;
     private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, UserDetailsService userDetailsService) {
+    public JwtAuthenticationFilter(
+            JwtTokenProvider jwtTokenProvider,
+            UserDetailsService userDetailsService,
+            UserRepository userRepository) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.userDetailsService = userDetailsService;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -51,6 +60,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (username != null) {
                 try {
                     UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+                    if (!userDetails.isEnabled() && !isSuspensionExemptPath(request)) {
+                        User suspendedUser = userRepository.findByUsername(username).orElse(null);
+                        String suspendedUntil = suspendedUser != null && suspendedUser.getOtpExpiry() != null
+                            ? suspendedUser.getOtpExpiry().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                            : "";
+
+                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        response.setContentType("application/json");
+                        response.getWriter().write(
+                            "{\"success\":false,\"message\":\"Your account is suspended"
+                                + (suspendedUntil.isEmpty() ? "" : " until " + suspendedUntil)
+                                + ". Submit an appeal petition to request review.\"}"
+                        );
+                        return;
+                    }
 
                     UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
@@ -81,5 +106,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return bearerToken.substring(7);
         }
         return null;
+    }
+
+    private boolean isSuspensionExemptPath(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        return uri != null && uri.startsWith("/api/auth/");
     }
 }

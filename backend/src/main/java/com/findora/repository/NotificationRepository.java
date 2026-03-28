@@ -1,6 +1,7 @@
 package com.findora.repository;
 
 import com.findora.model.Notification;
+import com.findora.model.Notification.NotificationType;
 
 import java.util.List;
 import java.util.Optional;
@@ -18,6 +19,8 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     Page<Notification> findByUserId(Long userId, Pageable pageable);
     List<Notification> findByUserIdAndIsReadFalse(Long userId);
     Optional<Notification> findByIdAndUserId(Long id, Long userId);
+    Optional<Notification> findTopByUserIdAndTypeAndTitleOrderByCreatedAtDesc(Long userId, NotificationType type, String title);
     long countByUserIdAndIsReadFalse(Long userId);
+    long countByUserIdAndTypeAndTitleAndRelatedId(Long userId, NotificationType type, String title, Long relatedId);
     void deleteByUserIdAndIsReadTrue(Long userId);
 }
