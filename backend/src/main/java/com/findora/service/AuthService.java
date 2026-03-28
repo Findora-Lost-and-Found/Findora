@@ -37,6 +37,8 @@ public class AuthService {
     private static final Random RANDOM = new Random();
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
     private static final Pattern PHONE_PATTERN = Pattern.compile("^\\d{10}$");
+    private static final Pattern STRONG_PASSWORD_PATTERN = Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z\\d])\\S{8,64}$");
+    private static final String PASSWORD_POLICY_MESSAGE = "Password must be 8-64 characters and include uppercase, lowercase, number, and special character.";
 
     public AuthService(
             UserRepository userRepository,
@@ -103,10 +105,9 @@ public class AuthService {
         return new AuthResponse(token, userDTO, null);
     }
 
-        /**
-         * Register new user.
-         * Includes validation and email verification OTP flow.
-         */
+    /**
+     * Register new user.
+     */
     public AuthResponse register(String username, String email, String password, String fullName, String role, String phone) {
         String normalizedEmail = normalizeEmail(email);
         String normalizedPhone = normalizePhone(phone);
@@ -117,6 +118,10 @@ public class AuthService {
 
         if (normalizedPhone != null && !isValidPhone(normalizedPhone)) {
             throw new RuntimeException("Phone number invalid format");
+        }
+
+        if (!isValidPassword(password)) {
+            throw new RuntimeException(PASSWORD_POLICY_MESSAGE);
         }
 
         if (userRepository.existsByUsername(username)) {
@@ -196,6 +201,10 @@ public class AuthService {
         return phone != null && PHONE_PATTERN.matcher(phone).matches();
     }
 
+    private boolean isValidPassword(String password) {
+        return password != null && STRONG_PASSWORD_PATTERN.matcher(password).matches();
+    }
+
     /**
      * Verify email with OTP.
      */
@@ -252,7 +261,7 @@ public class AuthService {
         log.info("Verification OTP regenerated for user {}", user.getUsername());
     }
 
-    public void requestPhoneUpdate(String username, String newPhone) {
+    public void updatePhoneNumber(String username, String newPhone) {
         User user = userRepository.findByUsername(username)
             .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -262,7 +271,7 @@ public class AuthService {
         }
 
         if (!isValidPhone(normalizedPhone)) {
-            throw new RuntimeException("Phone number invalid format");
+            throw new RuntimeException("Phone number must be 10 digits");
         }
 
         if (normalizedPhone.equals(user.getPhone())) {
@@ -273,45 +282,14 @@ public class AuthService {
             throw new RuntimeException("Phone number already in use");
         }
 
-        String otp = generateOtp();
-        user.setPendingPhone(normalizedPhone);
-        user.setPhoneVerificationOtp(otp);
-        user.setPhoneOtpExpiry(LocalDateTime.now().plusMinutes(15));
-        user.setIsPhoneVerified(false);
-        userRepository.save(user);
-
-        emailService.sendPhoneChangeOtp(user.getEmail(), user.getFullName(), otp, normalizedPhone);
-        log.info("Phone update OTP generated for user {}", user.getUsername());
-    }
-
-    public void verifyPhoneOtp(String username, String otp) {
-        User user = userRepository.findByUsername(username)
-            .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if (user.getPendingPhone() == null || user.getPendingPhone().isBlank()) {
-            throw new RuntimeException("No pending phone update request found");
-        }
-
-        if (otp == null || otp.isBlank()) {
-            throw new RuntimeException("OTP is required");
-        }
-
-        if (user.getPhoneOtpExpiry() == null || LocalDateTime.now().isAfter(user.getPhoneOtpExpiry())) {
-            throw new RuntimeException("OTP expired");
-        }
-
-        if (!otp.equals(user.getPhoneVerificationOtp())) {
-            throw new RuntimeException("Invalid OTP");
-        }
-
-        user.setPhone(user.getPendingPhone());
+        user.setPhone(normalizedPhone);
         user.setPendingPhone(null);
         user.setPhoneVerificationOtp(null);
         user.setPhoneOtpExpiry(null);
         user.setIsPhoneVerified(true);
         userRepository.save(user);
 
-        log.info("Phone number updated and verified for user {}", user.getUsername());
+        log.info("Phone number updated directly for user {}", user.getUsername());
     }
 
     /**
@@ -351,6 +329,10 @@ public class AuthService {
 
         if (!user.getResetOtp().equals(otp)) {
             throw new RuntimeException("Invalid OTP");
+        }
+
+        if (!isValidPassword(newPassword)) {
+            throw new RuntimeException(PASSWORD_POLICY_MESSAGE);
         }
 
         user.setPassword(passwordEncoder.encode(newPassword));
@@ -421,7 +403,7 @@ public class AuthService {
             user.getRole().name().toLowerCase(),
             user.getEmail(),
             user.getPhone(),
-            user.getPendingPhone(),
+            null,
             user.getIsPhoneVerified(),
             user.getIsVerified(),
             user.getIsApproved(),

@@ -4,6 +4,9 @@ import { useAuth } from '../context/AuthContext';
 import { getHomeRouteForUser } from '../utils/navigation';
 import { isValidEmail, isValidPhone, normalizeEmail, normalizePhone } from '../utils/contactValidation';
 
+const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d])\S{8,64}$/;
+const PASSWORD_REQUIREMENTS = 'Password must be 8-64 characters and include uppercase, lowercase, number, and special character.';
+
 const Signup = () => {
   const [formData, setFormData] = useState({
     username: '',
@@ -18,6 +21,8 @@ const Signup = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [phoneError, setPhoneError] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -49,6 +54,32 @@ const Signup = () => {
       return;
     }
 
+    if (name === 'password') {
+      setFormData((prev) => ({ ...prev, password: value }));
+      if (value && !STRONG_PASSWORD_REGEX.test(value)) {
+        setPasswordError(PASSWORD_REQUIREMENTS);
+      } else {
+        setPasswordError('');
+      }
+
+      if (formData.confirmPassword && value !== formData.confirmPassword) {
+        setConfirmPasswordError('Passwords do not match');
+      } else {
+        setConfirmPasswordError('');
+      }
+      return;
+    }
+
+    if (name === 'confirmPassword') {
+      setFormData((prev) => ({ ...prev, confirmPassword: value }));
+      if (value && value !== formData.password) {
+        setConfirmPasswordError('Passwords do not match');
+      } else {
+        setConfirmPasswordError('');
+      }
+      return;
+    }
+
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -65,8 +96,13 @@ const Signup = () => {
       return;
     }
 
+    if (!STRONG_PASSWORD_REGEX.test(formData.password)) {
+      setPasswordError(PASSWORD_REQUIREMENTS);
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match');
+      setConfirmPasswordError('Passwords do not match');
       return;
     }
 
@@ -163,8 +199,8 @@ const Signup = () => {
                 value={formData.password}
                 onChange={handleChange}
                 required
-                minLength="6"
-                placeholder="Enter password (min 6 characters)"
+                minLength="8"
+                placeholder="Enter password"
               />
               <button
                 type="button"
@@ -175,6 +211,7 @@ const Signup = () => {
                 {showPassword ? '🙈' : '👁️'}
               </button>
             </div>
+            {passwordError && <small style={{ color: '#DC2626' }}>{passwordError}</small>}
           </div>
 
           <div className="form-group">
@@ -197,6 +234,7 @@ const Signup = () => {
                 {showConfirmPassword ? '🙈' : '👁️'}
               </button>
             </div>
+            {confirmPasswordError && <small style={{ color: '#DC2626' }}>{confirmPasswordError}</small>}
           </div>
 
           <button type="submit" className="btn-primary" disabled={loading}>
