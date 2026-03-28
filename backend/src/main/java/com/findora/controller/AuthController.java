@@ -186,7 +186,14 @@ public class AuthController {
                 }
             }
 
-            authService.resendVerificationOtp(usernameOrEmail);
+            String otp = authService.resendVerificationOtp(usernameOrEmail);
+            if (otp != null && !otp.isBlank()) {
+                return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "OTP regenerated. Email delivery failed, use the OTP shown in-app.",
+                    "otp", otp
+                ));
+            }
             return ResponseEntity.ok(Map.of("success", true, "message", "OTP resent successfully"));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
@@ -269,6 +276,19 @@ public class AuthController {
 
             return ResponseEntity.ok(Map.of("success", true, "user", user));
 
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("success", false, "message", "Authentication required"));
+
+        } catch (RuntimeException e) {
+            if ("User not found".equalsIgnoreCase(e.getMessage())) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("success", false, "message", "Session expired. Please login again"));
+            }
+            log.error("Error fetching current user", e);
+            return ResponseEntity.badRequest()
+                .body(Map.of("success", false, "message", e.getMessage()));
+
         } catch (Exception e) {
             log.error("Error fetching current user", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -284,7 +304,11 @@ public class AuthController {
         if (auth == null || !auth.isAuthenticated()) {
             throw new IllegalStateException("User not authenticated");
         }
-        return auth.getName();
+        String username = auth.getName();
+        if (username == null || username.isBlank() || "anonymousUser".equalsIgnoreCase(username)) {
+            throw new IllegalStateException("User not authenticated");
+        }
+        return username;
     }
 
     private String getCurrentUsernameOptional() {

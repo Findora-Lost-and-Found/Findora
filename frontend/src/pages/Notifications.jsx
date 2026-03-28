@@ -27,7 +27,7 @@ const Notifications = () => {
     try {
       await notificationsAPI.markAsRead(id);
       loadNotifications();
-    } catch (error) {
+    } catch {
       toast.error('Failed to mark as read');
     }
   };
@@ -37,7 +37,7 @@ const Notifications = () => {
       await notificationsAPI.markAllAsRead();
       toast.success('All marked as read');
       loadNotifications();
-    } catch (error) {
+    } catch {
       toast.error('Failed to mark all as read');
     }
   };
@@ -47,7 +47,7 @@ const Notifications = () => {
       await notificationsAPI.delete(id);
       toast.success('Notification deleted');
       loadNotifications();
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete notification');
     }
   };

@@ -334,12 +334,36 @@ public class ItemController {
 
     /**
      * DELETE /api/items/:id - Delete item.
-     * Requires authorization to delete item.
+     * Requires authorization: only item owner or admin can delete.
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteItem(@PathVariable Long id) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-            .body(Map.of("message", "TODO: Implement item deletion"));
+        try {
+            Long userId = getCurrentUserId();
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("success", false, "message", "User not authenticated"));
+            }
+
+            Item item = itemRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Item not found"));
+
+            // Check authorization: only item owner or admin can delete
+            if (!userId.equals(item.getUserId()) && !isAdmin()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("success", false, "message", "You do not have permission to delete this item"));
+            }
+
+            itemRepository.delete(item);
+            return ResponseEntity.ok(Map.of("success", true, "message", "Item deleted successfully"));
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("success", false, "message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("success", false, "message", "Error deleting item"));
+        }
     }
 
     /**
@@ -355,6 +379,18 @@ public class ItemController {
         return userRepository.findByUsername(username)
             .map(user -> user.getId())
             .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
+    }
+
+    /**
+     * Check if current user has admin role.
+     */
+    private boolean isAdmin() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) {
+            return false;
+        }
+        return auth.getAuthorities().stream()
+            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("admin"));
     }
 
     private Map<String, Object> toItemPayload(Item item) {

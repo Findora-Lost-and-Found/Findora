@@ -2,6 +2,7 @@ package com.findora.controller;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeParseException;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -179,8 +180,8 @@ public class ClaimController {
             claimPayload.put("id", claim.getId());
             claimPayload.put("item_id", claim.getItemId());
             claimPayload.put("claimer_id", claim.getClaimerId());
-            claimPayload.put("otp", claim.getOtp());
-            claimPayload.put("otp_expiry", claim.getOtpExpiry() != null ? claim.getOtpExpiry().toString() : null);
+            claimPayload.put("otp", null);
+                claimPayload.put("otp_expiry", toUtcIsoString(claim.getOtpExpiry()));
             claimPayload.put("status", claim.getStatus().name().toLowerCase());
             claimPayload.put("claimed_at", claim.getClaimedAt());
             claimPayload.put("claim_mode", claimMode);
@@ -191,12 +192,41 @@ public class ClaimController {
 
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                 "success", true,
-                "message", "Claim submitted successfully. OTP sent.",
-                "otp", claim.getOtp(),
+                "message", "Claim submitted successfully. Generate OTP from My Claims when needed.",
                 "claim", claimPayload
             ));
         } catch (IllegalArgumentException e) {
             log.info("generic claim creation rejected reason={}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", e.getMessage()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "success", false,
+                "message", "Server error"
+            ));
+        }
+    }
+
+    @PostMapping("/{id}/otp")
+    @PreAuthorize("hasAnyRole('STUDENT', 'STAFF')")
+    @Transactional
+    public ResponseEntity<?> generateOtp(@PathVariable Long id) {
+        try {
+            Long currentUserId = getCurrentUserId();
+            Claim claim = claimCreationService.generateOtpForClaim(id, currentUserId);
+
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "OTP generated successfully",
+                "claim", Map.of(
+                    "id", claim.getId(),
+                    "otp", claim.getOtp(),
+                        "otp_expiry", toUtcIsoString(claim.getOtpExpiry())
+                )
+            ));
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of(
                 "success", false,
                 "message", e.getMessage()
@@ -227,7 +257,7 @@ public class ClaimController {
                     row.put("item_id", claim.getItemId());
                     row.put("status", claim.getStatus() != null ? claim.getStatus().name().toLowerCase() : "pending");
                     row.put("otp", claim.getOtp());
-                    row.put("otp_expiry", claim.getOtpExpiry() != null ? claim.getOtpExpiry().toString() : null);
+                        row.put("otp_expiry", toUtcIsoString(claim.getOtpExpiry()));
                     row.put("claimed_at", claim.getClaimedAt() != null ? claim.getClaimedAt().toString() : null);
                     row.put("collected_at", claim.getCollectedAt() != null ? claim.getCollectedAt().toString() : null);
 
@@ -274,7 +304,7 @@ public class ClaimController {
                     "claimer_id", claim.getClaimerId(),
                     "status", claim.getStatus() != null ? claim.getStatus().name().toLowerCase() : null,
                     "otp", claim.getOtp(),
-                    "otp_expiry", claim.getOtpExpiry(),
+                        "otp_expiry", toUtcIsoString(claim.getOtpExpiry()),
                     "claimed_at", claim.getClaimedAt(),
                     "collected_at", claim.getCollectedAt()
                 )
@@ -325,13 +355,20 @@ public class ClaimController {
             return false;
         }
 
-        return switch (category) {
-            case NIC -> validateNic(claimData, item);
-            case STUDENT_ID -> validateIdNumber(claimData, item);
-            case BANK_CARD -> validateBankCardIdentity(claimData, item);
-            case WALLET -> validateWalletIdentity(claimData, item);
-            default -> false;
-        };
+        if (category == ItemCategory.NIC) {
+            return validateNic(claimData, item);
+        }
+        if (category == ItemCategory.STUDENT_ID) {
+            return validateIdNumber(claimData, item);
+        }
+        if (category == ItemCategory.BANK_CARD) {
+            return validateBankCardIdentity(claimData, item);
+        }
+        if (category == ItemCategory.WALLET) {
+            return validateWalletIdentity(claimData, item);
+        }
+
+        return false;
     }
 
     private boolean validateNic(Map<String, Object> claimData, Item item) {
@@ -566,5 +603,9 @@ public class ClaimController {
             }
         }
         return "";
+    }
+
+    private String toUtcIsoString(LocalDateTime value) {
+        return value == null ? null : value.atOffset(ZoneOffset.UTC).toString();
     }
 }
