@@ -138,7 +138,10 @@ const ReportPost = () => {
             
             <div className="reason-options">
               {reportReasons.map((reason) => (
-                <label key={reason.id} className="reason-option">
+                <label
+                  key={reason.id}
+                  className={`reason-option${selectedReason === reason.id ? ' is-selected' : ''}`}
+                >
                   <input
                     type="radio"
                     name="report-reason"

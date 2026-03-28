@@ -72,12 +72,12 @@ exports.createClaim = async (req, res) => {
       console.error('Email sending failed:', error);
     }
 
-    // Notify item owner
+    // Notify item owner (founder) to submit the object within 24 hours
     await Notification.create({
       user_id: item.user_id,
       type: 'claim',
-      title: 'Someone claimed your found item',
-      message: `${req.user.full_name} has claimed your found item: ${item.item_name}`,
+      title: 'Item claimed - submit object within 24 hours',
+      message: `${req.user.full_name} has claimed your found item: ${item.item_name}. Please submit the object to security within 24 hours to complete the handover process.`,
       related_id: claimId
     });
 
