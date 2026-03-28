@@ -25,6 +25,7 @@ import com.findora.repository.UserRepository;
 import com.findora.security.JwtTokenProvider;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("null")
 class AuthServiceTest {
 
     @Mock
@@ -45,7 +46,6 @@ class AuthServiceTest {
     private AuthService authService;
 
     @BeforeEach
-    @SuppressWarnings("unused")
     void setUp() {
         authService = new AuthService(userRepository, passwordEncoder, jwtTokenProvider, emailService, notificationRepository);
     }

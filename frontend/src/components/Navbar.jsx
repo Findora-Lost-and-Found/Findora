@@ -50,6 +50,12 @@ const Navbar = () => {
   }, []);
 
   const handleLogout = () => {
+    const confirmed = window.confirm('Are you sure you want to logout?');
+    if (!confirmed) {
+      setIsMoreMenuOpen(false);
+      return;
+    }
+
     setIsMoreMenuOpen(false);
     logout();
     navigate('/login');

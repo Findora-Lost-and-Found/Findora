@@ -26,6 +26,7 @@ import com.findora.security.JwtTokenProvider;
  */
 @Service
 @Transactional
+@SuppressWarnings("null")
 public class AuthService {
 
     private final UserRepository userRepository;

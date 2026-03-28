@@ -48,6 +48,7 @@ import com.findora.service.MatchService;
  */
 @RestController
 @RequestMapping("/api/claims")
+@SuppressWarnings("null")
 public class ClaimController {
 
     private static final Logger log = LoggerFactory.getLogger(ClaimController.class);

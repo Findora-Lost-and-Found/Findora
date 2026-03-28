@@ -33,6 +33,7 @@ import com.findora.repository.NotificationRepository;
 import com.findora.repository.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings({"null", "unchecked"})
 class MatchServiceTest {
 
     private JpaRepository<Match, Long> matchRepository;
@@ -50,7 +51,6 @@ class MatchServiceTest {
     private MatchService matchService;
 
     @BeforeEach
-    @SuppressWarnings("unused")
     void setUp() throws Exception {
         Clock clock = Clock.fixed(Instant.parse("2026-03-16T10:00:00Z"), ZoneOffset.UTC);
         when(mailSenderProvider.getIfAvailable()).thenReturn(null);

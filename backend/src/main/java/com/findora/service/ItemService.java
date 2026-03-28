@@ -29,6 +29,7 @@ import com.findora.repository.ItemRepository;
  */
 @Service
 @Transactional(readOnly = true)
+@SuppressWarnings("null")
 public class ItemService {
 
     private final ItemRepository itemRepository;
