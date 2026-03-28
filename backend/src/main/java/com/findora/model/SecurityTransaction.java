@@ -25,7 +25,6 @@ import jakarta.persistence.Convert;
     @Index(name = "idx_transaction_type", columnList = "transaction_type"),
     @Index(name = "idx_transaction_date", columnList = "transaction_date")
 })
-@SuppressWarnings({"unused", "FieldMayBeFinal"})
 public class SecurityTransaction {
 
     @Id

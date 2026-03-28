@@ -54,7 +54,6 @@ class ItemControllerIntegrationTest {
     private String testToken;
 
     @BeforeEach
-    @SuppressWarnings("unused")
     public void setUp() {
         itemRepository.deleteAll();
         userRepository.deleteAll();

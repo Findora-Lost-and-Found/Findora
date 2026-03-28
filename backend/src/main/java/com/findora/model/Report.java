@@ -27,7 +27,6 @@ import jakarta.persistence.Table;
     @Index(name = "idx_reports_status", columnList = "status"),
     @Index(name = "idx_reports_reporter", columnList = "reporter_id")
 })
-@SuppressWarnings({"unused", "FieldMayBeFinal"})
 public class Report {
 
     @Id

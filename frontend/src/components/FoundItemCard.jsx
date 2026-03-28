@@ -59,6 +59,33 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
   const isWaitingForSecurity = normalizedStatus === 'HANDOVER_REQUESTED';
   const isAlreadyHandedOver = normalizedStatus === 'HELD_BY_SECURITY'
     || normalizedStatus === 'HANDED_TO_SECURITY';
+  const fallbackImage = CATEGORY_FALLBACK_IMAGE[normalizedItem.category] || CATEGORY_FALLBACK_IMAGE.Other;
+  const generatedPreviewImage = useMemo(() => buildIdentityPreviewImage(normalizedItem), [normalizedItem]);
+  const badgeLabel = useMemo(
+    () => getIdentityBadgeLabel(normalizedItem.category, normalizedItem),
+    [normalizedItem.category, normalizedItem.name, normalizedItem.item_name, normalizedItem.description]
+  );
+  const resolvedImage = useMemo(() => {
+    const source = normalizedItem.image ? String(normalizedItem.image).trim() : '';
+    const hasUploadedImage = source
+      && !source.includes('via.placeholder.com')
+      && !source.includes('placeholder.com');
+
+    // Always prefer the actual uploaded item photo when available.
+    if (hasUploadedImage) {
+      if (source.startsWith('http://') || source.startsWith('https://')) {
+        return source;
+      }
+      const normalizedPath = source.replace(/\\/g, '/').replace(/\/+/g, '/').replace(/^\/+/, '');
+      return `${API_ORIGIN}/${normalizedPath}`;
+    }
+
+    if (generatedPreviewImage) {
+      return generatedPreviewImage;
+    }
+
+    return fallbackImage;
+  }, [normalizedItem.image, generatedPreviewImage, fallbackImage]);
   
   const formatDate = (dateString) => {
     const options = { month: 'short', day: 'numeric', year: 'numeric' };
@@ -89,6 +116,7 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
           <SampleItemImage category={normalizedItem.category} item={normalizedItem} />
         )}
         <div className="card-badge">{normalizedItem.category}</div>
+>>>>>>> develop-i
       </div>
 
       <div className="card-content">
@@ -148,15 +176,17 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
               🏷️ Claim This Item
             </button>
           )}
-          <button
-            onClick={handleReportClick}
-            className="report-icon-btn group relative flex items-center justify-center p-2.5 rounded-lg border border-red-300 bg-red-50 text-red-600 hover:bg-red-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-300 dark:border-red-700 dark:bg-red-900/40 dark:text-red-300 dark:hover:bg-red-800 dark:focus:ring-red-600"
-            title="Report"
-            aria-label="Report"
-          >
-            <span className="report-tooltip absolute -top-10 left-1/2 transform -translate-x-1/2 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium text-white bg-red-600 shadow-sm opacity-0 pointer-events-none group-hover:opacity-100 group-focus:opacity-100 transition-opacity" role="tooltip">Report</span>
-            <span aria-hidden="true" role="img">🚩</span>
-          </button>
+          {!isOwnItem && (
+            <button
+              onClick={handleReportClick}
+              className="report-icon-btn group relative flex items-center justify-center p-2.5 rounded-lg border border-red-300 bg-red-50 text-red-600 hover:bg-red-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-300 dark:border-red-700 dark:bg-red-900/40 dark:text-red-300 dark:hover:bg-red-800 dark:focus:ring-red-600"
+              title="Report"
+              aria-label="Report"
+            >
+              <span className="report-tooltip absolute -top-10 left-1/2 transform -translate-x-1/2 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium text-white bg-red-600 shadow-sm opacity-0 pointer-events-none group-hover:opacity-100 group-focus:opacity-100 transition-opacity" role="tooltip">Report</span>
+              <span aria-hidden="true" role="img">🚩</span>
+            </button>
+          )}
         </div>
       </div>
 

@@ -11,12 +11,15 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.findora.dto.AuthResponse;
+import com.findora.dto.UpdatePhoneRequestDTO;
 import com.findora.dto.UserDTO;
+import com.findora.dto.VerifyPhoneOtpRequestDTO;
 import com.findora.service.AuthService;
 
 /**
@@ -78,7 +81,7 @@ public class AuthController {
     /**
      * POST /api/auth/register
      * Register new user.
-     * Request: { username, email, password, fullName, role }
+        * Request: { username, email, password, fullName, role, phone? }
      * Response: { token, user: {...}, message }
      */
     @PostMapping("/register")
@@ -87,6 +90,7 @@ public class AuthController {
             String username = registerRequest.get("username");
             String email = registerRequest.get("email");
             String password = registerRequest.get("password");
+            String phone = registerRequest.get("phone");
             String fullName = firstNonBlank(registerRequest.get("fullName"), registerRequest.get("full_name"));
             String role = registerRequest.getOrDefault("role", "STUDENT");
 
@@ -95,7 +99,7 @@ public class AuthController {
                     .body(Map.of("success", false, "message", "Missing required fields"));
             }
 
-            AuthResponse response = authService.register(username, email, password, fullName, role);
+            AuthResponse response = authService.register(username, email, password, fullName, role, phone);
 
             log.info("User registered: {}", username);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -123,7 +127,10 @@ public class AuthController {
     /**
      * POST /api/auth/verify-email
      * Verify email with OTP.
-     * TODO: Implement OTP validation
+<<<<<<< HEAD
+=======
+        * OTP validation endpoint.
+>>>>>>> develop-i
      */
     @PostMapping("/verify-email")
     public ResponseEntity<?> verifyEmail(@RequestBody Map<String, String> verifyRequest) {
@@ -166,7 +173,11 @@ public class AuthController {
 
     /**
      * POST /api/auth/resend-otp
-     * TODO: Implement OTP resend
+<<<<<<< HEAD
+     * Resend email verification OTP.
+=======
+        * Resend email verification OTP.
+>>>>>>> develop-i
      */
     @PostMapping("/resend-otp")
     public ResponseEntity<?> resendOtp(@RequestBody Map<String, String> request) {
@@ -194,7 +205,11 @@ public class AuthController {
     /**
      * POST /api/auth/forgot-password
      * Initiate password reset.
-     * TODO: Integrate with email service
+<<<<<<< HEAD
+     * Uses email service to deliver reset OTP.
+=======
+        * Uses email service to deliver reset OTP.
+>>>>>>> develop-i
      */
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> request) {
@@ -227,7 +242,11 @@ public class AuthController {
     /**
      * POST /api/auth/reset-password
      * Reset password with OTP.
-     * TODO: Implement password reset
+<<<<<<< HEAD
+     * Validates OTP and updates password.
+=======
+        * Validates OTP and updates password.
+>>>>>>> develop-i
      */
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> resetRequest) {
@@ -243,6 +262,54 @@ public class AuthController {
 
             authService.resetPassword(email, otp, newPassword);
             return ResponseEntity.ok(Map.of("success", true, "message", "Password reset successful"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/update-phone")
+    public ResponseEntity<?> updatePhone(@RequestBody UpdatePhoneRequestDTO request) {
+        try {
+            String username = getCurrentUsernameOptional();
+            if (username == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("success", false, "message", "Authentication required"));
+            }
+
+            if (request == null || request.getPhone() == null || request.getPhone().isBlank()) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Phone number is required"));
+            }
+
+            authService.requestPhoneUpdate(username, request.getPhone());
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "OTP sent to your email. Verify OTP to activate new phone number"
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/verify-phone-otp")
+    public ResponseEntity<?> verifyPhoneOtp(@RequestBody VerifyPhoneOtpRequestDTO request) {
+        try {
+            String username = getCurrentUsernameOptional();
+            if (username == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("success", false, "message", "Authentication required"));
+            }
+
+            if (request == null || request.getOtp() == null || request.getOtp().isBlank()) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "OTP is required"));
+            }
+
+            authService.verifyPhoneOtp(username, request.getOtp());
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Phone number verified and updated successfully"
+            ));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
         }

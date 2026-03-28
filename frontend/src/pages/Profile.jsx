@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
 import { toast } from 'react-toastify';
+import PhoneNumberUpdate from '../components/profile/PhoneNumberUpdate';
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, loadUser } = useAuth();
   const [theme, setTheme] = useState('light');
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -12,6 +13,9 @@ const Profile = () => {
     newPassword: '',
     confirmPassword: ''
   });
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -31,6 +35,9 @@ const Profile = () => {
   const closePasswordModal = () => {
     setIsPasswordModalOpen(false);
     setFormData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    setShowCurrentPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
     setErrors({});
     setSuccessMessage('');
     setLoading(false);
@@ -110,6 +117,8 @@ const Profile = () => {
   }
 
   const memberSince = user.createdAt || user.created_at;
+  const isPhoneVerified = Boolean(user.is_phone_verified ?? true);
+  const hasPendingPhoneVerification = Boolean(user.pending_phone);
 
   return (
     <div className="container">
@@ -156,6 +165,18 @@ const Profile = () => {
                   <span>{user.phone}</span>
                 </div>
               )}
+              {user.pending_phone && (
+                <div className="detail-row">
+                  <strong>Pending Phone:</strong>
+                  <span className="pending">{user.pending_phone}</span>
+                </div>
+              )}
+              <div className="detail-row">
+                <strong>Phone Verified:</strong>
+                <span className={isPhoneVerified ? 'verified' : 'not-verified'}>
+                  {isPhoneVerified ? '✓ Verified' : '✗ Not Verified'}
+                </span>
+              </div>
               <div className="detail-row">
                 <strong>Email Verified:</strong>
                 <span className={user.is_verified ? 'verified' : 'not-verified'}>
@@ -183,10 +204,22 @@ const Profile = () => {
           <p style={{ marginBottom: '1rem', color: '#6B7280' }}>
             Manage your account security settings.
           </p>
-          <button type="button" className="btn-primary" onClick={() => setIsPasswordModalOpen(true)}>
+          {hasPendingPhoneVerification && (
+            <p style={{ marginBottom: '0.75rem', color: '#B45309', fontWeight: 600 }}>
+              Phone verification is pending. Complete OTP verification below to re-enable phone-verified actions.
+            </p>
+          )}
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => setIsPasswordModalOpen(true)}
+            disabled={hasPendingPhoneVerification}
+          >
             Change Password
           </button>
         </div>
+
+        <PhoneNumberUpdate user={user} onVerified={loadUser} />
 
         {isPasswordModalOpen && (
           <div className="profile-password-overlay" onClick={closePasswordModal}>
@@ -205,40 +238,70 @@ const Profile = () => {
               <form onSubmit={handlePasswordSubmit} noValidate>
                 <div className="form-group">
                   <label htmlFor="currentPassword">Current Password</label>
-                  <input
-                    id="currentPassword"
-                    name="currentPassword"
-                    type="password"
-                    autoComplete="current-password"
-                    value={formData.currentPassword}
-                    onChange={handlePasswordChange}
-                  />
+                  <div className="password-input-wrapper">
+                    <input
+                      id="currentPassword"
+                      name="currentPassword"
+                      type={showCurrentPassword ? 'text' : 'password'}
+                      autoComplete="current-password"
+                      value={formData.currentPassword}
+                      onChange={handlePasswordChange}
+                    />
+                    <button
+                      type="button"
+                      className="password-toggle-btn"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      aria-label={showCurrentPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showCurrentPassword ? '🙈' : '👁️'}
+                    </button>
+                  </div>
                   {errors.currentPassword && <small style={{ color: '#DC2626' }}>{errors.currentPassword}</small>}
                 </div>
 
                 <div className="form-group">
                   <label htmlFor="newPassword">New Password</label>
-                  <input
-                    id="newPassword"
-                    name="newPassword"
-                    type="password"
-                    autoComplete="new-password"
-                    value={formData.newPassword}
-                    onChange={handlePasswordChange}
-                  />
+                  <div className="password-input-wrapper">
+                    <input
+                      id="newPassword"
+                      name="newPassword"
+                      type={showNewPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      value={formData.newPassword}
+                      onChange={handlePasswordChange}
+                    />
+                    <button
+                      type="button"
+                      className="password-toggle-btn"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showNewPassword ? '🙈' : '👁️'}
+                    </button>
+                  </div>
                   {errors.newPassword && <small style={{ color: '#DC2626' }}>{errors.newPassword}</small>}
                 </div>
 
                 <div className="form-group">
                   <label htmlFor="confirmPassword">Confirm New Password</label>
-                  <input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type="password"
-                    autoComplete="new-password"
-                    value={formData.confirmPassword}
-                    onChange={handlePasswordChange}
-                  />
+                  <div className="password-input-wrapper">
+                    <input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      value={formData.confirmPassword}
+                      onChange={handlePasswordChange}
+                    />
+                    <button
+                      type="button"
+                      className="password-toggle-btn"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showConfirmPassword ? '🙈' : '👁️'}
+                    </button>
+                  </div>
                   {errors.confirmPassword && <small style={{ color: '#DC2626' }}>{errors.confirmPassword}</small>}
                 </div>
 

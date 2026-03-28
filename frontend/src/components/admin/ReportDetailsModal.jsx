@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { toast } from 'react-toastify';
 import { adminAPI } from '../../services/api';
+import { maskSensitiveDescription } from '../../utils/itemDisplayUtils';
 import './ReportDetailsModal.css';
 
 const ReportDetailsModal = ({ report, onClose, onAction }) => {
@@ -10,6 +11,7 @@ const ReportDetailsModal = ({ report, onClose, onAction }) => {
   const [showHideConfirm, setShowHideConfirm] = useState(false);
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [adminNotes, setAdminNotes] = useState(report?.admin_notes || '');
+  const maskedReason = maskSensitiveDescription(report?.reason || '');
 
   const handleHideItem = async () => {
     if (!report?.id) {
@@ -144,7 +146,7 @@ const ReportDetailsModal = ({ report, onClose, onAction }) => {
               </div>
               <div className="detail-item full-width">
                 <label>Report Reason</label>
-                <p className="reason-text">{report.reason || 'N/A'}</p>
+                <p className="reason-text">{maskedReason || 'N/A'}</p>
               </div>
             </div>
           </section>

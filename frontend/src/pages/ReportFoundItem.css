@@ -103,22 +103,8 @@
 .form-actions {
   margin-top: 1rem;
   display: flex;
+  gap: 0.75rem;
   justify-content: flex-end;
-}
-
-.btn-primary {
-  border: none;
-  border-radius: 8px;
-  padding: 0.7rem 1.1rem;
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #ffffff;
-  background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
-  cursor: pointer;
-}
-
-.btn-primary:hover {
-  filter: brightness(1.05);
 }
 
 .error-text {
@@ -234,7 +220,7 @@ body.dark-mode .form-group input[type="file"]::file-selector-button:hover {
     justify-content: stretch;
   }
 
-  .form-actions .btn-primary {
+  .form-actions :is(.btn-primary, .btn-secondary) {
     width: 100%;
   }
 

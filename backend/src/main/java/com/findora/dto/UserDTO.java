@@ -16,6 +16,10 @@ public class UserDTO {
     private String role;              // e.g., "STUDENT", "ADMIN"
     private String email;
     private String phone;
+    @JsonProperty("pending_phone")
+    private String pendingPhone;
+    @JsonProperty("is_phone_verified")
+    private Boolean isPhoneVerified;
     @JsonProperty("is_verified")
     private Boolean isVerified;
     @JsonProperty("is_approved")
@@ -31,7 +35,8 @@ public class UserDTO {
     }
 
     public UserDTO(Long id, String username, String name, String fullName, String role, String email, String phone,
-                   Boolean isVerified, Boolean isApproved, Boolean isBanned, Boolean isSuspended, String createdAt) {
+                   String pendingPhone, Boolean isPhoneVerified, Boolean isVerified, Boolean isApproved,
+                   Boolean isBanned, Boolean isSuspended, String createdAt) {
         this.id = id;
         this.username = username;
         this.name = name;
@@ -39,6 +44,8 @@ public class UserDTO {
         this.role = role;
         this.email = email;
         this.phone = phone;
+        this.pendingPhone = pendingPhone;
+        this.isPhoneVerified = isPhoneVerified;
         this.isVerified = isVerified;
         this.isApproved = isApproved;
         this.isBanned = isBanned;
@@ -100,6 +107,22 @@ public class UserDTO {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    public String getPendingPhone() {
+        return pendingPhone;
+    }
+
+    public void setPendingPhone(String pendingPhone) {
+        this.pendingPhone = pendingPhone;
+    }
+
+    public Boolean getIsPhoneVerified() {
+        return isPhoneVerified;
+    }
+
+    public void setIsPhoneVerified(Boolean isPhoneVerified) {
+        this.isPhoneVerified = isPhoneVerified;
     }
 
     public Boolean getIsVerified() {

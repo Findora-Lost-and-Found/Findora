@@ -2,7 +2,9 @@ package com.findora.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 import java.util.Random;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +35,8 @@ public class AuthService {
     private final NotificationRepository notificationRepository;
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private static final Random RANDOM = new Random();
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
+    private static final Pattern PHONE_PATTERN = Pattern.compile("^\\d{10}$");
 
     public AuthService(
             UserRepository userRepository,
@@ -101,22 +105,37 @@ public class AuthService {
 
     /**
      * Register new user.
-     * TODO: Add validation, email verification OTP, etc.
+<<<<<<< HEAD
+=======
+        * Includes validation and email verification OTP flow.
+>>>>>>> develop-i
      */
-    public AuthResponse register(String username, String email, String password, String fullName, String role) {
+    public AuthResponse register(String username, String email, String password, String fullName, String role, String phone) {
+        String normalizedEmail = normalizeEmail(email);
+        String normalizedPhone = normalizePhone(phone);
+
+        if (!isValidEmail(normalizedEmail)) {
+            throw new RuntimeException("Invalid email format");
+        }
+
+        if (normalizedPhone != null && !isValidPhone(normalizedPhone)) {
+            throw new RuntimeException("Phone number invalid format");
+        }
+
         if (userRepository.existsByUsername(username)) {
             throw new RuntimeException("Username already exists");
         }
 
-        if (userRepository.existsByEmail(email)) {
+        if (userRepository.existsByEmail(normalizedEmail)) {
             throw new RuntimeException("Email already exists");
         }
 
         User user = new User();
         user.setUsername(username);
-        user.setEmail(email);
+        user.setEmail(normalizedEmail);
         user.setPassword(passwordEncoder.encode(password));
         user.setFullName(fullName);
+        user.setPhone(normalizedPhone);
         User.UserRole userRole = User.UserRole.valueOf(role.toUpperCase());
         user.setRole(userRole);
         boolean requiresEmailVerification = (userRole == User.UserRole.STUDENT
@@ -161,6 +180,25 @@ public class AuthService {
         return new AuthResponse(token, userDTO, message);
     }
 
+    private String normalizeEmail(String email) {
+        return email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String normalizePhone(String phone) {
+        if (phone == null || phone.isBlank()) {
+            return null;
+        }
+        return phone.replaceAll("\\D", "");
+    }
+
+    private boolean isValidEmail(String email) {
+        return email != null && EMAIL_PATTERN.matcher(email).matches();
+    }
+
+    private boolean isValidPhone(String phone) {
+        return phone != null && PHONE_PATTERN.matcher(phone).matches();
+    }
+
     /**
      * Verify email with OTP.
      */
@@ -201,7 +239,10 @@ public class AuthService {
 
     /**
      * Regenerate verification OTP.
-     * TODO: Integrate with mail sender and send the OTP to the user email.
+<<<<<<< HEAD
+=======
+        * Sends the generated OTP to the user email.
+>>>>>>> develop-i
      */
     public void resendVerificationOtp(String usernameOrEmail) {
         User user = userRepository.findByUsername(usernameOrEmail)
@@ -215,6 +256,68 @@ public class AuthService {
         emailService.sendVerificationOtp(user.getEmail(), user.getFullName(), user.getVerificationOtp());
 
         log.info("Verification OTP regenerated for user {}", user.getUsername());
+    }
+
+    public void requestPhoneUpdate(String username, String newPhone) {
+        User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+        String normalizedPhone = normalizePhone(newPhone);
+        if (normalizedPhone == null || normalizedPhone.isBlank()) {
+            throw new RuntimeException("Phone number is required");
+        }
+
+        if (!isValidPhone(normalizedPhone)) {
+            throw new RuntimeException("Phone number invalid format");
+        }
+
+        if (normalizedPhone.equals(user.getPhone())) {
+            throw new RuntimeException("New phone number must be different from current phone");
+        }
+
+        if (userRepository.existsByPhone(normalizedPhone) || userRepository.existsByPendingPhone(normalizedPhone)) {
+            throw new RuntimeException("Phone number already in use");
+        }
+
+        String otp = generateOtp();
+        user.setPendingPhone(normalizedPhone);
+        user.setPhoneVerificationOtp(otp);
+        user.setPhoneOtpExpiry(LocalDateTime.now().plusMinutes(15));
+        user.setIsPhoneVerified(false);
+        userRepository.save(user);
+
+        emailService.sendPhoneChangeOtp(user.getEmail(), user.getFullName(), otp, normalizedPhone);
+        log.info("Phone update OTP generated for user {}", user.getUsername());
+    }
+
+    public void verifyPhoneOtp(String username, String otp) {
+        User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getPendingPhone() == null || user.getPendingPhone().isBlank()) {
+            throw new RuntimeException("No pending phone update request found");
+        }
+
+        if (otp == null || otp.isBlank()) {
+            throw new RuntimeException("OTP is required");
+        }
+
+        if (user.getPhoneOtpExpiry() == null || LocalDateTime.now().isAfter(user.getPhoneOtpExpiry())) {
+            throw new RuntimeException("OTP expired");
+        }
+
+        if (!otp.equals(user.getPhoneVerificationOtp())) {
+            throw new RuntimeException("Invalid OTP");
+        }
+
+        user.setPhone(user.getPendingPhone());
+        user.setPendingPhone(null);
+        user.setPhoneVerificationOtp(null);
+        user.setPhoneOtpExpiry(null);
+        user.setIsPhoneVerified(true);
+        userRepository.save(user);
+
+        log.info("Phone number updated and verified for user {}", user.getUsername());
     }
 
     /**
@@ -237,7 +340,10 @@ public class AuthService {
         emailService.sendPasswordResetOtp(user.getEmail(), user.getFullName(), otp);
 
         log.info("Password reset OTP generated for user {}", user.getUsername());
-        // TODO: Send OTP via email
+<<<<<<< HEAD
+=======
+        // OTP is sent via emailService.sendPasswordResetOtp above.
+>>>>>>> develop-i
         return otp;
     }
 
@@ -324,6 +430,8 @@ public class AuthService {
             user.getRole().name().toLowerCase(),
             user.getEmail(),
             user.getPhone(),
+            user.getPendingPhone(),
+            user.getIsPhoneVerified(),
             user.getIsVerified(),
             user.getIsApproved(),
             user.getIsBanned(),

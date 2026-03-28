@@ -25,7 +25,6 @@ import jakarta.persistence.Table;
     @Index(name = "idx_notifications_is_read", columnList = "is_read"),
     @Index(name = "idx_notifications_type", columnList = "type")
 })
-@SuppressWarnings({"unused", "FieldMayBeFinal"})
 public class Notification {
 
     @Id

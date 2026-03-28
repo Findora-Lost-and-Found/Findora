@@ -2,7 +2,18 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { itemsAPI } from '../services/api';
 import { toast } from 'react-toastify';
-import { NIC_HELPER_TEXT, NIC_VALIDATION_MESSAGE, isValidNic, normalizeNic, sanitizeNicInput } from '../utils/nicUtils';
+import { NIC_HELPER_TEXT, NIC_VALIDATION_MESSAGE, isValidNic, isValidNicNumber, normalizeNic, normalizeNicNumber, sanitizeNicInput } from '../utils/nicUtils';
+import { isValidStudentIdNumber, normalizeStudentIdNumber, validateStudentID } from '../utils/studentIdUtils';
+import {
+  formatCardNumber,
+  getCardCursorPosition,
+  getCardLast4,
+  isValidCardNumber,
+  maskCardNumber,
+  normalizeCardNumber
+} from '../utils/cardUtils';
+import { validateLostTimeWithDate } from '../utils/timeUtils';
+import { BANK_OPTIONS } from '../data/bankOptions';
 import './ReportFoundItem.css';
 
 const CATEGORY_OPTIONS = [
@@ -23,19 +34,36 @@ const ReportFoundItem = () => {
   const [formData, setFormData] = useState({
     nicName: '',
     nicNumber: '',
+<<<<<<< HEAD
+    idHolderType: '',
+=======
+    nicLocation1: '',
+    nicLocation2: '',
+    nicLocation3: '',
+>>>>>>> develop-i
     idName: '',
     studentOrStaffId: '',
+    idLocation1: '',
+    idLocation2: '',
+    idLocation3: '',
     cardType: '',
     bankName: '',
     cardNumber: '',
     bankPrivateLocation: '',
+    bankPrivateLocation2: '',
+    bankPrivateLocation3: '',
     bankPrivateDate: '',
     bankPrivateTime: '',
     purseName: '',
     purseIdNumber: '',
+    purseWithIdLocation1: '',
+    purseWithIdLocation2: '',
+    purseWithIdLocation3: '',
     purseMoney: '',
     purseOtherItems: '',
     pursePrivateLocation: '',
+    pursePrivateLocation2: '',
+    pursePrivateLocation3: '',
     pursePrivateDate: '',
     pursePrivateTime: '',
     pursePhoto: null,
@@ -43,6 +71,8 @@ const ReportFoundItem = () => {
     otherItemName: '',
     otherDescription: '',
     otherPrivateLocation: '',
+    otherPrivateLocation2: '',
+    otherPrivateLocation3: '',
     otherPrivateDate: '',
     otherPrivateTime: ''
   });
@@ -55,13 +85,30 @@ const ReportFoundItem = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    let nextValue = value;
-    if (name === 'nicNumber') {
-      nextValue = sanitizeNicInput(value);
-    }
+    const inputEl = e.target;
+    const normalizePurseId = (rawValue) => String(rawValue).trim().toUpperCase();
+
+    const nextValue =
+      name === 'nicNumber'
+        ? sanitizeNicInput(value)
+        : name === 'studentOrStaffId'
+          ? normalizeStudentIdNumber(value)
+          : name === 'purseIdNumber'
+            ? normalizePurseId(value)
+          : name === 'cardNumber'
+            ? formatCardNumber(value)
+          : value;
+
     if (name === 'cardNumber') {
-      nextValue = String(value).replace(/\D/g, '').slice(0, 16);
+      const cursor = inputEl.selectionStart ?? value.length;
+      const digitsBeforeCursor = value.slice(0, cursor).replace(/\D/g, '').length;
+
+      requestAnimationFrame(() => {
+        const nextCursor = getCardCursorPosition(nextValue, digitsBeforeCursor);
+        inputEl.setSelectionRange(nextCursor, nextCursor);
+      });
     }
+
     setFormData((prev) => ({ ...prev, [name]: nextValue }));
   };
 
@@ -75,6 +122,23 @@ const ReportFoundItem = () => {
 
   const validate = () => {
     const nextErrors = {};
+    const isFutureDate = (dateValue) => {
+      if (!dateValue) return false;
+      const selectedDate = new Date(`${dateValue}T00:00:00`);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return selectedDate > today;
+    };
+    const assignInvalidTimeError = (fieldName, dateValue, timeValue) => {
+      if (!timeValue) {
+        return;
+      }
+
+      const validationResult = validateLostTimeWithDate(dateValue, timeValue);
+      if (validationResult !== true) {
+        nextErrors[fieldName] = validationResult;
+      }
+    };
 
     if (!category) nextErrors.category = 'Please select a category.';
 
@@ -85,20 +149,29 @@ const ReportFoundItem = () => {
     }
 
     if (category === 'Student / Staff ID') {
+      if (!formData.idHolderType) nextErrors.idHolderType = 'Please choose Student or Staff.';
       if (!formData.idName.trim()) nextErrors.idName = 'Name is required.';
       if (!formData.studentOrStaffId.trim()) nextErrors.studentOrStaffId = 'Student ID or Staff ID is required.';
-      if (formData.studentOrStaffId.trim() && !isValidStudentIdNumber(formData.studentOrStaffId)) {
-        nextErrors.studentOrStaffId = 'Student ID must be 6 digits followed by 1 letter.';
+      if (formData.studentOrStaffId.trim()) {
+        const validationResult = validateStudentID(formData.studentOrStaffId);
+        if (validationResult !== true) {
+          nextErrors.studentOrStaffId = validationResult;
+        }
       }
+      if (!formData.idLocation1.trim()) nextErrors.idLocation1 = 'Field 1 is required.';
     }
 
     if (category === 'Bank Card') {
       if (!formData.cardType) nextErrors.cardType = 'Card Type is required.';
       if (!formData.bankName.trim()) nextErrors.bankName = 'Name of the Bank is required.';
-      if (!/^\d{16}$/.test(formData.cardNumber)) nextErrors.cardNumber = 'Full 16-digit card number is required.';
+      if (!isValidCardNumber(formData.cardNumber)) nextErrors.cardNumber = 'Please enter a valid 16-digit card number.';
       if (!formData.bankPrivateLocation.trim()) nextErrors.bankPrivateLocation = 'Location is required.';
       if (!formData.bankPrivateDate) nextErrors.bankPrivateDate = 'Date is required.';
+      if (formData.bankPrivateDate && isFutureDate(formData.bankPrivateDate)) {
+        nextErrors.bankPrivateDate = 'Invalid date. Please select today or a past date.';
+      }
       if (!formData.bankPrivateTime) nextErrors.bankPrivateTime = 'Time is required.';
+      assignInvalidTimeError('bankPrivateTime', formData.bankPrivateDate, formData.bankPrivateTime);
     }
 
     if (category === 'Purse') {
@@ -112,6 +185,7 @@ const ReportFoundItem = () => {
         ) {
           nextErrors.purseIdNumber = 'Enter a valid NIC or Student ID (6 digits + 1 letter).';
         }
+        if (!formData.purseWithIdLocation1.trim()) nextErrors.purseWithIdLocation1 = 'Field 1 is required.';
       }
 
       if (purseOption === 'without-id') {
@@ -119,7 +193,11 @@ const ReportFoundItem = () => {
         if (!formData.purseOtherItems.trim()) nextErrors.purseOtherItems = 'Other items inside purse are required.';
         if (!formData.pursePrivateLocation.trim()) nextErrors.pursePrivateLocation = 'Location is required.';
         if (!formData.pursePrivateDate) nextErrors.pursePrivateDate = 'Date is required.';
+        if (formData.pursePrivateDate && isFutureDate(formData.pursePrivateDate)) {
+          nextErrors.pursePrivateDate = 'Invalid date. Please select today or a past date.';
+        }
         if (!formData.pursePrivateTime) nextErrors.pursePrivateTime = 'Time is required.';
+        assignInvalidTimeError('pursePrivateTime', formData.pursePrivateDate, formData.pursePrivateTime);
       }
     }
 
@@ -128,7 +206,11 @@ const ReportFoundItem = () => {
       if (!formData.otherPhoto) nextErrors.otherPhoto = 'Photo upload is required.';
       if (!formData.otherPrivateLocation.trim()) nextErrors.otherPrivateLocation = 'Location is required.';
       if (!formData.otherPrivateDate) nextErrors.otherPrivateDate = 'Date is required.';
+      if (formData.otherPrivateDate && isFutureDate(formData.otherPrivateDate)) {
+        nextErrors.otherPrivateDate = 'Invalid date. Please select today or a past date.';
+      }
       if (!formData.otherPrivateTime) nextErrors.otherPrivateTime = 'Time is required.';
+      assignInvalidTimeError('otherPrivateTime', formData.otherPrivateDate, formData.otherPrivateTime);
     }
 
     setErrors(nextErrors);
@@ -174,8 +256,13 @@ const ReportFoundItem = () => {
 
     if (category === 'Bank Card') {
       item_name = `${formData.bankName} ${formData.cardType} Card`;
-      description = `Last 4 digits: ${formData.cardNumber ? formData.cardNumber.slice(-4) : 'N/A'}`;
+      const last4 = getCardLast4(formData.cardNumber);
+      description = `Card: ${maskCardNumber(formData.cardNumber) || '**** **** **** ****'}${last4 ? ` (last 4: ${last4})` : ''}`;
       location = formData.bankPrivateLocation || location;
+=======
+      description = `Last 4 digits: ${formData.cardNumber ? formData.cardNumber.slice(-4) : 'N/A'}`;
+      location = [formData.bankPrivateLocation, formData.bankPrivateLocation2, formData.bankPrivateLocation3].filter(Boolean).join(', ') || location;
+>>>>>>> develop-i
       date = formData.bankPrivateDate || date;
       time = formData.bankPrivateTime || time;
     }
@@ -187,7 +274,7 @@ const ReportFoundItem = () => {
         description = `Claim with ID: ${formData.purseIdNumber}`;
       } else {
         description = `Items inside: ${formData.purseOtherItems || formData.purseMoney}`;
-        location = formData.pursePrivateLocation || location;
+        location = [formData.pursePrivateLocation, formData.pursePrivateLocation2, formData.pursePrivateLocation3].filter(Boolean).join(', ') || location;
         date = formData.pursePrivateDate || date;
         time = formData.pursePrivateTime || time;
       }
@@ -196,7 +283,7 @@ const ReportFoundItem = () => {
     if (category === 'Others') {
       item_name = formData.otherItemName || 'Other Found Item';
       description = formData.otherDescription || 'General found item report';
-      location = formData.otherPrivateLocation || location;
+      location = [formData.otherPrivateLocation, formData.otherPrivateLocation2, formData.otherPrivateLocation3].filter(Boolean).join(', ') || location;
       date = formData.otherPrivateDate || date;
       time = formData.otherPrivateTime || time;
       image = formData.otherPhoto;
@@ -214,7 +301,7 @@ const ReportFoundItem = () => {
     };
 
     if (category === 'Bank Card') {
-      payload.private_card_number = formData.cardNumber;
+      payload.private_card_number = normalizeCardNumber(formData.cardNumber);
     }
 
     return payload;
@@ -274,7 +361,9 @@ const ReportFoundItem = () => {
                 {errors.nicName && <p className="error-text">{errors.nicName}</p>}
               </div>
               <div className="form-group">
+                {/* OTP note only for fields where user might expect OTP */}
                 <label className="required">NIC Number</label>
+                <small style={{ color: '#A1A5AB', fontSize: '0.75rem', marginBottom: '0.5rem', display: 'block', opacity: 0.85 }}>Not used for OTP</small>
                 <input
                   name="nicNumber"
                   value={formData.nicNumber}
@@ -286,6 +375,22 @@ const ReportFoundItem = () => {
                 <small style={{ color: '#6B7280' }}>{NIC_HELPER_TEXT}</small>
                 {errors.nicNumber && <p className="error-text">{errors.nicNumber}</p>}
               </div>
+              <div className="private-block">
+                <h4>Where did you find it?</h4>
+                <div className="form-group">
+                  <label className="required">Field 1</label>
+                  <input name="nicLocation1" value={formData.nicLocation1} onChange={handleInputChange} />
+                  {errors.nicLocation1 && <p className="error-text">{errors.nicLocation1}</p>}
+                </div>
+                <div className="form-group">
+                  <label>Field 2 (optional)</label>
+                  <input name="nicLocation2" value={formData.nicLocation2} onChange={handleInputChange} />
+                </div>
+                <div className="form-group">
+                  <label>Field 3 (optional)</label>
+                  <input name="nicLocation3" value={formData.nicLocation3} onChange={handleInputChange} />
+                </div>
+              </div>
             </div>
           )}
 
@@ -293,20 +398,46 @@ const ReportFoundItem = () => {
             <div className="category-section">
               <h3>Student / Staff ID Details</h3>
               <div className="form-group">
+                <label className="required">Student or Staff</label>
+                <select name="idHolderType" value={formData.idHolderType} onChange={handleInputChange}>
+                  <option value="">Select one</option>
+                  <option value="Student">Student</option>
+                  <option value="Staff">Staff</option>
+                </select>
+                {errors.idHolderType && <p className="error-text">{errors.idHolderType}</p>}
+              </div>
+              <div className="form-group">
                 <label className="required">Name</label>
                 <input name="idName" value={formData.idName} onChange={handleInputChange} />
                 {errors.idName && <p className="error-text">{errors.idName}</p>}
               </div>
               <div className="form-group">
+                {/* OTP note only for fields where user might expect OTP */}
                 <label className="required">Student ID or Staff ID</label>
+                <small style={{ color: '#A1A5AB', fontSize: '0.75rem', marginBottom: '0.5rem', display: 'block', opacity: 0.85 }}>Not used for OTP</small>
                 <input
                   name="studentOrStaffId"
                   value={formData.studentOrStaffId}
                   onChange={handleInputChange}
                   placeholder="e.g. 123456A"
-                  maxLength={7}
                 />
                 {errors.studentOrStaffId && <p className="error-text">{errors.studentOrStaffId}</p>}
+              </div>
+              <div className="private-block">
+                <h4>Where did you find it?</h4>
+                <div className="form-group">
+                  <label className="required">Field 1</label>
+                  <input name="idLocation1" value={formData.idLocation1} onChange={handleInputChange} />
+                  {errors.idLocation1 && <p className="error-text">{errors.idLocation1}</p>}
+                </div>
+                <div className="form-group">
+                  <label>Field 2 (optional)</label>
+                  <input name="idLocation2" value={formData.idLocation2} onChange={handleInputChange} />
+                </div>
+                <div className="form-group">
+                  <label>Field 3 (optional)</label>
+                  <input name="idLocation3" value={formData.idLocation3} onChange={handleInputChange} />
+                </div>
               </div>
             </div>
           )}
@@ -328,24 +459,9 @@ const ReportFoundItem = () => {
                 <label className="required">Name of the Bank</label>
                 <select name="bankName" value={formData.bankName} onChange={handleInputChange}>
                   <option value="">-- Select Bank --</option>
-                  <option>Bank of Ceylon</option>
-                  <option>People's Bank</option>
-                  <option>Commercial Bank of Ceylon</option>
-                  <option>Hatton National Bank (HNB)</option>
-                  <option>Sampath Bank</option>
-                  <option>Seylan Bank</option>
-                  <option>Nations Trust Bank (NTB)</option>
-                  <option>National Savings Bank (NSB)</option>
-                  <option>Pan Asia Banking Corporation</option>
-                  <option>Union Bank of Colombo</option>
-                  <option>DFCC Bank</option>
-                  <option>Cargills Bank</option>
-                  <option>Amana Bank</option>
-                  <option>MCB Bank</option>
-                  <option>Citibank Sri Lanka</option>
-                  <option>Standard Chartered Bank</option>
-                  <option>HSBC Sri Lanka</option>
-                  <option>Other</option>
+                  {BANK_OPTIONS.map((bank) => (
+                    <option key={bank} value={bank}>{bank}</option>
+                  ))}
                 </select>
                 {errors.bankName && <p className="error-text">{errors.bankName}</p>}
               </div>
@@ -355,19 +471,30 @@ const ReportFoundItem = () => {
                   name="cardNumber"
                   value={formData.cardNumber}
                   onChange={handleInputChange}
-                  placeholder="Enter full 16-digit card number"
-                  maxLength={16}
+                  placeholder="xxxx xxxx xxxx xxxx"
+                  maxLength={19}
+                  autoComplete="off"
                   inputMode="numeric"
+                  pattern="[0-9 ]*"
                 />
+                <small className="helper-text">Enter 16 digits. The number is grouped automatically as xxxx xxxx xxxx xxxx.</small>
                 {errors.cardNumber && <p className="error-text">{errors.cardNumber}</p>}
               </div>
 
               <div className="private-block">
                 <h4>Private Fields (not shown publicly)</h4>
                 <div className="form-group">
-                  <label className="required">Location</label>
+                  <label className="required">Field 1</label>
                   <input name="bankPrivateLocation" value={formData.bankPrivateLocation} onChange={handleInputChange} />
                   {errors.bankPrivateLocation && <p className="error-text">{errors.bankPrivateLocation}</p>}
+                </div>
+                <div className="form-group">
+                  <label>Field 2 (optional)</label>
+                  <input name="bankPrivateLocation2" value={formData.bankPrivateLocation2} onChange={handleInputChange} />
+                </div>
+                <div className="form-group">
+                  <label>Field 3 (optional)</label>
+                  <input name="bankPrivateLocation3" value={formData.bankPrivateLocation3} onChange={handleInputChange} />
                 </div>
                 <div className="form-row">
                   <div className="form-group">
@@ -425,15 +552,32 @@ const ReportFoundItem = () => {
                     {errors.purseName && <p className="error-text">{errors.purseName}</p>}
                   </div>
                   <div className="form-group">
+                    {/* OTP note only for fields where user might expect OTP */}
                     <label className="required">Student ID or NIC number</label>
+                    <small style={{ color: '#A1A5AB', fontSize: '0.75rem', marginBottom: '0.5rem', display: 'block', opacity: 0.85 }}>Not used for OTP</small>
                     <input
                       name="purseIdNumber"
                       value={formData.purseIdNumber}
                       onChange={handleInputChange}
                       placeholder="NIC: 200012345678 / Student ID: 123456A"
-                      maxLength={12}
                     />
                     {errors.purseIdNumber && <p className="error-text">{errors.purseIdNumber}</p>}
+                  </div>
+                  <div className="private-block">
+                    <h4>Where did you find it?</h4>
+                    <div className="form-group">
+                      <label className="required">Field 1</label>
+                      <input name="purseWithIdLocation1" value={formData.purseWithIdLocation1} onChange={handleInputChange} />
+                      {errors.purseWithIdLocation1 && <p className="error-text">{errors.purseWithIdLocation1}</p>}
+                    </div>
+                    <div className="form-group">
+                      <label>Field 2 (optional)</label>
+                      <input name="purseWithIdLocation2" value={formData.purseWithIdLocation2} onChange={handleInputChange} />
+                    </div>
+                    <div className="form-group">
+                      <label>Field 3 (optional)</label>
+                      <input name="purseWithIdLocation3" value={formData.purseWithIdLocation3} onChange={handleInputChange} />
+                    </div>
                   </div>
                 </>
               )}
@@ -452,9 +596,17 @@ const ReportFoundItem = () => {
                     {errors.purseOtherItems && <p className="error-text">{errors.purseOtherItems}</p>}
                   </div>
                   <div className="form-group">
-                    <label className="required">Location</label>
+                    <label className="required">Field 1</label>
                     <input name="pursePrivateLocation" value={formData.pursePrivateLocation} onChange={handleInputChange} />
                     {errors.pursePrivateLocation && <p className="error-text">{errors.pursePrivateLocation}</p>}
+                  </div>
+                  <div className="form-group">
+                    <label>Field 2 (optional)</label>
+                    <input name="pursePrivateLocation2" value={formData.pursePrivateLocation2} onChange={handleInputChange} />
+                  </div>
+                  <div className="form-group">
+                    <label>Field 3 (optional)</label>
+                    <input name="pursePrivateLocation3" value={formData.pursePrivateLocation3} onChange={handleInputChange} />
                   </div>
                   <div className="form-row">
                     <div className="form-group">
@@ -508,9 +660,17 @@ const ReportFoundItem = () => {
               <div className="private-block">
                 <h4>Private Fields (not shown publicly)</h4>
                 <div className="form-group">
-                  <label className="required">Location</label>
+                  <label className="required">Field 1</label>
                   <input name="otherPrivateLocation" value={formData.otherPrivateLocation} onChange={handleInputChange} />
                   {errors.otherPrivateLocation && <p className="error-text">{errors.otherPrivateLocation}</p>}
+                </div>
+                <div className="form-group">
+                  <label>Field 2 (optional)</label>
+                  <input name="otherPrivateLocation2" value={formData.otherPrivateLocation2} onChange={handleInputChange} />
+                </div>
+                <div className="form-group">
+                  <label>Field 3 (optional)</label>
+                  <input name="otherPrivateLocation3" value={formData.otherPrivateLocation3} onChange={handleInputChange} />
                 </div>
                 <div className="form-row">
                   <div className="form-group">

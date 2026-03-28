@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { notificationsAPI } from '../services/api';
 import { toast } from 'react-toastify';
+import { maskSensitiveDescription } from '../utils/itemDisplayUtils';
 
 const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
@@ -73,7 +74,7 @@ const Notifications = () => {
               <div className="notification-content">
                 <span className={`notification-type ${notification.type}`}>{notification.type}</span>
                 <h3>{notification.title}</h3>
-                <p>{notification.message}</p>
+                <p>{maskSensitiveDescription(notification.message || '')}</p>
                 <small>{new Date(notification.created_at).toLocaleString()}</small>
               </div>
               <div className="notification-actions">
@@ -92,7 +93,7 @@ const Notifications = () => {
                 )}
                 {notification.type === 'claim' && (
                   <Link
-                    to="/my-claims"
+                    to={notification.claim_id ? `/my-claims?claimId=${notification.claim_id}` : '/my-claims'}
                     className="btn-link"
                     onClick={() => {
                       if (!notification.is_read) {

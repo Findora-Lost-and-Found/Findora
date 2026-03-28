@@ -5,8 +5,8 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
 
-import Navbar from './components/Navbar';
 import PrivateRoute from './components/PrivateRoute';
+import AppShell from './components/layout/AppShell';
 
 // Lazy-load pages so one broken page does not blank the whole app at startup.
 const Login = lazy(() => import('./pages/Login'));
@@ -48,8 +48,7 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <div className="app">
-          <Navbar />
+        <AppShell>
           <Suspense fallback={<div className="loading">Loading page...</div>}>
             <Routes>
               {/* Public Routes */}
@@ -94,7 +93,7 @@ function App() {
             </Routes>
           </Suspense>
           <ToastContainer position="top-right" autoClose={3000} />
-        </div>
+        </AppShell>
       </AuthProvider>
     </Router>
   );

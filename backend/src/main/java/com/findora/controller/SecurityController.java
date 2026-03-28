@@ -30,7 +30,7 @@ import com.findora.service.ItemService;
 import com.findora.service.SecurityService;
 
 /**
- * SecurityController - Security officer endpoints (TODO: Full implementation).
+ * SecurityController - Security officer endpoints.
  */
 @RestController
 @RequestMapping("/api/security")
@@ -112,10 +112,13 @@ public class SecurityController {
                 "message", "Handover request submitted successfully"
             ));
         } catch (IllegalArgumentException e) {
+            log.warn("Handover request validation failed: {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
         } catch (Exception e) {
+            log.error("Error processing handover request for itemId: {}", 
+                request != null ? request.getItemId() : "null", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("success", false, "message", "Server error"));
+                .body(Map.of("success", false, "message", "Server error: " + e.getMessage()));
         }
     }
 
@@ -206,7 +209,11 @@ public class SecurityController {
     @GetMapping("/stats")
     public ResponseEntity<?> getSecurityStats() {
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-            .body(Map.of("message", "TODO: Implement security stats"));
+<<<<<<< HEAD
+            .body(Map.of("message", "Security stats endpoint not yet implemented"));
+=======
+            .body(Map.of("message", "Security stats are not implemented yet"));
+>>>>>>> develop-i
     }
 
     /**
