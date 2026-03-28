@@ -1,7 +1,10 @@
 package com.findora.security;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.Map;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -13,6 +16,9 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
+
+import com.findora.model.User;
+import com.findora.repository.UserRepository;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -28,11 +34,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final UserDetailsService userDetailsService;
+    private final UserRepository userRepository;
+    private final ObjectMapper objectMapper;
     private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, UserDetailsService userDetailsService) {
+    public JwtAuthenticationFilter(
+            JwtTokenProvider jwtTokenProvider,
+            UserDetailsService userDetailsService,
+            UserRepository userRepository,
+            ObjectMapper objectMapper) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.userDetailsService = userDetailsService;
+        this.userRepository = userRepository;
+        this.objectMapper = objectMapper;
     }
 
     /**
@@ -50,6 +64,36 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (username != null) {
                 try {
+                    User user = userRepository.findByUsername(username).orElse(null);
+                    if (user == null) {
+                        log.warn("JWT principal '{}' not found in database, skipping authentication", username);
+                        filterChain.doFilter(request, response);
+                        return;
+                    }
+
+                    if (Boolean.TRUE.equals(user.getIsSuspended())
+                            && user.getSuspensionUntil() != null
+                            && LocalDateTime.now().isAfter(user.getSuspensionUntil())) {
+                        user.setIsSuspended(false);
+                        user.setSuspensionUntil(null);
+                        user.setBadPostAttempts(0);
+                        userRepository.save(user);
+                    }
+
+                    if (Boolean.TRUE.equals(user.getIsBanned())) {
+                        writeForbidden(response, "Your account is permanently banned. You can submit an appeal.");
+                        return;
+                    }
+
+                    if (Boolean.TRUE.equals(user.getIsSuspended())) {
+                        String message = "Your account is suspended. You can submit an appeal.";
+                        if (user.getSuspensionUntil() != null) {
+                            message = "Your account is suspended until " + user.getSuspensionUntil() + ". You can submit an appeal.";
+                        }
+                        writeForbidden(response, message);
+                        return;
+                    }
+
                     UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
                     UsernamePasswordAuthenticationToken authentication =
@@ -81,5 +125,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return bearerToken.substring(7);
         }
         return null;
+    }
+
+    private void writeForbidden(HttpServletResponse response, String message) throws IOException {
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        response.getWriter().write(objectMapper.writeValueAsString(Map.of(
+            "success", false,
+            "message", message
+        )));
     }
 }

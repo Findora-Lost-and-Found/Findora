@@ -19,6 +19,7 @@ import com.findora.model.User;
 import com.findora.repository.NotificationRepository;
 import com.findora.repository.UserRepository;
 import com.findora.security.JwtTokenProvider;
+import com.findora.service.AccessControlService.AccessState;
 
 /**
  * AuthService - Authentication and user registration business logic.
@@ -33,6 +34,7 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final EmailService emailService;
     private final NotificationRepository notificationRepository;
+    private final AccessControlService accessControlService;
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private static final Random RANDOM = new Random();
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
@@ -45,12 +47,14 @@ public class AuthService {
             PasswordEncoder passwordEncoder,
             JwtTokenProvider jwtTokenProvider,
             EmailService emailService,
-            NotificationRepository notificationRepository) {
+            NotificationRepository notificationRepository,
+            AccessControlService accessControlService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.emailService = emailService;
         this.notificationRepository = notificationRepository;
+        this.accessControlService = accessControlService;
     }
 
     /**
@@ -83,12 +87,9 @@ public class AuthService {
             throw new RuntimeException("Invalid password");
         }
 
-        if (user.getIsBanned()) {
-            throw new RuntimeException("User is banned");
-        }
-
-        if (user.getIsSuspended()) {
-            throw new RuntimeException("User account is suspended");
+        AccessState accessState = accessControlService.refreshAndGetAccessState(user);
+        if (accessState != AccessState.ALLOWED) {
+            throw new RuntimeException(accessControlService.accessBlockedMessage(user, accessState));
         }
 
         // Generate JWT token
@@ -409,6 +410,8 @@ public class AuthService {
             user.getIsApproved(),
             user.getIsBanned(),
             user.getIsSuspended(),
+            user.getBadPostAttempts(),
+            user.getSuspensionUntil() == null ? null : user.getSuspensionUntil().toString(),
             user.getCreatedAt() == null ? null : user.getCreatedAt().toString()
         );
     }

@@ -31,7 +31,7 @@ const SecurityPendingClaims = () => {
       return 'https://via.placeholder.com/80x80?text=No+Photo';
     }
 
-    return `http://localhost:8080/${String(imagePath).replace(/^\/+/, '')}`;
+    return `${(import.meta.env.VITE_API_URL || 'http://localhost:8083/api').replace(/\/api\/?$/, '')}/${String(imagePath).replace(/^\/+/, '')}`;`
   };
 
   const handleOtpChange = (claimId, value) => {

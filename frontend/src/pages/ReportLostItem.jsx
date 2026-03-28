@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { itemsAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { NIC_HELPER_TEXT, NIC_VALIDATION_MESSAGE, isValidNic, isValidNicNumber, normalizeNic, normalizeNicNumber, sanitizeNicInput } from '../utils/nicUtils';
 import { isValidStudentIdNumber, normalizeStudentIdNumber, validateStudentID } from '../utils/studentIdUtils';
 import {
@@ -78,6 +79,7 @@ const ReportLostItem = () => {
   });
 
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const handleCategoryChange = (e) => {
     setCategory(e.target.value);
@@ -327,7 +329,13 @@ const ReportLostItem = () => {
       toast.success('Lost item reported successfully!');
       navigate('/lost-items');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to submit. Please try again.');
+      const message = error.response?.data?.message || 'Failed to submit. Please try again.';
+      toast.error(message);
+
+      if (/suspend|banned|ban/i.test(String(message))) {
+        logout();
+        navigate('/login', { replace: true });
+      }
     } finally {
       setLoading(false);
     }

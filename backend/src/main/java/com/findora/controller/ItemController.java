@@ -71,7 +71,10 @@ public class ItemController {
     @Value("${app.upload.dir:uploads}")
     private String uploadDir;
 
-    public ItemController(ItemService itemService, ItemRepository itemRepository, UserRepository userRepository) {
+    public ItemController(
+            ItemService itemService,
+            ItemRepository itemRepository,
+            UserRepository userRepository) {
         this.itemService = itemService;
         this.itemRepository = itemRepository;
         this.userRepository = userRepository;
@@ -103,13 +106,13 @@ public class ItemController {
      */
     @GetMapping
     public ResponseEntity<?> getAllItems(
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(defaultValue = "createdAt,desc") String sort,
-            @RequestParam(required = false) String category,
-            @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) String type,
-            @RequestParam(required = false) String status) {
+            @RequestParam(name = "page", defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "10") Integer size,
+            @RequestParam(name = "sort", defaultValue = "createdAt,desc") String sort,
+            @RequestParam(name = "category", required = false) String category,
+            @RequestParam(name = "keyword", required = false) String keyword,
+            @RequestParam(name = "type", required = false) String type,
+            @RequestParam(name = "status", required = false) String status) {
 
         try {
             log.debug("GET /api/items: page={}, size={}, category={}, keyword={}", page, size, category, keyword);
@@ -137,7 +140,7 @@ public class ItemController {
      * GET /api/items/:id - Get single item by ID.
      */
     @GetMapping("/{id}")
-    public ResponseEntity<?> getItem(@PathVariable Long id) {
+    public ResponseEntity<?> getItem(@PathVariable("id") Long id) {
         try {
             Optional<ItemDTO> item = itemService.getItemById(id);
 
@@ -160,12 +163,12 @@ public class ItemController {
      */
     @GetMapping("/my/items")
     public ResponseEntity<?> getMyItems(
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(required = false) String type,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) String category,
-            @RequestParam(required = false) String keyword) {
+            @RequestParam(name = "page", defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "10") Integer size,
+            @RequestParam(name = "type", required = false) String type,
+            @RequestParam(name = "status", required = false) String status,
+            @RequestParam(name = "category", required = false) String category,
+            @RequestParam(name = "keyword", required = false) String keyword) {
 
         try {
             Long userId = getCurrentUserId();
@@ -301,7 +304,7 @@ public class ItemController {
     @PutMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> updateItemStatus(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @RequestBody Map<String, String> statusUpdate) {
         try {
             Item item = itemRepository.findById(id)
@@ -337,7 +340,7 @@ public class ItemController {
      * Requires authorization to delete item.
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteItem(@PathVariable Long id) {
+    public ResponseEntity<?> deleteItem(@PathVariable("id") Long id) {
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
             .body(Map.of("message", "TODO: Implement item deletion"));
     }

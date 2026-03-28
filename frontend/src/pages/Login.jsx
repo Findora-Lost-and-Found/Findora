@@ -10,6 +10,7 @@ const Login = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [accessBlockedMessage, setAccessBlockedMessage] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -24,7 +25,12 @@ const Login = () => {
     const result = await login(formData.identifier, formData.password);
 
     if (result.success) {
+      setAccessBlockedMessage('');
       navigate(getHomeRouteForUser(result.user));
+    } else {
+      const message = String(result.message || '');
+      const isAccessBlocked = /suspend|banned|ban/i.test(message);
+      setAccessBlockedMessage(isAccessBlocked ? message : '');
     }
 
     setLoading(false);
@@ -79,6 +85,18 @@ const Login = () => {
           <span>|</span>
           <Link to="/signup">Create Account</Link>
         </div>
+
+        {accessBlockedMessage && (
+          <div className="login-appeal-block">
+            <p>{accessBlockedMessage}</p>
+            <Link
+              to={`/appeal-access?identifier=${encodeURIComponent(formData.identifier || '')}`}
+              className="btn-secondary login-appeal-link"
+            >
+              Submit Access Appeal
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

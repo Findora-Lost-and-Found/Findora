@@ -32,6 +32,7 @@ import com.findora.repository.ItemRepository;
 public class ItemService {
 
     private final ItemRepository itemRepository;
+    private final AccessControlService accessControlService;
     private static final Logger log = LoggerFactory.getLogger(ItemService.class);
     private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_DATE_TIME;
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
@@ -40,8 +41,9 @@ public class ItemService {
         Pattern.compile("\\n?__PRIVATE_(?:CVV|CARD)__=\\d{3,16}");
     private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
 
-    public ItemService(ItemRepository itemRepository) {
+    public ItemService(ItemRepository itemRepository, AccessControlService accessControlService) {
         this.itemRepository = itemRepository;
+        this.accessControlService = accessControlService;
     }
 
     /**
@@ -226,6 +228,12 @@ public class ItemService {
      */
     @Transactional
     public Item createItem(Item item) {
+        accessControlService.validatePostLanguage(
+            item.getUserId(),
+            item.getItemName(),
+            item.getDescription(),
+            item.getLocation()
+        );
         log.info("Creating item: {} for user: {}", item.getItemName(), item.getUserId());
         return itemRepository.save(item);
     }

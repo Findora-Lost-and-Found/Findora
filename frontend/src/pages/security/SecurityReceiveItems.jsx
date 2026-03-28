@@ -31,7 +31,7 @@ const SecurityReceiveItems = () => {
   const getImageUrl = (item) => {
     const imagePath = item.imageUrl || item.image_url;
     if (imagePath) {
-      return `http://localhost:8080/${String(imagePath).replace(/^\/+/, '')}`;
+      return `${(import.meta.env.VITE_API_URL || 'http://localhost:8083/api').replace(/\/api\/?$/, '')}/${String(imagePath).replace(/^\/+/, '')}`;`
     }
     return 'https://via.placeholder.com/80x80?text=No+Photo';
   };

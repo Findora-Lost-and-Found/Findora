@@ -13,6 +13,7 @@ const configuredApiUrl = import.meta.env.VITE_API_URL;
 const API_ORIGIN = (configuredApiUrl?.includes('localhost:5000')
   ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')
   : configuredApiUrl || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
+const STUDENT_DASHBOARD_IMAGE_FALLBACK = 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22200%22 viewBox=%220 0 300 200%22%3E%3Crect width=%22300%22 height=%22200%22 fill=%22%23E5E7EB%22/%3E%3Ctext x=%22150%22 y=%22106%22 text-anchor=%22middle%22 fill=%22%236B7280%22 font-size=%2216%22 font-family=%22Arial%22%3EItem image%3C/text%3E%3C/svg%3E';
 
 const readFirst = (obj, keys, fallback = '') => {
   for (const key of keys) {
@@ -26,17 +27,22 @@ const readFirst = (obj, keys, fallback = '') => {
 
 const toImageUrl = (rawImage) => {
   if (!rawImage) {
-    return 'https://via.placeholder.com/300x200?text=Item+Image';
+    return STUDENT_DASHBOARD_IMAGE_FALLBACK;
   }
 
   const normalized = String(rawImage).trim().replace(/\\/g, '/');
 
   if (!normalized || normalized === 'null' || normalized === 'undefined') {
-    return 'https://via.placeholder.com/300x200?text=Item+Image';
+    return STUDENT_DASHBOARD_IMAGE_FALLBACK;
   }
 
   if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
     return normalized;
+  }
+
+  const looksLikePath = normalized.includes('/') || normalized.includes('.') || normalized.startsWith('uploads');
+  if (!looksLikePath) {
+    return STUDENT_DASHBOARD_IMAGE_FALLBACK;
   }
 
   const normalizedPath = normalized.replace(/\/+/g, '/').replace(/^\/+/, '');
@@ -86,7 +92,7 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
           ...item,
           name: item.name || item.item_name,
           date_found: item.date_found || item.date || item.created_at,
-          image: toImageUrl(readFirst(item, ['image', 'image_url', 'imageUrl'])),
+          image: toImageUrl(readFirst(item, ['image_url', 'imageUrl', 'image'])),
           category: normalizeCategory(item.category, item.name || item.item_name),
           posted_by: item.posted_by || {
             id: item.userId || item.user_id,

@@ -23,6 +23,7 @@ import com.findora.model.User;
 import com.findora.repository.NotificationRepository;
 import com.findora.repository.UserRepository;
 import com.findora.security.JwtTokenProvider;
+import com.findora.service.AccessControlService.AccessState;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
@@ -42,12 +43,23 @@ class AuthServiceTest {
     @Mock
     private NotificationRepository notificationRepository;
 
+    @Mock
+    private AccessControlService accessControlService;
+
     private AuthService authService;
 
     @BeforeEach
     @SuppressWarnings("unused")
     void setUp() {
-        authService = new AuthService(userRepository, passwordEncoder, jwtTokenProvider, emailService, notificationRepository);
+        when(accessControlService.refreshAndGetAccessState(any(User.class))).thenReturn(AccessState.ALLOWED);
+        authService = new AuthService(
+            userRepository,
+            passwordEncoder,
+            jwtTokenProvider,
+            emailService,
+            notificationRepository,
+            accessControlService
+        );
     }
 
     @Test

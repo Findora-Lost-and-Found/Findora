@@ -212,7 +212,7 @@ public class ClaimController {
     @PostMapping("/{id}/otp")
     @PreAuthorize("hasAnyRole('STUDENT', 'STAFF')")
     @Transactional
-    public ResponseEntity<?> generateOtp(@PathVariable Long id) {
+    public ResponseEntity<?> generateOtp(@PathVariable("id") Long id) {
         try {
             Long currentUserId = getCurrentUserId();
             Claim claim = claimCreationService.generateOtpForClaim(id, currentUserId);
@@ -242,8 +242,8 @@ public class ClaimController {
     @GetMapping("/my")
     @PreAuthorize("hasAnyRole('STUDENT', 'STAFF', 'SECURITY', 'ADMIN')")
     public ResponseEntity<?> getMyClaims(
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
+            @RequestParam(name = "page", defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "10") Integer size) {
         try {
             Long currentUserId = getCurrentUserId();
             Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "claimedAt"));
@@ -294,7 +294,7 @@ public class ClaimController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getClaimById(@PathVariable Long id) {
+    public ResponseEntity<?> getClaimById(@PathVariable("id") Long id) {
         return claimRepository.findById(id)
             .<ResponseEntity<?>>map(claim -> ResponseEntity.ok(Map.of(
                 "success", true,
@@ -315,8 +315,8 @@ public class ClaimController {
 
     @GetMapping("/pending")
     public ResponseEntity<?> getPendingClaims(
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
+            @RequestParam(name = "page", defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "10") Integer size) {
         List<Claim> claims = claimRepository.findByStatusInOrderByClaimedAtDesc(OPEN_STATUSES);
 
         List<Map<String, Object>> rows = claims.stream().map(claim -> {
