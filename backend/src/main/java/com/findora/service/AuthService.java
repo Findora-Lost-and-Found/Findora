@@ -37,6 +37,8 @@ public class AuthService {
     private static final Random RANDOM = new Random();
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
     private static final Pattern PHONE_PATTERN = Pattern.compile("^\\d{10}$");
+    private static final Pattern STRONG_PASSWORD_PATTERN = Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z\\d])\\S{8,64}$");
+    private static final String PASSWORD_POLICY_MESSAGE = "Password must be 8-64 characters and include uppercase, lowercase, number, and special character.";
 
     public AuthService(
             UserRepository userRepository,
@@ -118,6 +120,10 @@ public class AuthService {
             throw new RuntimeException("Phone number invalid format");
         }
 
+        if (!isValidPassword(password)) {
+            throw new RuntimeException(PASSWORD_POLICY_MESSAGE);
+        }
+
         if (userRepository.existsByUsername(username)) {
             throw new RuntimeException("Username already exists");
         }
@@ -193,6 +199,10 @@ public class AuthService {
 
     private boolean isValidPhone(String phone) {
         return phone != null && PHONE_PATTERN.matcher(phone).matches();
+    }
+
+    private boolean isValidPassword(String password) {
+        return password != null && STRONG_PASSWORD_PATTERN.matcher(password).matches();
     }
 
     /**
@@ -317,6 +327,10 @@ public class AuthService {
 
         if (!user.getResetOtp().equals(otp)) {
             throw new RuntimeException("Invalid OTP");
+        }
+
+        if (!isValidPassword(newPassword)) {
+            throw new RuntimeException(PASSWORD_POLICY_MESSAGE);
         }
 
         user.setPassword(passwordEncoder.encode(newPassword));

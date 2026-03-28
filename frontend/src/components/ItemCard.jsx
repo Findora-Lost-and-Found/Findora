@@ -18,6 +18,7 @@ const ItemCard = ({ item, showActions = false, onDelete }) => {
   const formattedTime = item.time || '--:--';
   const displayStatus = item.status || 'active';
   const displayDescription = maskSensitiveDescription(item.description, normalizedCategory);
+  const badgeLabel = normalizedCategory || 'Other';
   const rawImage = item.image_url || item.imageUrl || item.image;
   const normalizedImage = rawImage ? String(rawImage).trim().replace(/\\/g, '/') : '';
   const normalizedPath = normalizedImage ? normalizedImage.replace(/\/+/g, '/').replace(/^\/+/, '') : '';
