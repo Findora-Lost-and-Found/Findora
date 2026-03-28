@@ -1,4 +1,4 @@
-﻿package com.findora.service;
+package com.findora.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -37,6 +37,8 @@ public class AuthService {
     private static final Random RANDOM = new Random();
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
     private static final Pattern PHONE_PATTERN = Pattern.compile("^\\d{10}$");
+    private static final Pattern STRONG_PASSWORD_PATTERN = Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z\\d])\\S{8,64}$");
+    private static final String PASSWORD_POLICY_MESSAGE = "Password must be 8-64 characters and include uppercase, lowercase, number, and special character.";
 
     public AuthService(
             UserRepository userRepository,
@@ -105,7 +107,6 @@ public class AuthService {
 
     /**
      * Register new user.
-        * Includes validation and email verification OTP flow.
      */
     public AuthResponse register(String username, String email, String password, String fullName, String role, String phone) {
         String normalizedEmail = normalizeEmail(email);
@@ -117,6 +118,10 @@ public class AuthService {
 
         if (normalizedPhone != null && !isValidPhone(normalizedPhone)) {
             throw new RuntimeException("Phone number invalid format");
+        }
+
+        if (!isValidPassword(password)) {
+            throw new RuntimeException(PASSWORD_POLICY_MESSAGE);
         }
 
         if (userRepository.existsByUsername(username)) {
@@ -196,6 +201,10 @@ public class AuthService {
         return phone != null && PHONE_PATTERN.matcher(phone).matches();
     }
 
+    private boolean isValidPassword(String password) {
+        return password != null && STRONG_PASSWORD_PATTERN.matcher(password).matches();
+    }
+
     /**
      * Verify email with OTP.
      */
@@ -236,7 +245,6 @@ public class AuthService {
 
     /**
      * Regenerate verification OTP.
-        * Sends the generated OTP to the user email.
      */
     public void resendVerificationOtp(String usernameOrEmail) {
         User user = userRepository.findByUsername(usernameOrEmail)
@@ -250,6 +258,68 @@ public class AuthService {
         emailService.sendVerificationOtp(user.getEmail(), user.getFullName(), user.getVerificationOtp());
 
         log.info("Verification OTP regenerated for user {}", user.getUsername());
+    }
+
+    public void requestPhoneUpdate(String username, String newPhone) {
+        User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+        String normalizedPhone = normalizePhone(newPhone);
+        if (normalizedPhone == null || normalizedPhone.isBlank()) {
+            throw new RuntimeException("Phone number is required");
+        }
+
+        if (!isValidPhone(normalizedPhone)) {
+            throw new RuntimeException("Phone number invalid format");
+        }
+
+        if (normalizedPhone.equals(user.getPhone())) {
+            throw new RuntimeException("New phone number must be different from current phone");
+        }
+
+        if (userRepository.existsByPhone(normalizedPhone) || userRepository.existsByPendingPhone(normalizedPhone)) {
+            throw new RuntimeException("Phone number already in use");
+        }
+
+        String otp = generateOtp();
+        user.setPendingPhone(normalizedPhone);
+        user.setPhoneVerificationOtp(otp);
+        user.setPhoneOtpExpiry(LocalDateTime.now().plusMinutes(15));
+        user.setIsPhoneVerified(false);
+        userRepository.save(user);
+
+        emailService.sendPhoneChangeOtp(user.getEmail(), user.getFullName(), otp, normalizedPhone);
+        log.info("Phone update OTP generated for user {}", user.getUsername());
+    }
+
+    public void verifyPhoneOtp(String username, String otp) {
+        User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getPendingPhone() == null || user.getPendingPhone().isBlank()) {
+            throw new RuntimeException("No pending phone update request found");
+        }
+
+        if (otp == null || otp.isBlank()) {
+            throw new RuntimeException("OTP is required");
+        }
+
+        if (user.getPhoneOtpExpiry() == null || LocalDateTime.now().isAfter(user.getPhoneOtpExpiry())) {
+            throw new RuntimeException("OTP expired");
+        }
+
+        if (!otp.equals(user.getPhoneVerificationOtp())) {
+            throw new RuntimeException("Invalid OTP");
+        }
+
+        user.setPhone(user.getPendingPhone());
+        user.setPendingPhone(null);
+        user.setPhoneVerificationOtp(null);
+        user.setPhoneOtpExpiry(null);
+        user.setIsPhoneVerified(true);
+        userRepository.save(user);
+
+        log.info("Phone number updated and verified for user {}", user.getUsername());
     }
 
     /**
@@ -272,7 +342,6 @@ public class AuthService {
         emailService.sendPasswordResetOtp(user.getEmail(), user.getFullName(), otp);
 
         log.info("Password reset OTP generated for user {}", user.getUsername());
-        // OTP is sent via emailService.sendPasswordResetOtp above.
         return otp;
     }
 
@@ -289,6 +358,10 @@ public class AuthService {
 
         if (!user.getResetOtp().equals(otp)) {
             throw new RuntimeException("Invalid OTP");
+        }
+
+        if (!isValidPassword(newPassword)) {
+            throw new RuntimeException(PASSWORD_POLICY_MESSAGE);
         }
 
         user.setPassword(passwordEncoder.encode(newPassword));
@@ -359,6 +432,8 @@ public class AuthService {
             user.getRole().name().toLowerCase(),
             user.getEmail(),
             user.getPhone(),
+            user.getPendingPhone(),
+            user.getIsPhoneVerified(),
             user.getIsVerified(),
             user.getIsApproved(),
             user.getIsBanned(),

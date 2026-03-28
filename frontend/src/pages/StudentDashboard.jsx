@@ -117,7 +117,6 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
         <div className="dashboard-top">
           <div>
             <h1>Welcome, {user?.full_name}!</h1>
-            <p className="role-badge">Role: {user?.role}</p>
           </div>
           {canUseItemDashboard && (
             <button

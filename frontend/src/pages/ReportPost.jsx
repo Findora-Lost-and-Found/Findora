@@ -1,16 +1,55 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { reportsAPI } from '../services/api';
+import { itemsAPI, reportsAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import './ReportPost.css';
 
 const ReportPost = () => {
   const navigate = useNavigate();
   const { itemId } = useParams();
+  const { user } = useAuth();
   const [selectedReason, setSelectedReason] = useState('');
   const [description, setDescription] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [checkingOwnership, setCheckingOwnership] = useState(true);
+  const [blockedForSelfReport, setBlockedForSelfReport] = useState(false);
+
+  const userRole = useMemo(() => String(user?.role || '').toLowerCase(), [user?.role]);
+  const shouldRestrictSelfReport = userRole === 'student' || userRole === 'staff';
+
+  useEffect(() => {
+    const checkOwnership = async () => {
+      if (!itemId || !shouldRestrictSelfReport) {
+        setCheckingOwnership(false);
+        return;
+      }
+
+      try {
+        const response = await itemsAPI.getById(itemId);
+        const item = response.data || {};
+        const ownerId = Number(item.user_id ?? item.userId ?? item.posted_by?.id);
+        const currentUserId = Number(user?.id);
+        const isOwnItem = Number.isFinite(ownerId)
+          && Number.isFinite(currentUserId)
+          && ownerId === currentUserId;
+
+        if (isOwnItem) {
+          setBlockedForSelfReport(true);
+          toast.error('You cannot report your own item');
+          navigate('/found-items', { replace: true });
+        }
+      } catch (error) {
+        toast.error('Unable to validate post owner. Please try again.');
+        navigate('/found-items', { replace: true });
+      } finally {
+        setCheckingOwnership(false);
+      }
+    };
+
+    checkOwnership();
+  }, [itemId, navigate, shouldRestrictSelfReport, user?.id]);
 
   const reportReasons = [
     {
@@ -32,6 +71,11 @@ const ReportPost = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (blockedForSelfReport) {
+      toast.error('You cannot report your own item');
+      return;
+    }
+
     if (!selectedReason) {
       toast.error('Please select a report reason');
       return;
@@ -70,6 +114,14 @@ const ReportPost = () => {
         </div>
       </div>
     );
+  }
+
+  if (checkingOwnership) {
+    return <div className="loading">Loading...</div>;
+  }
+
+  if (blockedForSelfReport) {
+    return null;
   }
 
   return (

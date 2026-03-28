@@ -47,6 +47,7 @@ class MatchSchedulerIntegrationTest {
     private ClaimRepository claimRepository;
 
     @BeforeEach
+    @SuppressWarnings("unused")
     void setUp() {
         claimRepository.deleteAll();
         notificationRepository.deleteAll();

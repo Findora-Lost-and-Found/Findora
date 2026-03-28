@@ -191,7 +191,6 @@ const Dashboard = () => {
         <div className="dashboard-top">
           <div>
             <h1>Welcome, {user?.full_name}!</h1>
-            <p className="role-badge">Role: {user?.role}</p>
           </div>
           {(user?.role === 'student' || user?.role === 'staff') && (
             <button 

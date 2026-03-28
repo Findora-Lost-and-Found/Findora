@@ -1,4 +1,4 @@
-﻿package com.findora.controller;
+package com.findora.controller;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -54,7 +54,7 @@ class ReportControllerIntegrationTest {
     private Item item;
 
     @BeforeEach
-    
+    @SuppressWarnings("unused")
     void setUp() {
         reportRepository.deleteAll();
         itemRepository.deleteAll();

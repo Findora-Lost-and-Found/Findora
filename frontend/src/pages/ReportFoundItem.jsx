@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { itemsAPI } from '../services/api';
 import { toast } from 'react-toastify';
@@ -97,7 +97,7 @@ const ReportFoundItem = () => {
       if (!formData.nicName.trim()) nextErrors.nicName = 'Name is required.';
       if (!formData.nicNumber.trim()) nextErrors.nicNumber = 'NIC Number is required.';
       else if (!isValidNic(formData.nicNumber)) nextErrors.nicNumber = NIC_VALIDATION_MESSAGE;
-      if (!formData.nicLocation1.trim()) nextErrors.nicLocation1 = 'Field 1 is required.';
+      if (!formData.nicLocation1.trim()) nextErrors.nicLocation1 = 'Location is required.';
     }
 
     if (category === 'Student / Staff ID') {
@@ -107,7 +107,7 @@ const ReportFoundItem = () => {
       if (formData.studentOrStaffId.trim() && !isValidStudentIdNumber(formData.studentOrStaffId)) {
         nextErrors.studentOrStaffId = 'Student ID must be 6 digits followed by 1 letter.';
       }
-      if (!formData.idLocation1.trim()) nextErrors.idLocation1 = 'Field 1 is required.';
+      if (!formData.idLocation1.trim()) nextErrors.idLocation1 = 'Location is required.';
     }
 
     if (category === 'Bank Card') {
@@ -130,7 +130,7 @@ const ReportFoundItem = () => {
         ) {
           nextErrors.purseIdNumber = 'Enter a valid NIC or Student ID (6 digits + 1 letter).';
         }
-        if (!formData.purseWithIdLocation1.trim()) nextErrors.purseWithIdLocation1 = 'Field 1 is required.';
+        if (!formData.purseWithIdLocation1.trim()) nextErrors.purseWithIdLocation1 = 'Location is required.';
       }
 
       if (purseOption === 'without-id') {
@@ -184,13 +184,13 @@ const ReportFoundItem = () => {
     if (category === 'NIC') {
       item_name = `NIC - ${formData.nicName || 'Unknown'}`;
       description = `NIC Number: ${normalizeNic(formData.nicNumber)}`;
-      location = [formData.nicLocation1, formData.nicLocation2, formData.nicLocation3].filter(Boolean).join(', ') || location;
+      location = formData.nicLocation1.trim() || location;
     }
 
     if (category === 'Student / Staff ID') {
       item_name = `Student/Staff ID - ${formData.idName || 'Unknown'}`;
       description = `ID Number: ${formData.studentOrStaffId}`;
-      location = [formData.idLocation1, formData.idLocation2, formData.idLocation3].filter(Boolean).join(', ') || location;
+      location = formData.idLocation1.trim() || location;
     }
 
     if (category === 'Bank Card') {
@@ -206,7 +206,7 @@ const ReportFoundItem = () => {
       image = formData.pursePhoto;
       if (purseOption === 'with-id') {
         description = `Claim with ID: ${formData.purseIdNumber}`;
-        location = [formData.purseWithIdLocation1, formData.purseWithIdLocation2, formData.purseWithIdLocation3].filter(Boolean).join(', ') || location;
+        location = formData.purseWithIdLocation1.trim() || location;
       } else {
         description = `Items inside: ${formData.purseOtherItems || formData.purseMoney}`;
         location = [formData.pursePrivateLocation, formData.pursePrivateLocation2, formData.pursePrivateLocation3].filter(Boolean).join(', ') || location;
@@ -311,17 +311,14 @@ const ReportFoundItem = () => {
               <div className="private-block">
                 <h4>Where did you find it?</h4>
                 <div className="form-group">
-                  <label className="required">Field 1</label>
-                  <input name="nicLocation1" value={formData.nicLocation1} onChange={handleInputChange} />
+                  <label className="required">Location</label>
+                  <input
+                    name="nicLocation1"
+                    value={formData.nicLocation1}
+                    onChange={handleInputChange}
+                    placeholder="e.g. Near Library entrance"
+                  />
                   {errors.nicLocation1 && <p className="error-text">{errors.nicLocation1}</p>}
-                </div>
-                <div className="form-group">
-                  <label>Field 2 (optional)</label>
-                  <input name="nicLocation2" value={formData.nicLocation2} onChange={handleInputChange} />
-                </div>
-                <div className="form-group">
-                  <label>Field 3 (optional)</label>
-                  <input name="nicLocation3" value={formData.nicLocation3} onChange={handleInputChange} />
                 </div>
               </div>
             </div>
@@ -358,17 +355,14 @@ const ReportFoundItem = () => {
               <div className="private-block">
                 <h4>Where did you find it?</h4>
                 <div className="form-group">
-                  <label className="required">Field 1</label>
-                  <input name="idLocation1" value={formData.idLocation1} onChange={handleInputChange} />
+                  <label className="required">Location</label>
+                  <input
+                    name="idLocation1"
+                    value={formData.idLocation1}
+                    onChange={handleInputChange}
+                    placeholder="e.g. Canteen area"
+                  />
                   {errors.idLocation1 && <p className="error-text">{errors.idLocation1}</p>}
-                </div>
-                <div className="form-group">
-                  <label>Field 2 (optional)</label>
-                  <input name="idLocation2" value={formData.idLocation2} onChange={handleInputChange} />
-                </div>
-                <div className="form-group">
-                  <label>Field 3 (optional)</label>
-                  <input name="idLocation3" value={formData.idLocation3} onChange={handleInputChange} />
                 </div>
               </div>
             </div>
@@ -509,17 +503,14 @@ const ReportFoundItem = () => {
                   <div className="private-block">
                     <h4>Where did you find it?</h4>
                     <div className="form-group">
-                      <label className="required">Field 1</label>
-                      <input name="purseWithIdLocation1" value={formData.purseWithIdLocation1} onChange={handleInputChange} />
+                      <label className="required">Location</label>
+                      <input
+                        name="purseWithIdLocation1"
+                        value={formData.purseWithIdLocation1}
+                        onChange={handleInputChange}
+                        placeholder="e.g. Bus stand"
+                      />
                       {errors.purseWithIdLocation1 && <p className="error-text">{errors.purseWithIdLocation1}</p>}
-                    </div>
-                    <div className="form-group">
-                      <label>Field 2 (optional)</label>
-                      <input name="purseWithIdLocation2" value={formData.purseWithIdLocation2} onChange={handleInputChange} />
-                    </div>
-                    <div className="form-group">
-                      <label>Field 3 (optional)</label>
-                      <input name="purseWithIdLocation3" value={formData.purseWithIdLocation3} onChange={handleInputChange} />
                     </div>
                   </div>
                 </>

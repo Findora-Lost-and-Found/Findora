@@ -20,7 +20,14 @@ export const AuthProvider = ({ children }) => {
   const getApiErrorMessage = (error, fallbackMessage) => {
     const apiError = error.response?.data;
     const validationMessage = apiError?.errors?.[0]?.msg;
-    return validationMessage || apiError?.message || fallbackMessage;
+    const genericError = apiError?.error;
+
+    // Axios network/CORS failures usually have no response payload.
+    if (!error.response) {
+      return 'Unable to reach server. Please make sure backend is running on port 8080.';
+    }
+
+    return validationMessage || apiError?.message || genericError || error.message || fallbackMessage;
   };
 
   useEffect(() => {

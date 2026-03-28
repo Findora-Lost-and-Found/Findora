@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './FoundItemCard.css';
@@ -17,26 +17,32 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
   const { user: currentUser } = useAuth();
   const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
   const [imageLoadFailed, setImageLoadFailed] = useState(false);
-
   const normalizedItem = {
     ...item,
     category: normalizeCategory(item.category, item.name || item.item_name)
   };
-
   const postedByName = normalizedItem?.posted_by?.full_name || normalizedItem?.full_name || normalizedItem?.username || 'Unknown User';
   const displayDescription = maskSensitiveDescription(normalizedItem.description, normalizedItem.category);
 
+  // Treat ownership as true only when both IDs are present and equal.
   const currentUserId = Number(currentUser?.id);
   const ownerIdRaw = normalizedItem?.posted_by?.id ?? normalizedItem?.user_id ?? normalizedItem?.userId;
   const ownerId = Number(ownerIdRaw);
-  const isOwnItem = Number.isFinite(currentUserId) && Number.isFinite(ownerId) && currentUserId === ownerId;
+  const isOwnItem = Number.isFinite(currentUserId)
+    && Number.isFinite(ownerId)
+    && currentUserId === ownerId;
 
   const rawImage = normalizedItem.image || normalizedItem.image_url || normalizedItem.imageUrl || '';
   const normalizedRawImage = String(rawImage || '').trim();
-  const hasRealImage = normalizedRawImage !== '' && !normalizedRawImage.includes('placeholder.com') && !normalizedRawImage.includes('via.placeholder');
+  const hasRealImage =
+    normalizedRawImage !== ''
+    && !normalizedRawImage.includes('placeholder.com')
+    && !normalizedRawImage.includes('via.placeholder');
 
   const resolvedImageSrc = useMemo(() => {
-    if (!hasRealImage) return '';
+    if (!hasRealImage) {
+      return '';
+    }
 
     const source = normalizedRawImage.replace(/\\/g, '/');
     if (source.startsWith('http://') || source.startsWith('https://')) {
@@ -51,8 +57,9 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
 
   const normalizedStatus = useMemo(() => String(normalizedItem?.status || '').toUpperCase(), [normalizedItem?.status]);
   const isWaitingForSecurity = normalizedStatus === 'HANDOVER_REQUESTED';
-  const isAlreadyHandedOver = normalizedStatus === 'HELD_BY_SECURITY' || normalizedStatus === 'HANDED_TO_SECURITY';
-
+  const isAlreadyHandedOver = normalizedStatus === 'HELD_BY_SECURITY'
+    || normalizedStatus === 'HANDED_TO_SECURITY';
+  
   const formatDate = (dateString) => {
     const options = { month: 'short', day: 'numeric', year: 'numeric' };
     return new Date(dateString).toLocaleDateString('en-US', options);
@@ -72,9 +79,11 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
         {hasRealImage && !imageLoadFailed ? (
           <img
             src={resolvedImageSrc}
-            alt={normalizedItem.name || 'Found item'}
+            alt={normalizedItem.name}
             className="card-image"
-            onError={() => setImageLoadFailed(true)}
+            onError={(e) => {
+              setImageLoadFailed(true);
+            }}
           />
         ) : (
           <SampleItemImage category={normalizedItem.category} item={normalizedItem} />
@@ -84,22 +93,21 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
 
       <div className="card-content">
         <h3 className="card-title">{normalizedItem.name}</h3>
-
         {isWaitingForSecurity && (
           <div className="handed-over-label" style={{ color: '#f2994a', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-            Waiting for Approval
+            Waiting for Approvel
           </div>
         )}
-
         {isAlreadyHandedOver && (
           <div className="handed-over-label" style={{ color: '#219653', fontWeight: 'bold', marginBottom: '0.5rem' }}>
             Handed Over to Security
           </div>
         )}
-
+        
         <div className="card-meta">
           <div className="meta-item">
-            <span className="meta-text">Date: {formatDate(normalizedItem.date_found)}</span>
+            <span className="meta-icon">📅</span>
+            <span className="meta-text">{formatDate(normalizedItem.date_found)}</span>
           </div>
         </div>
 
@@ -117,7 +125,7 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
           {isOwnItem ? (
             isWaitingForSecurity ? (
               <button className="btn btn-secondary" disabled>
-                Waiting for Approval
+                Waiting for Approvel
               </button>
             ) : isAlreadyHandedOver ? (
               <button className="btn btn-secondary" disabled>
@@ -133,20 +141,24 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
               </button>
             )
           ) : (
-            <button onClick={handleClaimClick} className="btn btn-claim">
-              Claim This Item
+            <button 
+              onClick={handleClaimClick}
+              className="btn btn-claim"
+            >
+              🏷️ Claim This Item
             </button>
           )}
-
-          <button
-            onClick={handleReportClick}
-            className="report-icon-btn group relative flex items-center justify-center p-2.5 rounded-lg border border-red-300 bg-red-50 text-red-600 hover:bg-red-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-300 dark:border-red-700 dark:bg-red-900/40 dark:text-red-300 dark:hover:bg-red-800 dark:focus:ring-red-600"
-            title="Report"
-            aria-label="Report"
-          >
-            <span className="report-tooltip absolute -top-10 left-1/2 transform -translate-x-1/2 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium text-white bg-red-600 shadow-sm opacity-0 pointer-events-none group-hover:opacity-100 group-focus:opacity-100 transition-opacity" role="tooltip">Report</span>
-            <span aria-hidden="true" role="img">Flag</span>
-          </button>
+          {!isOwnItem && (
+            <button
+              onClick={handleReportClick}
+              className="report-icon-btn group relative flex items-center justify-center p-2.5 rounded-lg border border-red-300 bg-red-50 text-red-600 hover:bg-red-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-300 dark:border-red-700 dark:bg-red-900/40 dark:text-red-300 dark:hover:bg-red-800 dark:focus:ring-red-600"
+              title="Report"
+              aria-label="Report"
+            >
+              <span className="report-tooltip absolute -top-10 left-1/2 transform -translate-x-1/2 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium text-white bg-red-600 shadow-sm opacity-0 pointer-events-none group-hover:opacity-100 group-focus:opacity-100 transition-opacity" role="tooltip">Report</span>
+              <span aria-hidden="true" role="img">🚩</span>
+            </button>
+          )}
         </div>
       </div>
 
