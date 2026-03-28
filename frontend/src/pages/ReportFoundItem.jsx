@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { itemsAPI } from '../services/api';
 import { toast } from 'react-toastify';
 import { NIC_HELPER_TEXT, NIC_VALIDATION_MESSAGE, isValidNic, normalizeNic, sanitizeNicInput } from '../utils/nicUtils';
+import { isValidStudentIdNumber } from '../utils/studentIdUtils';
+import { getCardLast4, maskCardNumber } from '../utils/cardUtils';
 import './ReportFoundItem.css';
 
 const CATEGORY_OPTIONS = [
@@ -23,9 +25,7 @@ const ReportFoundItem = () => {
   const [formData, setFormData] = useState({
     nicName: '',
     nicNumber: '',
-    nicLocation1: '',
-    nicLocation2: '',
-    nicLocation3: '',
+    idHolderType: '',
     idName: '',
     studentOrStaffId: '',
     idLocation1: '',
@@ -195,7 +195,8 @@ const ReportFoundItem = () => {
 
     if (category === 'Bank Card') {
       item_name = `${formData.bankName} ${formData.cardType} Card`;
-      description = `Last 4 digits: ${formData.cardNumber ? formData.cardNumber.slice(-4) : 'N/A'}`;
+      const last4 = getCardLast4(formData.cardNumber);
+      description = `Card: ${maskCardNumber(formData.cardNumber) || '**** **** **** ****'}${last4 ? ` (last 4: ${last4})` : ''}`;
       location = [formData.bankPrivateLocation, formData.bankPrivateLocation2, formData.bankPrivateLocation3].filter(Boolean).join(', ') || location;
       date = formData.bankPrivateDate || date;
       time = formData.bankPrivateTime || time;
