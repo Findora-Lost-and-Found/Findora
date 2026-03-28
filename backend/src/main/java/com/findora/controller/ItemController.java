@@ -160,7 +160,6 @@ public class ItemController {
      */
     @GetMapping("/my/items")
     public ResponseEntity<?> getMyItems(
-<<<<<<< HEAD
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(required = false) String type,

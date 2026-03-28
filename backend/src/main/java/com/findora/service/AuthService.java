@@ -340,10 +340,6 @@ public class AuthService {
         emailService.sendPasswordResetOtp(user.getEmail(), user.getFullName(), otp);
 
         log.info("Password reset OTP generated for user {}", user.getUsername());
-<<<<<<< HEAD
-=======
-        // OTP is sent via emailService.sendPasswordResetOtp above.
->>>>>>> develop-i
         return otp;
     }
 
