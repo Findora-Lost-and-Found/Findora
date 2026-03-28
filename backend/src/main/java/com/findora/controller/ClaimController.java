@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -50,9 +51,16 @@ import com.findora.service.MatchService;
 public class ClaimController {
 
     private static final Logger log = LoggerFactory.getLogger(ClaimController.class);
-    private static final double STRONG_THRESHOLD_PERCENT = 70.0;
-    private static final double POSSIBLE_THRESHOLD_PERCENT = 50.0;
     private static final Pattern NIC_PATTERN = Pattern.compile("^(?:\\d{9}[VvXx]|\\d{12})$");
+
+    @Value("${app.matching.threshold.found:0.75}")
+    private double strongThreshold;
+
+    @Value("${app.matching.threshold.possible:0.60}")
+    private double possibleThreshold;
+
+    @Value("${app.matching.threshold.instant-otp:90.0}")
+    private double instantOtpThreshold;
 
     private static final Collection<Claim.ClaimStatus> OPEN_STATUSES = List.of(
         Claim.ClaimStatus.PENDING,
@@ -117,6 +125,10 @@ public class ClaimController {
                 throw new IllegalArgumentException("Only found items can be claimed");
             }
 
+            if (stringValue(item.getDescription()).isBlank()) {
+                throw new IllegalArgumentException("Found item description is required for matching");
+            }
+
             if (item.getUserId() != null && item.getUserId().equals(currentUserId)) {
                 throw new IllegalArgumentException("You cannot claim your own item");
             }
@@ -128,10 +140,18 @@ public class ClaimController {
                 });
 
             boolean immediateIdMatch = validateCategorySpecificCredentials(claimData, item);
-            Item claimProfile = buildClaimProfile(claimData, item);
-            double score = immediateIdMatch ? 100.0 : matchService.computeScore(claimProfile, item);
+            double score;
+            if (immediateIdMatch) {
+                score = 100.0;
+            } else {
+                Item claimProfile = buildClaimProfile(claimData, item);
+                score = matchService.computeScore(claimProfile, item);
+            }
 
-            if (score < POSSIBLE_THRESHOLD_PERCENT) {
+            double possibleThresholdPercent = possibleThreshold * 100.0;
+            double strongThresholdPercent = strongThreshold * 100.0;
+
+            if (score < possibleThresholdPercent) {
                 throw new IllegalArgumentException("Claim details do not match this item closely enough");
             }
 
@@ -139,7 +159,9 @@ public class ClaimController {
             String claimMode;
             if (immediateIdMatch) {
                 claimMode = "immediate";
-            } else if (score >= STRONG_THRESHOLD_PERCENT) {
+            } else if (score >= instantOtpThreshold) {
+                claimMode = "high_confidence_immediate";
+            } else if (score >= strongThresholdPercent) {
                 LocalDateTime availableAt = Optional.ofNullable(item.getCreatedAt()).orElse(now).plusDays(1);
                 if (availableAt.isAfter(now)) {
                     throw new IllegalArgumentException(
@@ -148,7 +170,7 @@ public class ClaimController {
                 claimMode = "after_waiting_period";
             } else {
                 throw new IllegalArgumentException(
-                    "Possible match detected (50-69%). OTP is not issued at this stage.");
+                    "Possible match detected (60-74%). OTP is not issued at this stage.");
             }
 
             Claim claim = claimCreationService.createClaimForItem(itemId, currentUserId);
@@ -400,7 +422,9 @@ public class ClaimController {
         }
         claimProfile.setItemName(claimItemName);
 
-        String description = String.join(" ",
+        String explicitDescription = stringValue(claimData.get("description"));
+        String description = explicitDescription.isBlank()
+            ? String.join(" ",
             stringValue(claimData.get("claimType")),
             stringValue(claimData.get("cardNumber")),
             stringValue(claimData.get("idNumber")),
@@ -410,7 +434,13 @@ public class ClaimController {
             stringValue(claimData.get("items3")),
             stringValue(claimData.get("fromTime")),
             stringValue(claimData.get("toTime"))
-        ).trim();
+        ).trim()
+            : explicitDescription;
+
+        if (description.isBlank()) {
+            throw new IllegalArgumentException("Claim description is required for matching");
+        }
+
         claimProfile.setDescription(description);
 
         String location = String.join(" | ",
@@ -422,7 +452,7 @@ public class ClaimController {
             .trim();
         claimProfile.setLocation(location);
 
-        claimProfile.setDate(parseDateOrDefault(claimData.get("foundFromDate"), foundItem.getDate()));
+        claimProfile.setDate(parseSingleClaimDate(claimData));
         claimProfile.setTime(parseTimeOrDefault(
             claimData.get("toTime"),
             parseTimeOrDefault(claimData.get("fromTime"), foundItem.getTime())
@@ -430,15 +460,30 @@ public class ClaimController {
         return claimProfile;
     }
 
-    private java.time.LocalDate parseDateOrDefault(Object dateRaw, java.time.LocalDate fallback) {
-        if (dateRaw == null) {
-            return fallback;
+    private java.time.LocalDate parseSingleClaimDate(Map<String, Object> claimData) {
+        String primaryDate = firstNonBlank(
+            stringValue(claimData.get("date")),
+            stringValue(claimData.get("lostDate")),
+            stringValue(claimData.get("foundFromDate")),
+            stringValue(claimData.get("fromDate"))
+        );
+        String rangeEndDate = firstNonBlank(
+            stringValue(claimData.get("foundToDate")),
+            stringValue(claimData.get("toDate"))
+        );
+
+        if (!rangeEndDate.isBlank() && !primaryDate.isBlank() && !rangeEndDate.equals(primaryDate)) {
+            throw new IllegalArgumentException("Please provide a single date for claim matching (date range is not supported)");
+        }
+
+        if (primaryDate.isBlank()) {
+            throw new IllegalArgumentException("A single date is required for claim matching");
         }
 
         try {
-            return java.time.LocalDate.parse(String.valueOf(dateRaw));
+            return java.time.LocalDate.parse(primaryDate);
         } catch (DateTimeParseException e) {
-            return fallback;
+            throw new IllegalArgumentException("Invalid claim date format. Use YYYY-MM-DD");
         }
     }
 
@@ -512,5 +557,14 @@ public class ClaimController {
 
     private String stringValue(Object value) {
         return value == null ? "" : String.valueOf(value).trim();
+    }
+
+    private String firstNonBlank(String... candidates) {
+        for (String value : candidates) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return "";
     }
 }

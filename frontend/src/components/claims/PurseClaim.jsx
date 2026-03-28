@@ -1,21 +1,17 @@
 import { useState } from 'react';
+import ClaimDetailsFields from './ClaimDetailsFields';
+import {
+  buildClaimDetailsPayload,
+  createInitialClaimDetails,
+  validateClaimDetails
+} from './claimDetailsUtils';
 
 const PurseClaim = ({ item, onSubmit, onCancel }) => {
   const [step, setStep] = useState('template'); // template, select, withId, withoutId
   const [selectedOption, setSelectedOption] = useState(null);
   const [idNumber, setIdNumber] = useState('');
-  const [formData, setFormData] = useState({
-    location1: '',
-    location2: '',
-    location3: '',
-    fromTime: '',
-    toTime: '',
-    items1: '',
-    items2: '',
-    items3: '',
-    foundFromDate: '',
-    foundToDate: ''
-  });
+  const [claimDetails, setClaimDetails] = useState(createInitialClaimDetails());
+  const [errors, setErrors] = useState({});
 
   const handleCollectClick = () => {
     setStep('select');
@@ -28,7 +24,12 @@ const PurseClaim = ({ item, onSubmit, onCancel }) => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setClaimDetails((prev) => ({ ...prev, [name]: value }));
+
+    if (errors[name]) {
+      const nextErrors = validateClaimDetails({ ...claimDetails, [name]: value });
+      setErrors(nextErrors);
+    }
   };
 
   const handleWithIdSubmit = () => {
@@ -40,16 +41,18 @@ const PurseClaim = ({ item, onSubmit, onCancel }) => {
   };
 
   const handleWithoutIdSubmit = () => {
-    if (!formData.location1.trim() || !formData.items1.trim()) {
-      alert('Please fill in all required fields');
-      return;
-    }
-    if (!formData.foundFromDate) {
-      alert('Please enter the date you lost the item');
-      return;
-    }
-    onSubmit({ ...formData, itemId: item.id, claimType: 'without-id' });
+    const nextErrors = validateClaimDetails(claimDetails);
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
+    onSubmit({
+      itemId: item.id,
+      claimType: 'without-id',
+      ...buildClaimDetailsPayload(claimDetails)
+    });
   };
+
+  const isWithoutIdValid = Object.keys(validateClaimDetails(claimDetails)).length === 0;
 
   return (
     <div className="claim-form">
@@ -138,113 +141,17 @@ const PurseClaim = ({ item, onSubmit, onCancel }) => {
         <>
           <h3>Verify Purse/Wallet Details</h3>
 
-          <div className="form-group">
-            <label className="required">Where did you lose it?</label>
-            <input
-              type="text"
-              name="location1"
-              placeholder="Primary location"
-              value={formData.location1}
-              onChange={handleInputChange}
-            />
-            <input
-              type="text"
-              name="location2"
-              placeholder="Secondary location (optional)"
-              value={formData.location2}
-              onChange={handleInputChange}
-              style={{ marginTop: '0.5rem' }}
-            />
-            <input
-              type="text"
-              name="location3"
-              placeholder="Additional details (optional)"
-              value={formData.location3}
-              onChange={handleInputChange}
-              style={{ marginTop: '0.5rem' }}
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="required">Time Span</label>
-            <div className="form-row">
-              <div>
-                <label style={{ fontSize: '0.9rem' }}>From Time</label>
-                <input
-                  type="time"
-                  name="fromTime"
-                  value={formData.fromTime}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: '0.9rem' }}>To Time</label>
-                <input
-                  type="time"
-                  name="toTime"
-                  value={formData.toTime}
-                  onChange={handleInputChange}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="required">What items were inside?</label>
-            <input
-              type="text"
-              name="items1"
-              placeholder="Main item (required)"
-              value={formData.items1}
-              onChange={handleInputChange}
-            />
-            <input
-              type="text"
-              name="items2"
-              placeholder="Another item (optional)"
-              value={formData.items2}
-              onChange={handleInputChange}
-              style={{ marginTop: '0.5rem' }}
-            />
-            <input
-              type="text"
-              name="items3"
-              placeholder="Additional item (optional)"
-              value={formData.items3}
-              onChange={handleInputChange}
-              style={{ marginTop: '0.5rem' }}
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="required">When was the item lost? (approximate date range)</label>
-            <div className="form-row">
-              <div>
-                <label style={{ fontSize: '0.9rem' }}>From Date</label>
-                <input
-                  type="date"
-                  name="foundFromDate"
-                  value={formData.foundFromDate}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: '0.9rem' }}>To Date</label>
-                <input
-                  type="date"
-                  name="foundToDate"
-                  value={formData.foundToDate}
-                  onChange={handleInputChange}
-                />
-              </div>
-            </div>
-          </div>
+          <ClaimDetailsFields
+            details={claimDetails}
+            errors={errors}
+            onChange={handleInputChange}
+          />
 
           <div className="form-actions">
             <button className="btn-secondary" onClick={() => setStep('select')}>
               Back
             </button>
-            <button className="btn-primary" onClick={handleWithoutIdSubmit}>
+            <button className="btn-primary" onClick={handleWithoutIdSubmit} disabled={!isWithoutIdValid}>
               Submit Claim
             </button>
           </div>

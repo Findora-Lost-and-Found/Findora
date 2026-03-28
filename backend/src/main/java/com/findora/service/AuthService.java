@@ -243,9 +243,10 @@ public class AuthService {
         verifyEmail(user.getId(), otp);
     }
 
-    /**
-     * Regenerate verification OTP.
-     */
+        /**
+         * Regenerate verification OTP.
+         * Sends the generated OTP to the user email.
+         */
     public void resendVerificationOtp(String usernameOrEmail) {
         User user = userRepository.findByUsername(usernameOrEmail)
             .or(() -> userRepository.findByEmail(usernameOrEmail))
@@ -311,6 +312,7 @@ public class AuthService {
         emailService.sendPasswordResetOtp(user.getEmail(), user.getFullName(), otp);
 
         log.info("Password reset OTP generated for user {}", user.getUsername());
+        // OTP is sent via emailService.sendPasswordResetOtp above.
         return otp;
     }
 
