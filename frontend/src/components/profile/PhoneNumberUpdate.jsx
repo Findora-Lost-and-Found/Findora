@@ -5,23 +5,15 @@ import { toast } from 'react-toastify';
 const normalizePhone = (value = '') => String(value).replace(/\D/g, '').slice(0, 10);
 
 const PhoneNumberUpdate = ({ user, onVerified }) => {
-  const [newPhone, setNewPhone] = useState(user?.pending_phone || user?.phone || '');
-  const [otp, setOtp] = useState('');
-  const [requesting, setRequesting] = useState(false);
-  const [verifying, setVerifying] = useState(false);
-  const [otpRequested, setOtpRequested] = useState(Boolean(user?.pending_phone));
+  const [newPhone, setNewPhone] = useState(user?.phone || '');
+  const [saving, setSaving] = useState(false);
 
   const activePhone = user?.phone || 'Not set';
-  const pendingPhone = user?.pending_phone || '';
   const isPhoneVerified = Boolean(user?.is_phone_verified ?? true);
-  const hasPendingVerification = Boolean(pendingPhone);
 
   const phoneStatusLabel = useMemo(() => {
-    if (hasPendingVerification) {
-      return `Pending verification for ${pendingPhone}`;
-    }
     return isPhoneVerified ? 'Verified' : 'Not verified';
-  }, [hasPendingVerification, pendingPhone, isPhoneVerified]);
+  }, [isPhoneVerified]);
 
   const requestPhoneUpdate = async () => {
     const normalizedPhone = normalizePhone(newPhone);
@@ -31,37 +23,14 @@ const PhoneNumberUpdate = ({ user, onVerified }) => {
     }
 
     try {
-      setRequesting(true);
+      setSaving(true);
       const response = await authAPI.updatePhone(normalizedPhone);
-      toast.success(response.data?.message || 'OTP sent for phone verification');
-      setOtpRequested(true);
-      setOtp('');
+      toast.success(response.data?.message || 'Phone number updated successfully');
       await onVerified?.();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to request phone update');
+      toast.error(error.response?.data?.message || 'Failed to update phone number');
     } finally {
-      setRequesting(false);
-    }
-  };
-
-  const verifyOtp = async () => {
-    const trimmedOtp = String(otp).trim();
-    if (!/^\d{6}$/.test(trimmedOtp)) {
-      toast.error('Please enter the 6-digit OTP');
-      return;
-    }
-
-    try {
-      setVerifying(true);
-      const response = await authAPI.verifyPhoneOtp(trimmedOtp);
-      toast.success(response.data?.message || 'Phone number verified successfully');
-      setOtp('');
-      setOtpRequested(false);
-      await onVerified?.();
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to verify OTP');
-    } finally {
-      setVerifying(false);
+      setSaving(false);
     }
   };
 
@@ -76,17 +45,11 @@ const PhoneNumberUpdate = ({ user, onVerified }) => {
         </div>
         <div className="detail-row">
           <strong>Phone Status:</strong>
-          <span className={hasPendingVerification ? 'pending' : (isPhoneVerified ? 'verified' : 'not-verified')}>
+          <span className={isPhoneVerified ? 'verified' : 'not-verified'}>
             {phoneStatusLabel}
           </span>
         </div>
       </div>
-
-      {hasPendingVerification && (
-        <div className="alert alert-warning" style={{ marginBottom: '1rem' }}>
-          Phone verification is pending. Actions that require a verified phone should remain blocked until OTP verification completes.
-        </div>
-      )}
 
       <div className="form-group">
         <label htmlFor="newPhone">New Phone Number</label>
@@ -107,41 +70,11 @@ const PhoneNumberUpdate = ({ user, onVerified }) => {
           type="button"
           className="btn-primary"
           onClick={requestPhoneUpdate}
-          disabled={requesting || verifying}
+          disabled={saving}
         >
-          {requesting ? 'Sending OTP...' : 'Update Phone'}
+          {saving ? 'Saving...' : 'Update Phone'}
         </button>
       </div>
-
-      {(otpRequested || hasPendingVerification) && (
-        <>
-          <div className="form-group" style={{ marginTop: '1rem' }}>
-            <label htmlFor="phoneOtp">Enter OTP</label>
-            <input
-              id="phoneOtp"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={6}
-              placeholder="6-digit OTP"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            />
-            <small>OTP is sent to your registered email and expires in 15 minutes.</small>
-          </div>
-
-          <div className="form-actions" style={{ marginTop: '0.75rem' }}>
-            <button
-              type="button"
-              className="btn-success"
-              onClick={verifyOtp}
-              disabled={verifying || requesting}
-            >
-              {verifying ? 'Verifying...' : 'Verify OTP'}
-            </button>
-          </div>
-        </>
-      )}
     </div>
   );
 };
