@@ -2,16 +2,25 @@ package com.findora.service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import jakarta.annotation.PostConstruct;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,18 +52,31 @@ public class SecurityService {
     private final SecurityTransactionRepository securityTransactionRepository;
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     public SecurityService(
             ClaimRepository claimRepository,
             ItemRepository itemRepository,
             SecurityTransactionRepository securityTransactionRepository,
             NotificationRepository notificationRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            JdbcTemplate jdbcTemplate) {
         this.claimRepository = claimRepository;
         this.itemRepository = itemRepository;
         this.securityTransactionRepository = securityTransactionRepository;
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
+    @PostConstruct
+    public void initializeSchemaCompatibility() {
+        try {
+            ensureItemStatusSupportsSecurityStates();
+            log.info("Verified items.status enum compatibility for security workflow");
+        } catch (Exception e) {
+            log.error("Unable to auto-patch items.status enum compatibility: {}", e.getMessage(), e);
+        }
     }
 
     @Transactional
@@ -75,8 +97,17 @@ public class SecurityService {
             throw new IllegalArgumentException("Item is already handed over to security");
         }
 
+        // Ensure legacy schemas support security workflow statuses before updating.
+        ensureItemStatusSupportsSecurityStates();
+
         item.setStatus(ItemStatus.HANDOVER_REQUESTED);
-        itemRepository.save(item);
+        try {
+            itemRepository.saveAndFlush(item);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Detected outdated items.status enum during flush. Retrying after compatibility patch.");
+            ensureItemStatusSupportsSecurityStates();
+            itemRepository.saveAndFlush(item);
+        }
 
         log.info("Handover requested for item {} by user {}", itemId, currentUserId);
 
@@ -88,6 +119,7 @@ public class SecurityService {
             notification.setTitle("New Handover Request");
             notification.setMessage("New item handover request received");
             notification.setRelatedId(itemId);
+            notification.setIsRead(false);
             notificationRepository.save(notification);
         }
     }
@@ -281,6 +313,50 @@ public class SecurityService {
             phone,
             claim.getClaimedAt()
         );
+    }
+
+    private void ensureItemStatusSupportsSecurityStates() {
+        String columnType = jdbcTemplate.queryForObject(
+            "SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS "
+                + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'items' AND COLUMN_NAME = 'status'",
+            String.class
+        );
+
+        if (columnType == null || columnType.isBlank()) {
+            throw new IllegalStateException("Could not inspect items.status column definition");
+        }
+
+        log.info("items.status column type before compatibility check: {}", columnType);
+
+        Set<String> values = new LinkedHashSet<>();
+        Matcher matcher = Pattern.compile("'([^']*)'").matcher(columnType.toLowerCase());
+        while (matcher.find()) {
+            values.add(matcher.group(1));
+        }
+
+        boolean changed = false;
+        for (String required : List.of("active", "handover_requested", "held_by_security", "handed_to_security", "claimed", "closed")) {
+            if (values.add(required)) {
+                changed = true;
+            }
+        }
+
+        if (!changed) {
+            log.info("items.status already supports all required security states");
+            return;
+        }
+
+        List<String> escapedValues = new ArrayList<>();
+        for (String value : values) {
+            escapedValues.add("'" + value.replace("'", "''") + "'");
+        }
+
+        String alterSql = "ALTER TABLE items MODIFY COLUMN status ENUM("
+            + String.join(",", escapedValues)
+            + ") DEFAULT 'active'";
+        log.info("Applying items.status compatibility patch: {}", alterSql);
+        jdbcTemplate.execute(alterSql);
+        log.info("Patched items.status enum values for handover compatibility");
     }
 
     private Integer safeLongToInteger(long value) {
