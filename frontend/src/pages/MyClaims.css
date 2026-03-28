@@ -136,6 +136,49 @@
   font-size: 0.85rem;
 }
 
+.otp-action-panel {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+  padding: 14px;
+  margin-top: 14px;
+}
+
+.otp-action-panel p {
+  margin: 0 0 10px 0;
+  color: #065f46;
+}
+
+.otp-expired-panel {
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
+.otp-expired-panel p {
+  color: #9a3412;
+}
+
+.btn-generate-otp {
+  background: #0f766e;
+  color: #ffffff;
+  border: 1px solid #0f766e;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.btn-generate-otp:hover:not(:disabled) {
+  background: #0a5d57;
+  transform: translateY(-1px);
+}
+
+.btn-generate-otp:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 .success-msg {
   background: #d4edda;
   color: #155724;

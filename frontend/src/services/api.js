@@ -64,6 +64,7 @@ export const claimsAPI = {
   create: (item_id, meta = undefined) => api.post('/claims', { item_id, ...(meta || {}) }),
   getMy: () => api.get('/claims/my'),
   getById: (id) => api.get(`/claims/${id}`),
+  generateOtp: (id) => api.post(`/claims/${id}/otp`),
   getPending: () => api.get('/claims/pending')
 };
 

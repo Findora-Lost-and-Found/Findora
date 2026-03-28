@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getHomeRouteForUser } from '../utils/navigation';
 import { isValidEmail, isValidPhone, normalizeEmail, normalizePhone } from '../utils/contactValidation';
+import { isValidStudentIdNumber, normalizeStudentIdNumber } from '../utils/studentIdUtils';
 
 const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d])\S{8,64}$/;
 const PASSWORD_REQUIREMENTS = 'Password must be 8-64 characters and include uppercase, lowercase, number, and special character.';
@@ -15,6 +16,7 @@ const Signup = () => {
     confirmPassword: '',
     full_name: '',
     role: 'student',
+    roleId: '',
     phone: ''
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -23,6 +25,7 @@ const Signup = () => {
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
+  const [roleIdError, setRoleIdError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -50,6 +53,28 @@ const Signup = () => {
         setEmailError('Invalid email format');
       } else {
         setEmailError('');
+      }
+      return;
+    }
+
+    if (name === 'role') {
+      setFormData((prev) => ({
+        ...prev,
+        role: value,
+        // Reset role-specific ID when switching away from student/staff.
+        roleId: value === 'student' || value === 'staff' ? prev.roleId : ''
+      }));
+      setRoleIdError('');
+      return;
+    }
+
+    if (name === 'roleId') {
+      const normalizedId = normalizeStudentIdNumber(value);
+      setFormData((prev) => ({ ...prev, roleId: normalizedId }));
+      if (normalizedId && !isValidStudentIdNumber(normalizedId)) {
+        setRoleIdError('ID must be 6 digits followed by 1 letter (e.g. 123456A).');
+      } else {
+        setRoleIdError('');
       }
       return;
     }
@@ -94,6 +119,18 @@ const Signup = () => {
     if (formData.phone && !isValidPhone(formData.phone)) {
       setPhoneError('Phone number invalid format');
       return;
+    }
+
+    if (formData.role === 'student' || formData.role === 'staff') {
+      if (!formData.roleId.trim()) {
+        setRoleIdError(`${formData.role === 'student' ? 'Student' : 'Staff'} ID is required`);
+        return;
+      }
+
+      if (!isValidStudentIdNumber(formData.roleId)) {
+        setRoleIdError('ID must be 6 digits followed by 1 letter (e.g. 123456A).');
+        return;
+      }
     }
 
     if (!STRONG_PASSWORD_REGEX.test(formData.password)) {
@@ -189,6 +226,22 @@ const Signup = () => {
               <option value="admin">Admin</option>
             </select>
           </div>
+
+          {(formData.role === 'student' || formData.role === 'staff') && (
+            <div className="form-group">
+              <label>{formData.role === 'student' ? 'Student ID' : 'Staff ID'}</label>
+              <input
+                type="text"
+                name="roleId"
+                value={formData.roleId}
+                onChange={handleChange}
+                required
+                maxLength="7"
+                placeholder="e.g. 123456A"
+              />
+              {roleIdError && <small style={{ color: '#DC2626' }}>{roleIdError}</small>}
+            </div>
+          )}
 
           <div className="form-group">
             <label>Password</label>

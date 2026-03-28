@@ -27,6 +27,10 @@ import com.findora.service.AuthService;
  * Frontend expects: { token, user: { id, username, name, role, email } }
  */
 @RestController
+@RequestMapping("/api/auth")
+public class AuthController {
+
+    private final AuthService authService;
     private final boolean exposeResetOtp;
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
