@@ -334,7 +334,7 @@ public class ItemController {
 
     /**
      * DELETE /api/items/:id - Delete item.
-     * TODO: Implement with authorization check
+     * Requires authorization to delete item.
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteItem(@PathVariable Long id) {
