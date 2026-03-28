@@ -26,7 +26,6 @@ import com.findora.service.MatchService;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@SuppressWarnings("unused")
 class MatchSchedulerIntegrationTest {
 
     @Autowired
