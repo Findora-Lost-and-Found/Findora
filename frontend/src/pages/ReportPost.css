@@ -64,7 +64,7 @@
   border: 2px solid #E5E7EB;
   border-radius: 10px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
 .reason-option:hover {
@@ -103,12 +103,12 @@
   font-size: 0.9rem;
 }
 
-.reason-option:has(input:checked) {
+.reason-option.is-selected {
   border-color: #16A34A;
   background: #ECFDF5;
 }
 
-.reason-option:has(input:checked) .reason-content strong {
+.reason-option.is-selected .reason-content strong {
   color: #16A34A;
 }
 

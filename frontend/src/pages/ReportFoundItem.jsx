@@ -99,7 +99,6 @@ const ReportFoundItem = () => {
       if (!formData.nicName.trim()) nextErrors.nicName = 'Name is required.';
       if (!formData.nicNumber.trim()) nextErrors.nicNumber = 'NIC Number is required.';
       else if (!isValidNic(formData.nicNumber)) nextErrors.nicNumber = NIC_VALIDATION_MESSAGE;
-      if (!formData.nicLocation1.trim()) nextErrors.nicLocation1 = 'Location is required.';
     }
 
     if (category === 'Student / Staff ID') {
@@ -109,7 +108,6 @@ const ReportFoundItem = () => {
       if (formData.studentOrStaffId.trim() && !isValidStudentIdNumber(formData.studentOrStaffId)) {
         nextErrors.studentOrStaffId = 'Student ID must be 6 digits followed by 1 letter.';
       }
-      if (!formData.idLocation1.trim()) nextErrors.idLocation1 = 'Location is required.';
     }
 
     if (category === 'Bank Card') {
@@ -318,19 +316,6 @@ const ReportFoundItem = () => {
                 <small style={{ color: '#6B7280' }}>{NIC_HELPER_TEXT}</small>
                 {errors.nicNumber && <p className="error-text">{errors.nicNumber}</p>}
               </div>
-              <div className="private-block">
-                <h4>Where did you find it?</h4>
-                <div className="form-group">
-                  <label className="required">Location</label>
-                  <input
-                    name="nicLocation1"
-                    value={formData.nicLocation1}
-                    onChange={handleInputChange}
-                    placeholder="e.g. Near Library entrance"
-                  />
-                  {errors.nicLocation1 && <p className="error-text">{errors.nicLocation1}</p>}
-                </div>
-              </div>
             </div>
           )}
 
@@ -361,19 +346,6 @@ const ReportFoundItem = () => {
                   maxLength={7}
                 />
                 {errors.studentOrStaffId && <p className="error-text">{errors.studentOrStaffId}</p>}
-              </div>
-              <div className="private-block">
-                <h4>Where did you find it?</h4>
-                <div className="form-group">
-                  <label className="required">Location</label>
-                  <input
-                    name="idLocation1"
-                    value={formData.idLocation1}
-                    onChange={handleInputChange}
-                    placeholder="e.g. Canteen area"
-                  />
-                  {errors.idLocation1 && <p className="error-text">{errors.idLocation1}</p>}
-                </div>
               </div>
             </div>
           )}

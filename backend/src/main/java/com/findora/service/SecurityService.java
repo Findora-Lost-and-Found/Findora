@@ -1,6 +1,7 @@
 package com.findora.service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -141,7 +142,7 @@ public class SecurityService {
             throw new IllegalArgumentException("Invalid OTP");
         }
 
-        if (claim.getOtpExpiry() != null && LocalDateTime.now().isAfter(claim.getOtpExpiry())) {
+        if (claim.getOtpExpiry() != null && LocalDateTime.now(ZoneOffset.UTC).isAfter(claim.getOtpExpiry())) {
             throw new IllegalArgumentException("OTP has expired");
         }
 
@@ -154,20 +155,24 @@ public class SecurityService {
 
         claim.setStatus(Claim.ClaimStatus.COLLECTED);
         claim.setSecurityOfficerId(securityOfficerId);
-        claim.setCollectedAt(LocalDateTime.now());
+        claim.setCollectedAt(LocalDateTime.now(ZoneOffset.UTC));
         claimRepository.save(claim);
 
         item.setStatus(ItemStatus.CLAIMED);
         itemRepository.save(item);
 
-        SecurityTransaction releaseTx = new SecurityTransaction();
-        releaseTx.setSecurityOfficerId(securityOfficerId);
-        releaseTx.setItemId(item.getId());
-        releaseTx.setClaimId(claim.getId());
-        releaseTx.setTransactionType(SecurityTransaction.TransactionType.RELEASE);
-        releaseTx.setStatus(SecurityTransaction.TransactionStatus.RECEIVED);
-        releaseTx.setReleasedTo(resolveClaimerName(claim));
-        securityTransactionRepository.save(releaseTx);
+        if (supportsSecurityTransactionWorkflowColumns()) {
+            SecurityTransaction releaseTx = new SecurityTransaction();
+            releaseTx.setSecurityOfficerId(securityOfficerId);
+            releaseTx.setItemId(item.getId());
+            releaseTx.setClaimId(claim.getId());
+            releaseTx.setTransactionType(SecurityTransaction.TransactionType.RELEASE);
+            releaseTx.setStatus(SecurityTransaction.TransactionStatus.RECEIVED);
+            releaseTx.setReleasedTo(resolveClaimerName(claim));
+            securityTransactionRepository.save(releaseTx);
+        } else {
+            log.warn("Skipping release security transaction write due to legacy schema (missing status/transaction_type columns)");
+        }
 
         Notification notification = new Notification();
         notification.setUserId(claim.getClaimerId());
@@ -198,7 +203,10 @@ public class SecurityService {
         Item item = itemRepository.findById(itemId)
             .orElseThrow(() -> new IllegalArgumentException("Item not found"));
 
-        try {
+        // Ensure legacy schemas support security workflow statuses before updating item state.
+        ensureItemStatusSupportsSecurityStates();
+
+        if (supportsSecurityTransactionWorkflowColumns()) {
             SecurityTransaction tx = securityTransactionRepository.findFirstByItemIdOrderByCreatedAtDesc(itemId)
                 .orElseThrow(() -> new IllegalArgumentException("No handover request found for item"));
 
@@ -209,20 +217,35 @@ public class SecurityService {
             tx.setStatus(SecurityTransaction.TransactionStatus.RECEIVED);
             tx.setSecurityOfficerId(securityOfficerId);
             securityTransactionRepository.save(tx);
-        } catch (RuntimeException e) {
-            log.warn("Skipping security transaction update due to schema mismatch: {}", e.getMessage());
+        } else {
+            log.warn("Skipping security transaction update due to legacy schema (missing status/transaction_type columns)");
         }
 
         item.setStatus(ItemStatus.HELD_BY_SECURITY);
-        itemRepository.save(item);
+        try {
+            itemRepository.saveAndFlush(item);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Detected outdated items.status enum during receive-item. Retrying after compatibility patch.");
+            ensureItemStatusSupportsSecurityStates();
+            itemRepository.saveAndFlush(item);
+        }
 
-        Notification notification = new Notification();
-        notification.setUserId(item.getUserId());
-        notification.setType(Notification.NotificationType.SYSTEM);
-        notification.setTitle("Handover Completed");
-        notification.setMessage("You successfully handed over the item to Security");
-        notification.setRelatedId(itemId);
-        notificationRepository.save(notification);
+        try {
+            if (item.getUserId() != null) {
+                Notification notification = new Notification();
+                notification.setUserId(item.getUserId());
+                notification.setType(Notification.NotificationType.SYSTEM);
+                notification.setTitle("Handover Completed");
+                notification.setMessage("You successfully handed over the item to Security");
+                notification.setRelatedId(itemId);
+                notification.setIsRead(false);
+                notificationRepository.save(notification);
+            } else {
+                log.warn("Skipping handover notification for item {} because finder userId is null", itemId);
+            }
+        } catch (RuntimeException e) {
+            log.warn("Skipping handover notification due to persistence issue for item {}: {}", itemId, e.getMessage());
+        }
     }
 
     @Transactional(readOnly = true)
@@ -316,47 +339,64 @@ public class SecurityService {
     }
 
     private void ensureItemStatusSupportsSecurityStates() {
-        String columnType = jdbcTemplate.queryForObject(
-            "SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS "
-                + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'items' AND COLUMN_NAME = 'status'",
-            String.class
+        try {
+            String columnType = jdbcTemplate.queryForObject(
+                "SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS "
+                    + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'items' AND COLUMN_NAME = 'status'",
+                String.class
+            );
+
+            if (columnType == null || columnType.isBlank()) {
+                log.warn("Could not inspect items.status column - database may be unavailable");
+                return;
+            }
+
+            log.info("items.status column type before compatibility check: {}", columnType);
+
+            Set<String> values = new LinkedHashSet<>();
+            Matcher matcher = Pattern.compile("'([^']*)'").matcher(columnType.toLowerCase());
+            while (matcher.find()) {
+                values.add(matcher.group(1));
+            }
+
+            boolean changed = false;
+            for (String required : List.of("active", "handover_requested", "held_by_security", "handed_to_security", "claimed", "closed")) {
+                if (values.add(required)) {
+                    changed = true;
+                }
+            }
+
+            if (!changed) {
+                log.info("items.status already supports all required security states");
+                return;
+            }
+
+            List<String> escapedValues = new ArrayList<>();
+            for (String value : values) {
+                escapedValues.add("'" + value.replace("'", "''") + "'");
+            }
+
+            String alterSql = "ALTER TABLE items MODIFY COLUMN status ENUM("
+                + String.join(",", escapedValues)
+                + ") DEFAULT 'active'";
+            log.info("Applying items.status compatibility patch: {}", alterSql);
+            jdbcTemplate.execute(alterSql);
+            log.info("Patched items.status enum values for handover compatibility");
+        } catch (Exception e) {
+            log.warn("Schema compatibility check skipped (database may be unavailable): {}", e.getMessage());
+        }
+    }
+
+    private boolean supportsSecurityTransactionWorkflowColumns() {
+        Integer presentColumns = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                + "WHERE TABLE_SCHEMA = DATABASE() "
+                + "AND TABLE_NAME = 'security_transactions' "
+                + "AND COLUMN_NAME IN ('status', 'transaction_type')",
+            Integer.class
         );
 
-        if (columnType == null || columnType.isBlank()) {
-            throw new IllegalStateException("Could not inspect items.status column definition");
-        }
-
-        log.info("items.status column type before compatibility check: {}", columnType);
-
-        Set<String> values = new LinkedHashSet<>();
-        Matcher matcher = Pattern.compile("'([^']*)'").matcher(columnType.toLowerCase());
-        while (matcher.find()) {
-            values.add(matcher.group(1));
-        }
-
-        boolean changed = false;
-        for (String required : List.of("active", "handover_requested", "held_by_security", "handed_to_security", "claimed", "closed")) {
-            if (values.add(required)) {
-                changed = true;
-            }
-        }
-
-        if (!changed) {
-            log.info("items.status already supports all required security states");
-            return;
-        }
-
-        List<String> escapedValues = new ArrayList<>();
-        for (String value : values) {
-            escapedValues.add("'" + value.replace("'", "''") + "'");
-        }
-
-        String alterSql = "ALTER TABLE items MODIFY COLUMN status ENUM("
-            + String.join(",", escapedValues)
-            + ") DEFAULT 'active'";
-        log.info("Applying items.status compatibility patch: {}", alterSql);
-        jdbcTemplate.execute(alterSql);
-        log.info("Patched items.status enum values for handover compatibility");
+        return presentColumns != null && presentColumns >= 2;
     }
 
     private Integer safeLongToInteger(long value) {

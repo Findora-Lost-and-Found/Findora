@@ -26,6 +26,7 @@ import com.findora.security.JwtTokenProvider;
 import com.findora.service.AccessControlService.AccessState;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("unused")
 class AuthServiceTest {
 
     @Mock

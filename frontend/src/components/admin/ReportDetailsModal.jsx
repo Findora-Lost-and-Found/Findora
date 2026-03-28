@@ -47,9 +47,9 @@ const ReportDetailsModal = ({ report, onClose, onAction }) => {
       await adminAPI.suspendUser(userId, { suspended: true });
       toast.success('User suspended');
       setShowSuspendConfirm(false);
-        console.error('Suspend user error:', error);
       onAction?.();
     } catch (error) {
+      console.error('Suspend user error:', error);
       toast.error(error.response?.data?.message || 'Failed to suspend user');
     } finally {
       setLoading(false);
