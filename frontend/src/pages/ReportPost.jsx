@@ -70,7 +70,6 @@ const ReportPost = () => {
   ];
 
   const handleSubmit = async (e) => {
-  const handleSubmit = async (e) => {
     e.preventDefault();
     if (blockedForSelfReport) {
       toast.error('You cannot report your own item');
@@ -79,29 +78,7 @@ const ReportPost = () => {
 
     if (!selectedReason) {
       toast.error('Please select a report reason');
-      toast.error('Please select a report reason');
       return;
-    }
-
-    const selectedOption = reportReasons.find((reason) => reason.id === selectedReason);
-
-    try {
-      setSubmitting(true);
-      await reportsAPI.create({
-        itemId,
-        reason: selectedOption?.title || selectedReason,
-        description
-      });
-      toast.success('Report submitted successfully');
-      setSubmitted(true);
-
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 1200);
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to submit report');
-    } finally {
-      setSubmitting(false);
     }
 
     const selectedOption = reportReasons.find((reason) => reason.id === selectedReason);
@@ -194,8 +171,6 @@ const ReportPost = () => {
             <button type="button" onClick={() => navigate(-1)} className="btn-secondary">
               Cancel
             </button>
-            <button type="submit" className="btn-primary" disabled={submitting}>
-              {submitting ? 'Submitting...' : 'Submit Report'}
             <button type="submit" className="btn-primary" disabled={submitting}>
               {submitting ? 'Submitting...' : 'Submit Report'}
             </button>
