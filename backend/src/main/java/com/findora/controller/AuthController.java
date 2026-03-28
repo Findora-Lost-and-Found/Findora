@@ -28,10 +28,6 @@ import com.findora.service.AuthService;
  * Frontend expects: { token, user: { id, username, name, role, email } }
  */
 @RestController
-@RequestMapping("/api/auth")
-public class AuthController {
-
-    private final AuthService authService;
     private final boolean exposeResetOtp;
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
@@ -127,10 +123,6 @@ public class AuthController {
     /**
      * POST /api/auth/verify-email
      * Verify email with OTP.
-<<<<<<< HEAD
-=======
-        * OTP validation endpoint.
->>>>>>> develop-i
      */
     @PostMapping("/verify-email")
     public ResponseEntity<?> verifyEmail(@RequestBody Map<String, String> verifyRequest) {
@@ -173,11 +165,7 @@ public class AuthController {
 
     /**
      * POST /api/auth/resend-otp
-<<<<<<< HEAD
      * Resend email verification OTP.
-=======
-        * Resend email verification OTP.
->>>>>>> develop-i
      */
     @PostMapping("/resend-otp")
     public ResponseEntity<?> resendOtp(@RequestBody Map<String, String> request) {
@@ -205,11 +193,7 @@ public class AuthController {
     /**
      * POST /api/auth/forgot-password
      * Initiate password reset.
-<<<<<<< HEAD
      * Uses email service to deliver reset OTP.
-=======
-        * Uses email service to deliver reset OTP.
->>>>>>> develop-i
      */
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> request) {
@@ -242,11 +226,7 @@ public class AuthController {
     /**
      * POST /api/auth/reset-password
      * Reset password with OTP.
-<<<<<<< HEAD
      * Validates OTP and updates password.
-=======
-        * Validates OTP and updates password.
->>>>>>> develop-i
      */
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> resetRequest) {

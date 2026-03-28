@@ -37,6 +37,8 @@ public class AuthService {
     private static final Random RANDOM = new Random();
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
     private static final Pattern PHONE_PATTERN = Pattern.compile("^\\d{10}$");
+    private static final Pattern STRONG_PASSWORD_PATTERN = Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z\\d])\\S{8,64}$");
+    private static final String PASSWORD_POLICY_MESSAGE = "Password must be 8-64 characters and include uppercase, lowercase, number, and special character.";
 
     public AuthService(
             UserRepository userRepository,
@@ -105,10 +107,6 @@ public class AuthService {
 
     /**
      * Register new user.
-<<<<<<< HEAD
-=======
-        * Includes validation and email verification OTP flow.
->>>>>>> develop-i
      */
     public AuthResponse register(String username, String email, String password, String fullName, String role, String phone) {
         String normalizedEmail = normalizeEmail(email);
@@ -120,6 +118,10 @@ public class AuthService {
 
         if (normalizedPhone != null && !isValidPhone(normalizedPhone)) {
             throw new RuntimeException("Phone number invalid format");
+        }
+
+        if (!isValidPassword(password)) {
+            throw new RuntimeException(PASSWORD_POLICY_MESSAGE);
         }
 
         if (userRepository.existsByUsername(username)) {
@@ -199,6 +201,10 @@ public class AuthService {
         return phone != null && PHONE_PATTERN.matcher(phone).matches();
     }
 
+    private boolean isValidPassword(String password) {
+        return password != null && STRONG_PASSWORD_PATTERN.matcher(password).matches();
+    }
+
     /**
      * Verify email with OTP.
      */
@@ -239,10 +245,6 @@ public class AuthService {
 
     /**
      * Regenerate verification OTP.
-<<<<<<< HEAD
-=======
-        * Sends the generated OTP to the user email.
->>>>>>> develop-i
      */
     public void resendVerificationOtp(String usernameOrEmail) {
         User user = userRepository.findByUsername(usernameOrEmail)
@@ -356,6 +358,10 @@ public class AuthService {
 
         if (!user.getResetOtp().equals(otp)) {
             throw new RuntimeException("Invalid OTP");
+        }
+
+        if (!isValidPassword(newPassword)) {
+            throw new RuntimeException(PASSWORD_POLICY_MESSAGE);
         }
 
         user.setPassword(passwordEncoder.encode(newPassword));
