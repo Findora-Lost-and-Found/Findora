@@ -49,6 +49,7 @@ import com.findora.service.MatchService;
  */
 @RestController
 @RequestMapping("/api/claims")
+@SuppressWarnings("null")
 public class ClaimController {
 
     private static final Logger log = LoggerFactory.getLogger(ClaimController.class);
@@ -242,8 +243,8 @@ public class ClaimController {
     @GetMapping("/my")
     @PreAuthorize("hasAnyRole('STUDENT', 'STAFF', 'SECURITY', 'ADMIN')")
     public ResponseEntity<?> getMyClaims(
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
+            @RequestParam(value = "page", defaultValue = "0") Integer page,
+            @RequestParam(value = "size", defaultValue = "10") Integer size) {
         try {
             Long currentUserId = getCurrentUserId();
             Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "claimedAt"));
@@ -315,8 +316,8 @@ public class ClaimController {
 
     @GetMapping("/pending")
     public ResponseEntity<?> getPendingClaims(
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
+            @RequestParam(value = "page", defaultValue = "0") Integer page,
+            @RequestParam(value = "size", defaultValue = "10") Integer size) {
         List<Claim> claims = claimRepository.findByStatusInOrderByClaimedAtDesc(OPEN_STATUSES);
 
         List<Map<String, Object>> rows = claims.stream().map(claim -> {

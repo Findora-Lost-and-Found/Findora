@@ -31,7 +31,7 @@ import com.findora.repository.UserRepository;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@SuppressWarnings("unused")
+@SuppressWarnings("null")
 class ReportControllerIntegrationTest {
 
     @Autowired
@@ -55,7 +55,6 @@ class ReportControllerIntegrationTest {
     private Item item;
 
     @BeforeEach
-    @SuppressWarnings("unused")
     void setUp() {
         reportRepository.deleteAll();
         itemRepository.deleteAll();

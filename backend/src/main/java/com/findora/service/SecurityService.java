@@ -43,6 +43,7 @@ import com.findora.repository.SecurityTransactionRepository;
 import com.findora.repository.UserRepository;
 
 @Service
+@SuppressWarnings("null")
 public class SecurityService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { authAPI } from '../services/api';
 import { toast } from 'react-toastify';
+import PasswordInput from '../components/PasswordInput';
 
 const ResetPassword = () => {
   const location = useLocation();
@@ -12,8 +13,6 @@ const ResetPassword = () => {
     newPassword: '',
     confirmPassword: ''
   });
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
@@ -97,46 +96,26 @@ const ResetPassword = () => {
 
           <div className="form-group">
             <label>New Password</label>
-            <div className="password-input-wrapper">
-              <input
-                type={showNewPassword ? 'text' : 'password'}
-                name="newPassword"
-                placeholder="Enter new password"
-                value={formData.newPassword}
-                onChange={handleChange}
-                required
-              />
-              <button
-                type="button"
-                className="password-toggle-btn"
-                onClick={() => setShowNewPassword(!showNewPassword)}
-                aria-label={showNewPassword ? 'Hide password' : 'Show password'}
-              >
-                {showNewPassword ? '🙈' : '👁️'}
-              </button>
-            </div>
+            <PasswordInput
+              name="newPassword"
+              placeholder="Enter new password"
+              value={formData.newPassword}
+              onChange={handleChange}
+              required
+              autoComplete="new-password"
+            />
           </div>
 
           <div className="form-group">
             <label>Confirm Password</label>
-            <div className="password-input-wrapper">
-              <input
-                type={showConfirmPassword ? 'text' : 'password'}
-                name="confirmPassword"
-                placeholder="Confirm new password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                required
-              />
-              <button
-                type="button"
-                className="password-toggle-btn"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-              >
-                {showConfirmPassword ? '🙈' : '👁️'}
-              </button>
-            </div>
+            <PasswordInput
+              name="confirmPassword"
+              placeholder="Confirm new password"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              required
+              autoComplete="new-password"
+            />
           </div>
 
           <button 

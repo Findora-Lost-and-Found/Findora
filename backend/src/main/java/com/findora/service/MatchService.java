@@ -41,6 +41,7 @@ import com.findora.repository.NotificationRepository;
 import com.findora.repository.UserRepository;
 
 @Service
+@SuppressWarnings("null")
 public class MatchService {
 
     private static final Logger log = LoggerFactory.getLogger(MatchService.class);

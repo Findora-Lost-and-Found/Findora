@@ -19,6 +19,7 @@ import com.findora.repository.ItemRepository;
  * Reusable claim creation service that preserves existing ClaimController behavior.
  */
 @Service
+@SuppressWarnings("null")
 public class ClaimCreationService {
 
     private static final Collection<Claim.ClaimStatus> OPEN_STATUSES = List.of(
