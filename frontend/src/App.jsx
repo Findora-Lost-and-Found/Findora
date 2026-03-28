@@ -92,7 +92,7 @@ function App() {
               <Route path="/admin/items/:section" element={<PrivateRoute roles={['admin']}><AdminItemsByStatus /></PrivateRoute>} />
             </Routes>
           </Suspense>
-          <ToastContainer position="top-right" autoClose={3000} />
+            <ToastContainer position="bottom-right" autoClose={3000} />
         </AppShell>
       </AuthProvider>
     </Router>

@@ -49,6 +49,7 @@ public class MatchService {
     private static final Pattern ID_PATTERN = Pattern.compile("\\b[A-Z]{2,4}[- ]?\\d{4,10}\\b");
     private static final Pattern CARD16_PATTERN = Pattern.compile("\\b\\d{16}\\b");
     private static final Pattern PRIVATE_CARD_PATTERN = Pattern.compile("__PRIVATE_CARD__=(\\d{16})");
+    private static final Pattern CARD_LAST4_HINT_PATTERN = Pattern.compile("(?i)(?:last\\s*4[^0-9]*|ending[^0-9]*)(\\d{4})");
 
     private final MatchRepository matchRepository;
     private final ItemRepository itemRepository;
@@ -58,22 +59,19 @@ public class MatchService {
     private final Clock clock;
     private final JavaMailSender mailSender;
 
-    @Value("${app.matching.threshold.found:0.70}")
+    @Value("${app.matching.threshold.found:0.75}")
     private double strongThreshold;
 
-    @Value("${app.matching.threshold.possible:0.50}")
+    @Value("${app.matching.threshold.possible:0.60}")
     private double possibleThreshold;
 
-    @Value("${app.matching.weight.name:0.10}")
-    private double nameWeight;
-
-    @Value("${app.matching.weight.description:0.45}")
+    @Value("${app.matching.weight.description:0.55}")
     private double descriptionWeight;
 
-    @Value("${app.matching.weight.location:0.30}")
+    @Value("${app.matching.weight.location:0.25}")
     private double locationWeight;
 
-    @Value("${app.matching.weight.date:0.05}")
+    @Value("${app.matching.weight.date:0.10}")
     private double dateWeight;
 
     @Value("${app.matching.weight.time:0.10}")
@@ -113,6 +111,10 @@ public class MatchService {
         int notificationsSent = 0;
 
         for (Item lost : lostItems) {
+            if (!hasRequiredDescription(lost)) {
+                continue;
+            }
+
             List<Item> candidates = foundByCategory.getOrDefault(lost.getCategory(), List.of());
             if (candidates.isEmpty()) {
                 continue;
@@ -120,6 +122,10 @@ public class MatchService {
 
             List<MatchCandidate> scoredCandidates = new ArrayList<>();
             for (Item found : candidates) {
+                if (!hasRequiredDescription(found)) {
+                    continue;
+                }
+
                 if (!withinSevenDayWindow(lost.getDate(), found.getDate())) {
                     continue;
                 }
@@ -155,55 +161,185 @@ public class MatchService {
     }
 
     public double computeScore(Item lost, Item found) {
+        if (lost == null || found == null) {
+            return 0.0;
+        }
+
+        if (!hasRequiredDescription(lost) || !hasRequiredDescription(found)) {
+            return 0.0;
+        }
+
         if (isSpecialExactIdMatch(lost, found)) {
             return 100.0;
         }
 
-        double bankCardSimilarity = bankCardNumberSimilarity(lost, found);
-
-        double nameScore = enhancedTextSimilarity(lost.getItemName(), found.getItemName());
-        double descriptionScore = descriptionSimilarity(lost.getDescription(), found.getDescription());
-        String foundEvidenceCorpus = String.join(" ",
-            Optional.ofNullable(found.getItemName()).orElse(""),
-            Optional.ofNullable(found.getDescription()).orElse(""),
-            Optional.ofNullable(found.getLocation()).orElse(""));
-        double keywordEvidence = keywordOverlapScore(lost.getDescription(), foundEvidenceCorpus);
-        List<String> lostLocations = splitLocationHints(lost.getLocation());
-        double locationScore = bestLocationSimilarity(lostLocations, found.getLocation());
-        double dateScore = Math.max(1.0, cappedDateProximityScore(lost.getDate(), found.getDate()));
+        double descriptionScore = calculateDescriptionSimilarity(lost.getDescription(), found.getDescription());
+        double locationScore = calculateLocationSimilarity(splitLocationHints(lost.getLocation()), found.getLocation());
+        double dateScore = calculateDateSimilarity(lost.getDate(), found.getDate());
         LocalTime lostFrom = offsetTime(lost.getTime(), -90);
         LocalTime lostTo = offsetTime(lost.getTime(), 180);
-        double timeScore = Math.max(1.0, timeConsistencyScore(lostFrom, lostTo, found.getTime()));
+        double timeScore = calculateTimeSimilarity(lostFrom, lostTo, found.getTime());
 
-        double weighted = (nameScore * nameWeight)
-            + (descriptionScore * descriptionWeight)
+        double weighted = (descriptionScore * descriptionWeight)
             + (locationScore * locationWeight)
             + (dateScore * dateWeight)
             + (timeScore * timeWeight);
 
         double normalized = weighted / Math.max(0.0001,
-            (nameWeight + descriptionWeight + locationWeight + dateWeight + timeWeight));
+            (descriptionWeight + locationWeight + dateWeight + timeWeight));
 
-        double finalScore = Math.max(0.0, Math.min(100.0, normalized * 100.0));
+        double finalScore = Math.max(0.0, Math.min(100.0, normalized));
 
-        if (keywordEvidence > 0.0) {
-            double keywordBoost = Math.min(18.0, keywordEvidence * 30.0);
-            finalScore = Math.min(100.0, finalScore + keywordBoost);
+        if (descriptionScore > 80.0) {
+            finalScore += 10.0;
         }
 
-        // Near bank-card number matches should remain high confidence.
-        if (bankCardSimilarity >= 0.93) {
-            finalScore = Math.max(finalScore, 93.0);
-        } else if (bankCardSimilarity >= 0.86) {
-            finalScore = Math.max(finalScore, 86.0);
-        }
-
-        // Strong real-world alignment should still produce OTP-eligible confidence.
-        if (descriptionScore >= 0.75 && locationScore >= 0.70 && timeScore >= 0.60) {
-            finalScore = Math.max(finalScore, 85.0);
+        if (locationScore > 70.0) {
+            finalScore += 5.0;
         }
 
         return Math.min(100.0, finalScore);
+    }
+
+    private boolean hasRequiredDescription(Item item) {
+        return item != null && item.getDescription() != null && !item.getDescription().isBlank();
+    }
+
+    private double calculateDescriptionSimilarity(String lostDescription, String foundDescription) {
+        return textSimilarityScore(lostDescription, foundDescription);
+    }
+
+    private double calculateLocationSimilarity(List<String> lostLocations, String foundLocation) {
+        if (lostLocations == null || lostLocations.isEmpty() || foundLocation == null || foundLocation.isBlank()) {
+            return 0.0;
+        }
+
+        double best = 0.0;
+        for (String lostLocation : lostLocations) {
+            best = Math.max(best, textSimilarityScore(lostLocation, foundLocation));
+            if (best >= 100.0) {
+                return 100.0;
+            }
+        }
+        return best;
+    }
+
+    private double calculateDateSimilarity(LocalDate lostDate, LocalDate foundDate) {
+        if (lostDate == null || foundDate == null) {
+            return 0.0;
+        }
+
+        long differenceDays = Math.abs(ChronoUnit.DAYS.between(lostDate, foundDate));
+        if (differenceDays == 0) {
+            return 100.0;
+        }
+        if (differenceDays <= 1) {
+            return 80.0;
+        }
+        if (differenceDays <= 3) {
+            return 60.0;
+        }
+        return 0.0;
+    }
+
+    private double calculateTimeSimilarity(LocalTime lostFrom, LocalTime lostTo, LocalTime foundTime) {
+        if (lostFrom == null || lostTo == null || foundTime == null) {
+            return 0.0;
+        }
+
+        int fromMinutes = lostFrom.getHour() * 60 + lostFrom.getMinute();
+        int toMinutes = lostTo.getHour() * 60 + lostTo.getMinute();
+        int foundMinutes = foundTime.getHour() * 60 + foundTime.getMinute();
+
+        if (toMinutes < fromMinutes) {
+            int swap = fromMinutes;
+            fromMinutes = toMinutes;
+            toMinutes = swap;
+        }
+
+        if (foundMinutes >= fromMinutes && foundMinutes <= toMinutes) {
+            return 100.0;
+        }
+
+        int distanceToRange = foundMinutes < fromMinutes
+            ? (fromMinutes - foundMinutes)
+            : (foundMinutes - toMinutes);
+
+        if (distanceToRange <= 30) {
+            return 70.0;
+        }
+        if (distanceToRange <= 120) {
+            return 40.0;
+        }
+        return 10.0;
+    }
+
+    private double textSimilarityScore(String left, String right) {
+        String normalizedLeft = normalizeText(left);
+        String normalizedRight = normalizeText(right);
+
+        if (normalizedLeft.isBlank() || normalizedRight.isBlank()) {
+            return 0.0;
+        }
+
+        Set<String> leftTokens = tokenize(normalizedLeft);
+        Set<String> rightTokens = tokenize(normalizedRight);
+
+        double tokenOverlapScore = jaccardSimilarity(leftTokens, rightTokens) * 100.0;
+        double fuzzyTokenScore = fuzzyTokenSimilarity(leftTokens, rightTokens) * 100.0;
+
+        int maxLen = Math.max(normalizedLeft.length(), normalizedRight.length());
+        int editDistance = levenshteinDistance(normalizedLeft, normalizedRight);
+        double editScore = maxLen == 0 ? 0.0 : (1.0 - ((double) editDistance / maxLen)) * 100.0;
+
+        double combined = (tokenOverlapScore * 0.20)
+            + (fuzzyTokenScore * 0.50)
+            + (Math.max(0.0, editScore) * 0.30);
+
+        return Math.max(0.0, Math.min(100.0, combined));
+    }
+
+    private double fuzzyTokenSimilarity(Set<String> leftTokens, Set<String> rightTokens) {
+        if (leftTokens.isEmpty() || rightTokens.isEmpty()) {
+            return 0.0;
+        }
+
+        double total = 0.0;
+        int compared = 0;
+
+        for (String left : leftTokens) {
+            double best = 0.0;
+            for (String right : rightTokens) {
+                int maxLen = Math.max(left.length(), right.length());
+                if (maxLen == 0) {
+                    continue;
+                }
+                int distance = levenshteinDistance(left, right);
+                double similarity = 1.0 - ((double) distance / maxLen);
+                best = Math.max(best, similarity);
+                if (best >= 1.0) {
+                    break;
+                }
+            }
+            total += Math.max(0.0, best);
+            compared++;
+        }
+
+        return compared == 0 ? 0.0 : (total / compared);
+    }
+
+    private double jaccardSimilarity(Set<String> leftTokens, Set<String> rightTokens) {
+        if (leftTokens.isEmpty() || rightTokens.isEmpty()) {
+            return 0.0;
+        }
+
+        Set<String> intersection = new HashSet<>(leftTokens);
+        intersection.retainAll(rightTokens);
+
+        Set<String> union = new HashSet<>(leftTokens);
+        union.addAll(rightTokens);
+
+        return union.isEmpty() ? 0.0 : ((double) intersection.size() / union.size());
     }
 
     @Transactional(readOnly = true)
@@ -445,129 +581,7 @@ public class MatchService {
         return distance <= 7;
     }
 
-    private double dateProximityScore(LocalDate lostDate, LocalDate foundDate) {
-        if (lostDate == null || foundDate == null) {
-            return 0.0;
-        }
-
-        long distance = Math.abs(ChronoUnit.DAYS.between(lostDate, foundDate));
-        if (distance > 7) {
-            return 0.0;
-        }
-
-        return 1.0 - (distance / 7.0);
-    }
-
-    private double cappedDateProximityScore(LocalDate lostDate, LocalDate foundDate) {
-        double base = dateProximityScore(lostDate, foundDate);
-        if (base <= 0.0) {
-            return 0.0;
-        }
-
-        // Keep date meaningful but avoid over-penalizing valid matches within the 7-day window.
-        return 0.70 + (base * 0.30);
-    }
-
-    private double timeConsistencyScore(LocalTime lostFrom, LocalTime lostTo, LocalTime foundTime) {
-        if (lostFrom == null || lostTo == null || foundTime == null) {
-            return 0.0;
-        }
-
-        int fromMinutes = lostFrom.getHour() * 60 + lostFrom.getMinute();
-        int toMinutes = lostTo.getHour() * 60 + lostTo.getMinute();
-        int foundMinutes = foundTime.getHour() * 60 + foundTime.getMinute();
-
-        if (toMinutes < fromMinutes) {
-            int temp = fromMinutes;
-            fromMinutes = toMinutes;
-            toMinutes = temp;
-        }
-
-        if (foundMinutes < fromMinutes) {
-            return 0.0;
-        }
-
-        if (foundMinutes <= toMinutes) {
-            return 1.0;
-        }
-
-        int minutesAfterRange = foundMinutes - toMinutes;
-        if (minutesAfterRange <= 120) {
-            return 0.78;
-        }
-
-        if (minutesAfterRange <= 360) {
-            double decay = (minutesAfterRange - 120) / 240.0;
-            return 0.78 - (decay * 0.28);
-        }
-
-        if (minutesAfterRange <= 720) {
-            double decay = (minutesAfterRange - 360) / 360.0;
-            return 0.50 - (decay * 0.20);
-        }
-
-        return 0.30;
-    }
-
-    private double bestLocationSimilarity(List<String> lostLocations, String foundLocation) {
-        if (lostLocations == null || lostLocations.isEmpty()) {
-            return 0.0;
-        }
-
-        double best = 0.0;
-        for (String candidate : lostLocations) {
-            best = Math.max(best, locationPhraseSimilarity(candidate, foundLocation));
-        }
-        return best;
-    }
-
-    private double locationPhraseSimilarity(String lostLocation, String foundLocation) {
-        String left = normalizeText(lostLocation);
-        String right = normalizeText(foundLocation);
-
-        if (left.isBlank() || right.isBlank()) {
-            return 0.0;
-        }
-
-        double best = enhancedTextSimilarity(left, right);
-
-        if (left.contains(right) || right.contains(left)) {
-            best = Math.max(best, 0.92);
-        }
-
-        String compactLeft = left.replace(" ", "");
-        String compactRight = right.replace(" ", "");
-        int compactMaxLen = Math.max(compactLeft.length(), compactRight.length());
-        if (compactMaxLen > 0) {
-            int compactDistance = levenshteinDistance(compactLeft, compactRight);
-            double compactEditScore = 1.0 - ((double) compactDistance / compactMaxLen);
-            best = Math.max(best, compactEditScore);
-        }
-
-        Set<String> leftTokens = tokenize(left);
-        Set<String> rightTokens = tokenize(right);
-
-        Set<String> tokenIntersection = new HashSet<>(leftTokens);
-        tokenIntersection.retainAll(rightTokens);
-        if (!tokenIntersection.isEmpty()) {
-            double overlap = (double) tokenIntersection.size() / Math.max(1, leftTokens.size());
-            best = Math.max(best, 0.85 + (0.15 * overlap));
-        }
-
-        for (String leftToken : leftTokens) {
-            for (String rightToken : rightTokens) {
-                int maxLen = Math.max(leftToken.length(), rightToken.length());
-                if (maxLen < 3) {
-                    continue;
-                }
-                int distance = levenshteinDistance(leftToken, rightToken);
-                double tokenEditScore = 1.0 - ((double) distance / maxLen);
-                best = Math.max(best, tokenEditScore);
-            }
-        }
-
-        return Math.max(0.0, Math.min(1.0, best));
-    }
+    
 
     private List<String> splitLocationHints(String value) {
         if (value == null || value.isBlank()) {
@@ -589,20 +603,6 @@ public class MatchService {
         return List.of(value.trim());
     }
 
-    private double keywordOverlapScore(String left, String right) {
-        Set<String> leftTokens = tokenize(left);
-        Set<String> rightTokens = tokenize(right);
-
-        if (leftTokens.isEmpty() || rightTokens.isEmpty()) {
-            return 0.0;
-        }
-
-        Set<String> intersection = new HashSet<>(leftTokens);
-        intersection.retainAll(rightTokens);
-
-        return (double) intersection.size() / Math.max(1, leftTokens.size());
-    }
-
     private LocalTime offsetTime(LocalTime base, int minutes) {
         if (base == null) {
             return null;
@@ -611,82 +611,6 @@ public class MatchService {
         int total = (base.getHour() * 60) + base.getMinute() + minutes;
         int clamped = Math.max(0, Math.min((24 * 60) - 1, total));
         return LocalTime.of(clamped / 60, clamped % 60);
-    }
-
-    private double descriptionSimilarity(String left, String right) {
-        double weightedJaccard = weightedTokenSimilarity(left, right);
-        double semantic = enhancedTextSimilarity(left, right);
-        return Math.max(0.0, Math.min(1.0, (weightedJaccard * 0.7) + (semantic * 0.3)));
-    }
-
-    private double weightedTokenSimilarity(String left, String right) {
-        Map<String, Integer> leftFreq = tokenFrequency(left);
-        Map<String, Integer> rightFreq = tokenFrequency(right);
-
-        if (leftFreq.isEmpty() || rightFreq.isEmpty()) {
-            return 0.0;
-        }
-
-        Set<String> vocabulary = new HashSet<>();
-        vocabulary.addAll(leftFreq.keySet());
-        vocabulary.addAll(rightFreq.keySet());
-
-        double minSum = 0.0;
-        double maxSum = 0.0;
-
-        for (String token : vocabulary) {
-            int leftCount = leftFreq.getOrDefault(token, 0);
-            int rightCount = rightFreq.getOrDefault(token, 0);
-            minSum += Math.min(leftCount, rightCount);
-            maxSum += Math.max(leftCount, rightCount);
-        }
-
-        if (maxSum <= 0.0) {
-            return 0.0;
-        }
-
-        return minSum / maxSum;
-    }
-
-    private Map<String, Integer> tokenFrequency(String value) {
-        Map<String, Integer> frequency = new HashMap<>();
-        if (value == null || value.isBlank()) {
-            return frequency;
-        }
-
-        String normalized = normalizeText(value);
-        if (normalized.isBlank()) {
-            return frequency;
-        }
-
-        for (String token : normalized.split(" ")) {
-            if (token.length() < 2) {
-                continue;
-            }
-            frequency.merge(token, 1, Integer::sum);
-        }
-
-        return frequency;
-    }
-
-    private double enhancedTextSimilarity(String left, String right) {
-        String normalizedLeft = normalizeText(left);
-        String normalizedRight = normalizeText(right);
-
-        if (normalizedLeft.isBlank() || normalizedRight.isBlank()) {
-            return 0.0;
-        }
-
-        double tokenScore = textSimilarity(normalizedLeft, normalizedRight);
-
-        int maxLen = Math.max(normalizedLeft.length(), normalizedRight.length());
-        if (maxLen <= 24) {
-            int distance = levenshteinDistance(normalizedLeft, normalizedRight);
-            double editScore = 1.0 - ((double) distance / Math.max(1, maxLen));
-            return Math.max(0.0, Math.min(1.0, (editScore * 0.6) + (tokenScore * 0.4)));
-        }
-
-        return tokenScore;
     }
 
     private int levenshteinDistance(String left, String right) {
@@ -727,23 +651,6 @@ public class MatchService {
             .trim();
     }
 
-    private double textSimilarity(String left, String right) {
-        Set<String> leftTokens = tokenize(left);
-        Set<String> rightTokens = tokenize(right);
-
-        if (leftTokens.isEmpty() || rightTokens.isEmpty()) {
-            return 0.0;
-        }
-
-        Set<String> intersection = new HashSet<>(leftTokens);
-        intersection.retainAll(rightTokens);
-
-        Set<String> union = new HashSet<>(leftTokens);
-        union.addAll(rightTokens);
-
-        return union.isEmpty() ? 0.0 : ((double) intersection.size() / union.size());
-    }
-
     private Set<String> tokenize(String value) {
         Set<String> tokens = new HashSet<>();
         if (value == null || value.isBlank()) {
@@ -774,96 +681,87 @@ public class MatchService {
             return false;
         }
 
-        Set<String> lostIds = extractIdentifiers(lost);
-        Set<String> foundIds = extractIdentifiers(found);
+        Set<String> lostNics = extractNicIdentifiers(lost);
+        Set<String> foundNics = extractNicIdentifiers(found);
+        if (hasIntersection(lostNics, foundNics)) {
+            return true;
+        }
 
-        if (lostIds.isEmpty() || foundIds.isEmpty()) {
+        Set<String> lostGeneralIds = extractGeneralIdentifiers(lost);
+        Set<String> foundGeneralIds = extractGeneralIdentifiers(found);
+        if (hasIntersection(lostGeneralIds, foundGeneralIds)) {
+            return true;
+        }
+
+        Set<String> lostCardLast4 = extractCardLast4Identifiers(lost);
+        Set<String> foundCardLast4 = extractCardLast4Identifiers(found);
+        return hasIntersection(lostCardLast4, foundCardLast4);
+    }
+
+    private boolean hasIntersection(Set<String> left, Set<String> right) {
+        if (left.isEmpty() || right.isEmpty()) {
             return false;
         }
 
-        for (String id : lostIds) {
-            if (foundIds.contains(id)) {
+        for (String value : left) {
+            if (right.contains(value)) {
                 return true;
             }
         }
-
         return false;
     }
 
-    private Set<String> extractIdentifiers(Item item) {
+    private Set<String> extractNicIdentifiers(Item item) {
         Set<String> values = new HashSet<>();
-
-        String searchable = ((item.getItemName() == null ? "" : item.getItemName()) + " "
-            + (item.getDescription() == null ? "" : item.getDescription())).toUpperCase(Locale.ROOT);
-
-        Matcher privateCardMatcher = PRIVATE_CARD_PATTERN.matcher(searchable);
-        while (privateCardMatcher.find()) {
-            values.add(privateCardMatcher.group(1));
-        }
-
-        Matcher cardMatcher = CARD16_PATTERN.matcher(searchable);
-        while (cardMatcher.find()) {
-            values.add(cardMatcher.group());
-        }
-
+        String searchable = toSearchableCorpus(item);
         Matcher nicMatcher = NIC_PATTERN.matcher(searchable);
         while (nicMatcher.find()) {
             values.add(nicMatcher.group().replace(" ", ""));
         }
+        return values;
+    }
 
+    private Set<String> extractGeneralIdentifiers(Item item) {
+        Set<String> values = new HashSet<>();
+        String searchable = toSearchableCorpus(item);
         Matcher idMatcher = ID_PATTERN.matcher(searchable);
         while (idMatcher.find()) {
             values.add(idMatcher.group().replace(" ", "").replace("-", ""));
+        }
+        return values;
+    }
+
+    private Set<String> extractCardLast4Identifiers(Item item) {
+        Set<String> values = new HashSet<>();
+        String searchable = toSearchableCorpus(item);
+
+        Matcher privateCardMatcher = PRIVATE_CARD_PATTERN.matcher(searchable);
+        while (privateCardMatcher.find()) {
+            String card = privateCardMatcher.group(1);
+            values.add(card.substring(card.length() - 4));
+        }
+
+        Matcher cardMatcher = CARD16_PATTERN.matcher(searchable);
+        while (cardMatcher.find()) {
+            String card = cardMatcher.group();
+            values.add(card.substring(card.length() - 4));
+        }
+
+        Matcher hintMatcher = CARD_LAST4_HINT_PATTERN.matcher(searchable);
+        while (hintMatcher.find()) {
+            values.add(hintMatcher.group(1));
         }
 
         return values;
     }
 
-    private double bankCardNumberSimilarity(Item lost, Item found) {
-        String lostCard = extractPrimaryCardNumber(lost);
-        String foundCard = extractPrimaryCardNumber(found);
-
-        if (lostCard.isBlank() || foundCard.isBlank()) {
-            return 0.0;
-        }
-
-        if (lostCard.equals(foundCard)) {
-            return 1.0;
-        }
-
-        int distance = levenshteinDistance(lostCard, foundCard);
-        if (distance == 1) {
-            return 0.93;
-        }
-        if (distance == 2) {
-            return 0.86;
-        }
-        if (distance == 3) {
-            return 0.70;
-        }
-
-        return 0.0;
-    }
-
-    private String extractPrimaryCardNumber(Item item) {
+    private String toSearchableCorpus(Item item) {
         if (item == null) {
             return "";
         }
 
-        String text = ((item.getItemName() == null ? "" : item.getItemName()) + " "
+        return ((item.getItemName() == null ? "" : item.getItemName()) + " "
             + (item.getDescription() == null ? "" : item.getDescription())).toUpperCase(Locale.ROOT);
-
-        Matcher privateCardMatcher = PRIVATE_CARD_PATTERN.matcher(text);
-        if (privateCardMatcher.find()) {
-            return privateCardMatcher.group(1);
-        }
-
-        Matcher cardMatcher = CARD16_PATTERN.matcher(text);
-        if (cardMatcher.find()) {
-            return cardMatcher.group();
-        }
-
-        return "";
     }
 
     private double round(double value) {

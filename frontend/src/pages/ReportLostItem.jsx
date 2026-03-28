@@ -261,7 +261,7 @@ const ReportLostItem = () => {
     if (category === 'NIC') {
       item_name = `NIC - ${formData.nicName}`;
       description = `NIC Number: ${normalizeNic(formData.nicNumber)}`;
-      location = [formData.nicLocation1, formData.nicLocation2].filter(Boolean).join(', ') || defaultLocation;
+      location = [formData.nicLocation1, formData.nicLocation2, formData.nicLocation3].filter(Boolean).join(', ') || defaultLocation;
       date = formData.nicDateLost;
       time = formData.nicFromTime;
       image = null;

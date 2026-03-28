@@ -83,10 +83,9 @@ class MatchServiceTest {
 
         ReflectionTestUtils.setField(matchService, "strongThreshold", 0.80);
         ReflectionTestUtils.setField(matchService, "possibleThreshold", 0.60);
-        ReflectionTestUtils.setField(matchService, "nameWeight", 0.10);
-        ReflectionTestUtils.setField(matchService, "descriptionWeight", 0.45);
-        ReflectionTestUtils.setField(matchService, "locationWeight", 0.30);
-        ReflectionTestUtils.setField(matchService, "dateWeight", 0.05);
+        ReflectionTestUtils.setField(matchService, "descriptionWeight", 0.55);
+        ReflectionTestUtils.setField(matchService, "locationWeight", 0.25);
+        ReflectionTestUtils.setField(matchService, "dateWeight", 0.10);
         ReflectionTestUtils.setField(matchService, "timeWeight", 0.10);
     }
 

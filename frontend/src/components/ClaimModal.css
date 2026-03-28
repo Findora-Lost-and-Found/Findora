@@ -137,6 +137,17 @@
   background: #F9FAFB;
 }
 
+.form-group .input-invalid {
+  border-color: #DC2626;
+  background: #FEF2F2;
+}
+
+.form-group .field-error {
+  color: #DC2626;
+  font-size: 0.85rem;
+  margin-top: 0.2rem;
+}
+
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;

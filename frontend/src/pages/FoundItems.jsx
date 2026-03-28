@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
@@ -63,6 +63,7 @@ const FoundItems = () => {
     sortBy: FOUND_ITEM_SORT.LATEST
   });
   const [searchInput, setSearchInput] = useState('');
+  const hasAppliedFocusScroll = useRef(false);
 
   const normalizeItem = (item) => ({
     id: item.id,
@@ -176,14 +177,15 @@ const FoundItems = () => {
 
   useEffect(() => {
     const focusItemId = searchParams.get('focusItem');
-    if (!focusItemId) return;
+    if (!focusItemId || hasAppliedFocusScroll.current) return;
 
     const targetId = `found-item-${focusItemId}`;
-    // Delay to ensure the card exists in DOM after list rendering.
+    // Run only once per page mount to avoid repeated smooth-scroll jitter.
     const timer = setTimeout(() => {
       const targetCard = document.getElementById(targetId);
       if (targetCard) {
         targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        hasAppliedFocusScroll.current = true;
       }
     }, 100);
 
