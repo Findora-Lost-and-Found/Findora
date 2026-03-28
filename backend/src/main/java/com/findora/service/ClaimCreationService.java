@@ -54,15 +54,39 @@ public class ClaimCreationService {
                 throw new IllegalArgumentException("You already have an active claim for this item");
             });
 
-        String otp = String.format("%06d", ThreadLocalRandom.current().nextInt(0, 1_000_000));
-        LocalDateTime otpExpiry = LocalDateTime.now(ZoneOffset.UTC).plusHours(24);
-
         Claim claim = new Claim();
         claim.setItemId(itemId);
         claim.setClaimerId(currentUserId);
+        // OTP is generated on-demand from My Claims page.
+        claim.setOtp("");
+        claim.setOtpExpiry(LocalDateTime.now(ZoneOffset.UTC));
+        claim.setStatus(Claim.ClaimStatus.PENDING);
+        return claimRepository.save(claim);
+    }
+
+    @Transactional
+    public Claim generateOtpForClaim(Long claimId, Long currentUserId) {
+        Claim claim = claimRepository.findByIdAndClaimerId(claimId, currentUserId)
+            .orElseThrow(() -> new IllegalArgumentException("Claim not found"));
+
+        if (claim.getStatus() == Claim.ClaimStatus.REJECTED || claim.getStatus() == Claim.ClaimStatus.COLLECTED) {
+            throw new IllegalArgumentException("OTP cannot be generated for this claim status");
+        }
+
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+        boolean hasActiveOtp = claim.getOtp() != null
+            && !claim.getOtp().isBlank()
+            && claim.getOtpExpiry() != null
+            && claim.getOtpExpiry().isAfter(now);
+
+        if (hasActiveOtp) {
+            return claim;
+        }
+
+        String otp = String.format("%06d", ThreadLocalRandom.current().nextInt(0, 1_000_000));
+        LocalDateTime otpExpiry = now.plusHours(1);
         claim.setOtp(otp);
         claim.setOtpExpiry(otpExpiry);
-        claim.setStatus(Claim.ClaimStatus.PENDING);
         return claimRepository.save(claim);
     }
 }

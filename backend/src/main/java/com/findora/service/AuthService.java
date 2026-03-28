@@ -8,6 +8,7 @@ import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +35,7 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final EmailService emailService;
     private final NotificationRepository notificationRepository;
+    private final boolean exposeVerificationOtp;
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private static final Random RANDOM = new Random();
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
@@ -46,12 +48,14 @@ public class AuthService {
             PasswordEncoder passwordEncoder,
             JwtTokenProvider jwtTokenProvider,
             EmailService emailService,
-            NotificationRepository notificationRepository) {
+            NotificationRepository notificationRepository,
+            @Value("${app.dev.expose-verification-otp:false}") boolean exposeVerificationOtp) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.emailService = emailService;
         this.notificationRepository = notificationRepository;
+        this.exposeVerificationOtp = exposeVerificationOtp;
     }
 
     /**
@@ -155,8 +159,17 @@ public class AuthService {
 
         User savedUser = userRepository.save(user);
 
+        String fallbackVerificationOtp = null;
         if (requiresEmailVerification) {
-            emailService.sendVerificationOtp(savedUser.getEmail(), savedUser.getFullName(), savedUser.getVerificationOtp());
+            try {
+                emailService.sendVerificationOtp(savedUser.getEmail(), savedUser.getFullName(), savedUser.getVerificationOtp());
+            } catch (RuntimeException emailError) {
+                if (!exposeVerificationOtp) {
+                    throw emailError;
+                }
+                fallbackVerificationOtp = savedUser.getVerificationOtp();
+                log.warn("Verification email delivery failed for {}. Exposing OTP in response for development fallback.", savedUser.getUsername(), emailError);
+            }
         }
 
         String token = null;
@@ -178,9 +191,13 @@ public class AuthService {
             message = "Signup request submitted. Please wait for admin approval";
         }
 
+        if (fallbackVerificationOtp != null) {
+            message = "Signup successful. Email delivery failed, use the OTP shown in-app to verify.";
+        }
+
         log.info("User {} registered successfully", username);
 
-        return new AuthResponse(token, userDTO, message);
+        return new AuthResponse(token, userDTO, message, fallbackVerificationOtp);
     }
 
     private String normalizeEmail(String email) {
@@ -244,11 +261,10 @@ public class AuthService {
         verifyEmail(user.getId(), otp);
     }
 
-        /**
-         * Regenerate verification OTP.
-         * Sends the generated OTP to the user email.
-         */
-    public void resendVerificationOtp(String usernameOrEmail) {
+    /**
+     * Regenerate verification OTP.
+     */
+    public String resendVerificationOtp(String usernameOrEmail) {
         User user = userRepository.findByUsername(usernameOrEmail)
             .or(() -> userRepository.findByEmail(usernameOrEmail))
             .orElseThrow(() -> new RuntimeException("User not found"));
@@ -257,9 +273,18 @@ public class AuthService {
         user.setOtpExpiry(LocalDateTime.now().plusHours(24));
         userRepository.save(user);
 
-        emailService.sendVerificationOtp(user.getEmail(), user.getFullName(), user.getVerificationOtp());
+        try {
+            emailService.sendVerificationOtp(user.getEmail(), user.getFullName(), user.getVerificationOtp());
+        } catch (RuntimeException emailError) {
+            if (!exposeVerificationOtp) {
+                throw emailError;
+            }
+            log.warn("Verification OTP resend email delivery failed for {}. Exposing OTP in response for development fallback.", user.getUsername(), emailError);
+            return user.getVerificationOtp();
+        }
 
         log.info("Verification OTP regenerated for user {}", user.getUsername());
+        return exposeVerificationOtp ? user.getVerificationOtp() : null;
     }
 
     public void updatePhoneNumber(String username, String newPhone) {
@@ -359,7 +384,10 @@ public class AuthService {
      */
     @Transactional(readOnly = true)
     public UserDTO getCurrentUserByUsername(String username) {
-        User user = userRepository.findByUsername(username)
+        String principal = username == null ? "" : username.trim();
+
+        User user = userRepository.findByUsername(principal)
+            .or(() -> userRepository.findByEmail(principal))
             .orElseThrow(() -> new RuntimeException("User not found"));
 
         return convertToUserDTO(user);

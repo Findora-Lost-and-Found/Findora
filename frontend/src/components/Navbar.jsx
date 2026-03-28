@@ -86,7 +86,7 @@ const Navbar = () => {
               {(user.role === 'student' || user.role === 'staff' || user.role === 'security') && (
                 <>
                   <Link to="/lost-items" className="nav-link">My Lost Items</Link>
-                  <Link to="/found-items" className="nav-link">Found Items</Link>
+                  <Link to="/found-items" className="nav-link">My Found Items</Link>
                 </>
               )}
 
