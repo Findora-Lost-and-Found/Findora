@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { useAuth } from '../context/AuthContext';
 import { itemsAPI, securityAPI } from '../services/api';
 import FoundItemCard from '../components/FoundItemCard';
 import Pagination from '../components/Pagination';
-import { sampleFoundItems } from '../data/sampleFoundItems';
 import { normalizeCategory } from '../utils/categoryUtils';
-import { FOUND_ITEM_SORT } from '../utils/itemDisplayUtils';
+import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
 
 const PAGE_SIZE = 4;
 const configuredApiUrl = import.meta.env.VITE_API_URL;
@@ -44,6 +44,7 @@ const toImageUrl = (rawImage) => {
 };
 
 const FoundItems = () => {
+  const { user } = useAuth();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const [allItems, setAllItems] = useState([]);
@@ -100,11 +101,10 @@ const FoundItems = () => {
     try {
       setLoading(true);
 
-      const response = await itemsAPI.getAll({
+      const response = await itemsAPI.getMy({
         type: 'found',
         page: currentPage,
         size: PAGE_SIZE,
-        sort: sortParam,
         category: filters.category || undefined,
         keyword: filters.search.trim() || undefined
       });
@@ -112,32 +112,30 @@ const FoundItems = () => {
       const apiItems = response.data?.content || [];
       console.log('FoundItems fetched from API:', apiItems);
       const normalizedItems = apiItems.map(normalizeItem);
+      const ownerOnlyItems = normalizedItems.filter((item) => {
+        const ownerId = item?.posted_by?.id;
+        if (!user?.id || ownerId === undefined || ownerId === null) {
+          return true;
+        }
+        return String(ownerId) === String(user.id);
+      });
+      const sortedItems = sortFoundItems(ownerOnlyItems, filters.sortBy);
 
-      if (normalizedItems.length > 0) {
-        setAllItems(normalizedItems);
-        setPagination({
-          totalPages: response.data?.totalPages ?? 0,
-          totalElements: response.data?.totalElements ?? 0,
-          pageNumber: response.data?.pageNumber ?? currentPage,
-          pageSize: response.data?.pageSize ?? PAGE_SIZE
-        });
-      } else {
-        setAllItems(sampleFoundItems);
-        setPagination({
-          totalPages: 1,
-          totalElements: sampleFoundItems.length,
-          pageNumber: 0,
-          pageSize: sampleFoundItems.length
-        });
-      }
+      setAllItems(sortedItems);
+      setPagination({
+        totalPages: response.data?.totalPages ?? 0,
+        totalElements: response.data?.totalElements ?? 0,
+        pageNumber: response.data?.pageNumber ?? currentPage,
+        pageSize: response.data?.pageSize ?? PAGE_SIZE
+      });
     } catch (error) {
       console.error('Error loading found items:', error.response?.data || error.message);
-      setAllItems(sampleFoundItems);
+      setAllItems([]);
       setPagination({
-        totalPages: 1,
-        totalElements: sampleFoundItems.length,
+        totalPages: 0,
+        totalElements: 0,
         pageNumber: 0,
-        pageSize: sampleFoundItems.length
+        pageSize: PAGE_SIZE
       });
     } finally {
       setLoading(false);
@@ -201,6 +199,11 @@ const FoundItems = () => {
   return (
     <div className="container">
       <h1>Found Items</h1>
+      {user?.username && (
+        <p style={{ marginTop: '-0.5rem', color: '#4B5563' }}>
+          Showing posts uploaded by @{user.username}
+        </p>
+      )}
 
       <div className="filters">
         <select name="category" value={filters.category} onChange={handleFilterChange}>
@@ -236,7 +239,7 @@ const FoundItems = () => {
 
       <div className="items-grid">
         {displayedItems.length === 0 ? (
-          <p>No found items available.</p>
+          <p>You have not posted any found items yet.</p>
         ) : (
           displayedItems.map((item) => (
             <FoundItemCard

@@ -37,7 +37,6 @@ import com.findora.security.JwtAuthenticationFilter;
 
 @WebMvcTest(AdminController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@SuppressWarnings("unused")
 class AdminControllerTest {
 
     @Autowired
