@@ -33,6 +33,7 @@ import com.findora.repository.NotificationRepository;
 import com.findora.repository.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("unused")
 class MatchServiceTest {
 
     private JpaRepository<Match, Long> matchRepository;
@@ -57,7 +58,9 @@ class MatchServiceTest {
 
         Class<?> matchRepositoryClass = Class.forName("com.findora.repository.MatchRepository");
         Object matchRepositoryProxy = org.mockito.Mockito.mock(matchRepositoryClass);
-        this.matchRepository = (JpaRepository<Match, Long>) matchRepositoryProxy;
+        @SuppressWarnings("unchecked")
+        JpaRepository<Match, Long> castedRepository = (JpaRepository<Match, Long>) matchRepositoryProxy;
+        this.matchRepository = castedRepository;
         Constructor<MatchService> constructor = MatchService.class.getConstructor(
             matchRepositoryClass,
             ItemRepository.class,

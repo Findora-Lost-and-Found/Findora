@@ -316,47 +316,52 @@ public class SecurityService {
     }
 
     private void ensureItemStatusSupportsSecurityStates() {
-        String columnType = jdbcTemplate.queryForObject(
-            "SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS "
-                + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'items' AND COLUMN_NAME = 'status'",
-            String.class
-        );
+        try {
+            String columnType = jdbcTemplate.queryForObject(
+                "SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS "
+                    + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'items' AND COLUMN_NAME = 'status'",
+                String.class
+            );
 
-        if (columnType == null || columnType.isBlank()) {
-            throw new IllegalStateException("Could not inspect items.status column definition");
-        }
-
-        log.info("items.status column type before compatibility check: {}", columnType);
-
-        Set<String> values = new LinkedHashSet<>();
-        Matcher matcher = Pattern.compile("'([^']*)'").matcher(columnType.toLowerCase());
-        while (matcher.find()) {
-            values.add(matcher.group(1));
-        }
-
-        boolean changed = false;
-        for (String required : List.of("active", "handover_requested", "held_by_security", "handed_to_security", "claimed", "closed")) {
-            if (values.add(required)) {
-                changed = true;
+            if (columnType == null || columnType.isBlank()) {
+                log.warn("Could not inspect items.status column - database may be unavailable");
+                return;
             }
-        }
 
-        if (!changed) {
-            log.info("items.status already supports all required security states");
-            return;
-        }
+            log.info("items.status column type before compatibility check: {}", columnType);
 
-        List<String> escapedValues = new ArrayList<>();
-        for (String value : values) {
-            escapedValues.add("'" + value.replace("'", "''") + "'");
-        }
+            Set<String> values = new LinkedHashSet<>();
+            Matcher matcher = Pattern.compile("'([^']*)'").matcher(columnType.toLowerCase());
+            while (matcher.find()) {
+                values.add(matcher.group(1));
+            }
 
-        String alterSql = "ALTER TABLE items MODIFY COLUMN status ENUM("
-            + String.join(",", escapedValues)
-            + ") DEFAULT 'active'";
-        log.info("Applying items.status compatibility patch: {}", alterSql);
-        jdbcTemplate.execute(alterSql);
-        log.info("Patched items.status enum values for handover compatibility");
+            boolean changed = false;
+            for (String required : List.of("active", "handover_requested", "held_by_security", "handed_to_security", "claimed", "closed")) {
+                if (values.add(required)) {
+                    changed = true;
+                }
+            }
+
+            if (!changed) {
+                log.info("items.status already supports all required security states");
+                return;
+            }
+
+            List<String> escapedValues = new ArrayList<>();
+            for (String value : values) {
+                escapedValues.add("'" + value.replace("'", "''") + "'");
+            }
+
+            String alterSql = "ALTER TABLE items MODIFY COLUMN status ENUM("
+                + String.join(",", escapedValues)
+                + ") DEFAULT 'active'";
+            log.info("Applying items.status compatibility patch: {}", alterSql);
+            jdbcTemplate.execute(alterSql);
+            log.info("Patched items.status enum values for handover compatibility");
+        } catch (Exception e) {
+            log.warn("Schema compatibility check skipped (database may be unavailable): {}", e.getMessage());
+        }
     }
 
     private Integer safeLongToInteger(long value) {

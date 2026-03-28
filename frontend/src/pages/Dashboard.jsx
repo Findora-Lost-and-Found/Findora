@@ -218,7 +218,7 @@ const Dashboard = () => {
         {(user?.role === 'student' || user?.role === 'staff') && (
           <div className="found-items-section">
             <div className="section-header">
-              <h2>Recently Found Items</h2>
+              <h2>Global Found Items Feed</h2>
               <Link to="/found-items" className="link-more">View All -&gt;</Link>
             </div>
             <div className="found-items-grid">

@@ -86,6 +86,10 @@ export const AuthProvider = ({ children }) => {
       toast.success('Login successful');
       return { success: true, user };
     } catch (error) {
+      // Prevent cross-account confusion: never keep an old session after a failed login attempt.
+      localStorage.removeItem('token');
+      setToken(null);
+      setUser(null);
       const message = getApiErrorMessage(error, 'Login failed');
       toast.error(message);
       return { success: false, message };

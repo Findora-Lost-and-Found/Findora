@@ -146,7 +146,6 @@ const ReportLostItem = () => {
       if (formData.nicNumber.trim() && !isValidNicNumber(formData.nicNumber)) {
         nextErrors.nicNumber = 'NIC must be 12 digits or 9 digits followed by V.';
       }
-      if (!formData.nicLocation1.trim()) nextErrors.nicLocation1 = 'Location is required.';
       if (!formData.nicDateLost) nextErrors.nicDateLost = 'Date is required.';
       if (formData.nicDateLost && isFutureDate(formData.nicDateLost)) {
         nextErrors.nicDateLost = 'Invalid date. Please select today or a past date.';
@@ -167,7 +166,6 @@ const ReportLostItem = () => {
           nextErrors.studentOrStaffId = validationResult;
         }
       }
-      if (!formData.idLocation1.trim()) nextErrors.idLocation1 = 'Location is required.';
       if (!formData.idDateLost) nextErrors.idDateLost = 'Date is required.';
       if (formData.idDateLost && isFutureDate(formData.idDateLost)) {
         nextErrors.idDateLost = 'Invalid date. Please select today or a past date.';
@@ -256,13 +254,14 @@ const ReportLostItem = () => {
       'Purse / Wallet': 'Wallet',
       'Others': 'Other'
     };
+    const defaultLocation = 'Not specified';
 
     let item_name, description, location, date, time, image;
 
     if (category === 'NIC') {
       item_name = `NIC - ${formData.nicName}`;
       description = `NIC Number: ${normalizeNic(formData.nicNumber)}`;
-      location = [formData.nicLocation1, formData.nicLocation2].filter(Boolean).join(', ');
+      location = [formData.nicLocation1, formData.nicLocation2].filter(Boolean).join(', ') || defaultLocation;
       date = formData.nicDateLost;
       time = formData.nicFromTime;
       image = null;
@@ -270,7 +269,7 @@ const ReportLostItem = () => {
       const idType = formData.idHolderType || 'Student';
       item_name = `${idType} ID - ${formData.idName}`;
       description = `ID Type: ${idType} | Name: ${formData.idName || 'Unknown'} | ID Number: ${formData.studentOrStaffId}`;
-      location = [formData.idLocation1, formData.idLocation2, formData.idLocation3].filter(Boolean).join(', ');
+      location = [formData.idLocation1, formData.idLocation2, formData.idLocation3].filter(Boolean).join(', ') || defaultLocation;
       date = formData.idDateLost;
       time = formData.idFromTime;
       image = null;
@@ -374,20 +373,7 @@ const ReportLostItem = () => {
                 {errors.nicNumber && <p className="report-lost-error">{errors.nicNumber}</p>}
               </div>
               <div className="report-lost-private">
-                <h4>Where did you lose it?</h4>
-                <div className="report-lost-form-group">
-                  <label className="required">Field 1</label>
-                  <input name="nicLocation1" value={formData.nicLocation1} onChange={handleInputChange} />
-                  {errors.nicLocation1 && <p className="report-lost-error">{errors.nicLocation1}</p>}
-                </div>
-                <div className="report-lost-form-group">
-                  <label>Field 2 (optional)</label>
-                  <input name="nicLocation2" value={formData.nicLocation2} onChange={handleInputChange} />
-                </div>
-                <div className="report-lost-form-group">
-                  <label>Field 3 (optional)</label>
-                  <input name="nicLocation3" value={formData.nicLocation3} onChange={handleInputChange} />
-                </div>
+                <h4>When did you lose it?</h4>
                 <div className="report-lost-form-group">
                   <label className="required">What date did you lose it?</label>
                   <input type="date" name="nicDateLost" value={formData.nicDateLost} onChange={handleInputChange} />
@@ -442,20 +428,7 @@ const ReportLostItem = () => {
                 {errors.studentOrStaffId && <p className="report-lost-error">{errors.studentOrStaffId}</p>}
               </div>
               <div className="report-lost-private">
-                <h4>Where did you lose it?</h4>
-                <div className="report-lost-form-group">
-                  <label className="required">Field 1</label>
-                  <input name="idLocation1" value={formData.idLocation1} onChange={handleInputChange} />
-                  {errors.idLocation1 && <p className="report-lost-error">{errors.idLocation1}</p>}
-                </div>
-                <div className="report-lost-form-group">
-                  <label>Field 2 (optional)</label>
-                  <input name="idLocation2" value={formData.idLocation2} onChange={handleInputChange} />
-                </div>
-                <div className="report-lost-form-group">
-                  <label>Field 3 (optional)</label>
-                  <input name="idLocation3" value={formData.idLocation3} onChange={handleInputChange} />
-                </div>
+                <h4>When did you lose it?</h4>
                 <div className="report-lost-form-group">
                   <label className="required">What date did you lose it?</label>
                   <input type="date" name="idDateLost" value={formData.idDateLost} onChange={handleInputChange} />
