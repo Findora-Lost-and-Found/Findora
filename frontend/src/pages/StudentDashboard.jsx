@@ -6,6 +6,7 @@ import PostModal from '../components/PostModal';
 import FoundItemCard from '../components/FoundItemCard';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
+import { sampleFoundItems } from '../data/sampleFoundItems';
 
 const DEFAULT_POST_ROLES = ['student', 'staff', 'security'];
 const configuredApiUrl = import.meta.env.VITE_API_URL;
@@ -93,10 +94,10 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
           }
         }));
         const sortedFoundItems = sortFoundItems(apiItems, FOUND_ITEM_SORT.LATEST);
-        setFoundItems(sortedFoundItems.slice(0, 6));
+        setFoundItems(sortedFoundItems.length > 0 ? sortedFoundItems.slice(0, 6) : sampleFoundItems);
       } else {
         console.error('Dashboard found items fetch failed:', foundRes.reason?.response?.data || foundRes.reason?.message);
-        setFoundItems([]);
+        setFoundItems(sampleFoundItems);
       }
     } catch (error) {
       console.error('Error loading dashboard:', error);
