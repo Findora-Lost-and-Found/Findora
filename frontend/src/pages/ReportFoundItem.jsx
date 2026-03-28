@@ -34,13 +34,7 @@ const ReportFoundItem = () => {
   const [formData, setFormData] = useState({
     nicName: '',
     nicNumber: '',
-<<<<<<< HEAD
     idHolderType: '',
-=======
-    nicLocation1: '',
-    nicLocation2: '',
-    nicLocation3: '',
->>>>>>> develop-i
     idName: '',
     studentOrStaffId: '',
     idLocation1: '',
@@ -258,11 +252,7 @@ const ReportFoundItem = () => {
       item_name = `${formData.bankName} ${formData.cardType} Card`;
       const last4 = getCardLast4(formData.cardNumber);
       description = `Card: ${maskCardNumber(formData.cardNumber) || '**** **** **** ****'}${last4 ? ` (last 4: ${last4})` : ''}`;
-      location = formData.bankPrivateLocation || location;
-=======
-      description = `Last 4 digits: ${formData.cardNumber ? formData.cardNumber.slice(-4) : 'N/A'}`;
       location = [formData.bankPrivateLocation, formData.bankPrivateLocation2, formData.bankPrivateLocation3].filter(Boolean).join(', ') || location;
->>>>>>> develop-i
       date = formData.bankPrivateDate || date;
       time = formData.bankPrivateTime || time;
     }

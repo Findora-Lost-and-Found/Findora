@@ -103,13 +103,10 @@ public class AuthService {
         return new AuthResponse(token, userDTO, null);
     }
 
-    /**
-     * Register new user.
-<<<<<<< HEAD
-=======
-        * Includes validation and email verification OTP flow.
->>>>>>> develop-i
-     */
+        /**
+         * Register new user.
+         * Includes validation and email verification OTP flow.
+         */
     public AuthResponse register(String username, String email, String password, String fullName, String role, String phone) {
         String normalizedEmail = normalizeEmail(email);
         String normalizedPhone = normalizePhone(phone);
@@ -237,13 +234,10 @@ public class AuthService {
         verifyEmail(user.getId(), otp);
     }
 
-    /**
-     * Regenerate verification OTP.
-<<<<<<< HEAD
-=======
-        * Sends the generated OTP to the user email.
->>>>>>> develop-i
-     */
+        /**
+         * Regenerate verification OTP.
+         * Sends the generated OTP to the user email.
+         */
     public void resendVerificationOtp(String usernameOrEmail) {
         User user = userRepository.findByUsername(usernameOrEmail)
             .or(() -> userRepository.findByEmail(usernameOrEmail))
@@ -340,10 +334,7 @@ public class AuthService {
         emailService.sendPasswordResetOtp(user.getEmail(), user.getFullName(), otp);
 
         log.info("Password reset OTP generated for user {}", user.getUsername());
-<<<<<<< HEAD
-=======
         // OTP is sent via emailService.sendPasswordResetOtp above.
->>>>>>> develop-i
         return otp;
     }
 

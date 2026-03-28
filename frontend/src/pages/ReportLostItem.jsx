@@ -262,24 +262,15 @@ const ReportLostItem = () => {
     if (category === 'NIC') {
       item_name = `NIC - ${formData.nicName}`;
       description = `NIC Number: ${normalizeNic(formData.nicNumber)}`;
-      location = [formData.nicLocation1, formData.nicLocation2].filter(Boolean).join(', ');
-=======
       location = [formData.nicLocation1, formData.nicLocation2, formData.nicLocation3].filter(Boolean).join(', ');
->>>>>>> develop-i
       date = formData.nicDateLost;
       time = formData.nicFromTime;
       image = null;
     } else if (category === 'Student / Staff ID') {
-<<<<<<< HEAD
       const idType = formData.idHolderType || 'Student';
       item_name = `${idType} ID - ${formData.idName}`;
       description = `ID Type: ${idType} | Name: ${formData.idName || 'Unknown'} | ID Number: ${formData.studentOrStaffId}`;
-      location = [formData.idLocation1, formData.idLocation2].filter(Boolean).join(', ');
-=======
-      item_name = `Student/Staff ID - ${formData.idName}`;
-      description = `ID: ${formData.studentOrStaffId}`;
       location = [formData.idLocation1, formData.idLocation2, formData.idLocation3].filter(Boolean).join(', ');
->>>>>>> develop-i
       date = formData.idDateLost;
       time = formData.idFromTime;
       image = null;
@@ -288,7 +279,6 @@ const ReportLostItem = () => {
       const last4 = getCardLast4(formData.cardNumber);
       description = `Card: ${maskCardNumber(formData.cardNumber) || '**** **** **** ****'}${last4 ? ` (last 4: ${last4})` : ''}`;
       location = [formData.bankLocation1, formData.bankLocation2, formData.bankLocation3].filter(Boolean).join(', ');
->>>>>>> develop-i
       date = formData.bankDateLost;
       time = formData.bankFromTime;
       image = null;

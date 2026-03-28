@@ -215,34 +215,13 @@ const Dashboard = () => {
         )}
 
         {/* Found Items Feed Section */}
-<<<<<<< HEAD
-        {(user?.role === 'student' || user?.role === 'staff') && foundItems.length > 0 && foundItems.some(i => i) && (
-=======
         {(user?.role === 'student' || user?.role === 'staff') && (
->>>>>>> develop-i
           <div className="found-items-section">
             <div className="section-header">
               <h2>Recently Found Items</h2>
               <Link to="/found-items" className="link-more">View All →</Link>
             </div>
             <div className="found-items-grid">
-<<<<<<< HEAD
-              {foundItems.map((item) => (
-                <FoundItemCard
-                  key={item.id}
-                  item={item}
-                  onClaim={() => {
-                    claimsAPI.create(item.id).then(() => {
-                      navigate('/my-claims');
-                    }).catch((err) => {
-                      console.error('Claim error:', err);
-                    });
-                  }}
-                  onHandover={handleHandoverRequest}
-                  handoverInProgress={!!handoverLoadingById[item.id]}
-                />
-              ))}
-=======
               {foundItems.length === 0 ? (
                 <p>No found items available right now.</p>
               ) : (
@@ -262,7 +241,6 @@ const Dashboard = () => {
                   />
                 ))
               )}
->>>>>>> develop-i
             </div>
           </div>
         )}

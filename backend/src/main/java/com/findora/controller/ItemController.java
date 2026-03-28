@@ -160,7 +160,6 @@ public class ItemController {
      */
     @GetMapping("/my/items")
     public ResponseEntity<?> getMyItems(
-<<<<<<< HEAD
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(required = false) String type,
@@ -335,11 +334,7 @@ public class ItemController {
 
     /**
      * DELETE /api/items/:id - Delete item.
-<<<<<<< HEAD
      * Requires authorization to delete item.
-=======
-      * Pending: add authorization check.
->>>>>>> develop-i
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteItem(@PathVariable Long id) {
