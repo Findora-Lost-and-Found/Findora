@@ -19,8 +19,9 @@
 
 .admin-appeals-controls select {
   border: 1px solid var(--border-soft);
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   padding: 0.45rem 0.6rem;
+  font-size: 0.96rem;
 }
 
 .admin-appeals-layout {

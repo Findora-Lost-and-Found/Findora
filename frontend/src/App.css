@@ -1250,6 +1250,26 @@ body.dark-mode .form-group select:focus {
 
 .search-form input {
   min-width: 220px;
+  min-height: 42px;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid #9ccfca;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 0.96rem;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04) inset;
+}
+
+.search-form input:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.18);
+}
+
+body.dark-mode .search-form input {
+  background: #1f2937;
+  color: #f8fafc;
+  border-color: #4b5563;
 }
 
 .search-icon-btn {
