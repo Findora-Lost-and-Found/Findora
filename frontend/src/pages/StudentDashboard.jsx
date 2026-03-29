@@ -6,7 +6,6 @@ import PostModal from '../components/PostModal';
 import FoundItemCard from '../components/FoundItemCard';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
-import { sampleFoundItems } from '../data/sampleFoundItems';
 
 const DEFAULT_POST_ROLES = ['student', 'staff', 'security'];
 const configuredApiUrl = import.meta.env.VITE_API_URL;
@@ -94,10 +93,10 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
           }
         }));
         const sortedFoundItems = sortFoundItems(apiItems, FOUND_ITEM_SORT.LATEST);
-        setFoundItems(sortedFoundItems.length > 0 ? sortedFoundItems.slice(0, 6) : sampleFoundItems);
+        setFoundItems(sortedFoundItems.slice(0, 6));
       } else {
         console.error('Dashboard found items fetch failed:', foundRes.reason?.response?.data || foundRes.reason?.message);
-        setFoundItems(sampleFoundItems);
+        setFoundItems([]);
       }
     } catch (error) {
       console.error('Error loading dashboard:', error);
@@ -143,26 +142,30 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
         {/* Inject role-specific controls without duplicating the shared dashboard layout. */}
         {extraPanel}
 
-        {canUseItemDashboard && foundItems.length > 0 && (
+        {canUseItemDashboard && (
           <div className="found-items-section">
             <div className="section-header">
               <h2>Recently Found Items</h2>
               <Link to="/found-items" className="link-more">View All →</Link>
             </div>
             <div className="found-items-grid">
-              {foundItems.map((item) => (
-                <FoundItemCard
-                  key={item.id}
-                  item={item}
-                  onClaim={() => {
-                    claimsAPI.create(item.id).then(() => {
-                      navigate('/my-claims');
-                    }).catch((err) => {
-                      console.error('Claim error:', err);
-                    });
-                  }}
-                />
-              ))}
+              {foundItems.length === 0 ? (
+                <p>No found items available right now.</p>
+              ) : (
+                foundItems.map((item) => (
+                  <FoundItemCard
+                    key={item.id}
+                    item={item}
+                    onClaim={() => {
+                      claimsAPI.create(item.id).then(() => {
+                        navigate('/my-claims');
+                      }).catch((err) => {
+                        console.error('Claim error:', err);
+                      });
+                    }}
+                  />
+                ))
+              )}
             </div>
           </div>
         )}

@@ -8,7 +8,6 @@ import FoundItemCard from '../components/FoundItemCard';
 import SecurityDashboard from './SecurityDashboard';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
-import { sampleFoundItems } from '../data/sampleFoundItems';
 
 const ADMIN_PREVIEW_LIMIT = 5;
 const configuredApiUrl = import.meta.env.VITE_API_URL;
@@ -118,10 +117,10 @@ const Dashboard = () => {
             }
           }));
           const sortedFoundItems = sortFoundItems(apiItems, FOUND_ITEM_SORT.LATEST);
-          setFoundItems(sortedFoundItems.length > 0 ? sortedFoundItems.slice(0, 6) : sampleFoundItems);
+          setFoundItems(sortedFoundItems.slice(0, 6));
         } else {
           console.error('Dashboard found items fetch failed:', foundRes.reason?.response?.data || foundRes.reason?.message);
-          setFoundItems(sampleFoundItems);
+          setFoundItems([]);
         }
       } else if (user.role === 'admin') {
         const [foundRes, receivedRes, releasedRes] = await Promise.allSettled([

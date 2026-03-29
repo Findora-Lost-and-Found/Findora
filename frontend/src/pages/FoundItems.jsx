@@ -199,11 +199,6 @@ const FoundItems = () => {
   return (
     <div className="container">
       <h1>Found Items</h1>
-      {user?.username && (
-        <p style={{ marginTop: '-0.5rem', color: '#4B5563' }}>
-          Showing posts uploaded by @{user.username}
-        </p>
-      )}
 
       <div className="filters">
         <select name="category" value={filters.category} onChange={handleFilterChange}>
