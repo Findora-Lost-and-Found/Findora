@@ -590,22 +590,6 @@ public class MatchService {
         return (value == null || value.isBlank()) ? fallback : value;
     }
 
-    private void sendOptionalEmail(String email, String title, String message) {
-        if (mailSender == null || email == null || email.isBlank()) {
-            return;
-        }
-
-        try {
-            SimpleMailMessage mail = new SimpleMailMessage();
-            mail.setTo(email);
-            mail.setSubject(title);
-            mail.setText(message);
-            mailSender.send(mail);
-        } catch (MailException ex) {
-            log.warn("unable to send match email to {}: {}", email, ex.getMessage());
-        }
-    }
-
     private Match getOwnedMatch(Long matchId, Long userId) {
         Match match = matchRepository.findById(matchId)
             .orElseThrow(() -> new IllegalArgumentException("Match not found"));

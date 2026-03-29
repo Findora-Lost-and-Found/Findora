@@ -77,7 +77,8 @@ public class ItemController {
     public ItemController(
             ItemService itemService,
             ItemRepository itemRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            MatchService matchService) {
         this.itemService = itemService;
         this.itemRepository = itemRepository;
         this.userRepository = userRepository;
