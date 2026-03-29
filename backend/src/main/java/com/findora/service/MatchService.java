@@ -20,11 +20,7 @@ import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.MailException;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,7 +54,6 @@ public class MatchService {
     private final NotificationRepository notificationRepository;
     private final ClaimCreationService claimCreationService;
     private final Clock clock;
-    private final JavaMailSender mailSender;
 
     @Value("${app.matching.threshold.found:0.75}")
     private double strongThreshold;
@@ -87,15 +82,13 @@ public class MatchService {
             UserRepository userRepository,
             NotificationRepository notificationRepository,
             ClaimCreationService claimCreationService,
-            Clock clock,
-            ObjectProvider<JavaMailSender> mailSenderProvider) {
+            Clock clock) {
         this.matchRepository = matchRepository;
         this.itemRepository = itemRepository;
         this.userRepository = userRepository;
         this.notificationRepository = notificationRepository;
         this.claimCreationService = claimCreationService;
         this.clock = clock;
-        this.mailSender = mailSenderProvider.getIfAvailable();
     }
 
     @Transactional
@@ -489,30 +482,12 @@ public class MatchService {
         notification.setRelatedId(match.getId());
         notificationRepository.save(notification);
 
-        sendOptionalEmail(recipient.getEmail(), title, message);
-
         log.info(
             "match notification sent matchId={} score={} threshold={} notifiedAt={}",
             match.getId(),
             round(match.getScore()),
             threshold,
             match.getNotifiedAt());
-    }
-
-    private void sendOptionalEmail(String email, String title, String message) {
-        if (mailSender == null || email == null || email.isBlank()) {
-            return;
-        }
-
-        try {
-            SimpleMailMessage mail = new SimpleMailMessage();
-            mail.setTo(email);
-            mail.setSubject(title);
-            mail.setText(message);
-            mailSender.send(mail);
-        } catch (MailException ex) {
-            log.warn("unable to send match email to {}: {}", email, ex.getMessage());
-        }
     }
 
     private Match getOwnedMatch(Long matchId, Long userId) {

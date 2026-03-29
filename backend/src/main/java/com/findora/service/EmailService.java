@@ -41,6 +41,10 @@ public class EmailService {
         sendOtp(toEmail, fullName, otp, "Phone Update Verification OTP", action);
     }
 
+    public void sendAccountDeletionOtp(String toEmail, String fullName, String otp) {
+        sendOtp(toEmail, fullName, otp, "Account Deletion OTP", "confirm permanent account deletion");
+    }
+
     private void sendOtp(String toEmail, String fullName, String otp, String subject, String actionText) {
         validateMailConfiguration();
                 validateRequest(toEmail, otp);

@@ -68,6 +68,8 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
 
     Optional<Item> findByIdAndUserId(Long id, Long userId);
 
+       boolean existsByUserIdAndTypeAndStatusNot(Long userId, ItemType type, ItemStatus status);
+
     long countByType(ItemType type);
 
     long countByTypeAndStatus(ItemType type, ItemStatus status);

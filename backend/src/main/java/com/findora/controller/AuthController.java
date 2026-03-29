@@ -292,6 +292,46 @@ public class AuthController {
             .body(Map.of("success", false, "message", "Phone number update is disabled"));
     }
 
+    @PostMapping("/delete-account/request-otp")
+    public ResponseEntity<?> requestDeleteAccountOtp() {
+        try {
+            String username = getCurrentUsername();
+            authService.requestAccountDeletionOtp(username);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Account deletion OTP sent to your email"
+            ));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("success", false, "message", "Authentication required"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/delete-account/confirm")
+    public ResponseEntity<?> confirmDeleteAccount(@RequestBody Map<String, String> request) {
+        try {
+            String otp = request != null ? request.get("otp") : null;
+            if (otp == null || otp.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "OTP is required"));
+            }
+
+            String username = getCurrentUsername();
+            authService.confirmAccountDeletion(username, otp);
+
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Account deleted successfully"
+            ));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("success", false, "message", "Authentication required"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
     /**
      * GET /api/auth/me
      * Get current authenticated user.
