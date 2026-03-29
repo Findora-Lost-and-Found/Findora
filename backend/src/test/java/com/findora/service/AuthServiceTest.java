@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import org.mockito.Mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -20,9 +21,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import com.findora.dto.UserDTO;
 import com.findora.model.Notification;
 import com.findora.model.User;
+import com.findora.repository.ItemRepository;
 import com.findora.repository.NotificationRepository;
 import com.findora.repository.UserRepository;
 import com.findora.security.JwtTokenProvider;
+import com.findora.service.AccessControlService.AccessState;
 
 @ExtendWith(MockitoExtension.class)
 @SuppressWarnings("null")
@@ -43,17 +46,25 @@ class AuthServiceTest {
     @Mock
     private NotificationRepository notificationRepository;
 
+    @Mock
+    private ItemRepository itemRepository;
+
+    @Mock
+    private AccessControlService accessControlService;
+
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
+        lenient().when(accessControlService.refreshAndGetAccessState(any(User.class))).thenReturn(AccessState.ALLOWED);
         authService = new AuthService(
             userRepository,
             passwordEncoder,
             jwtTokenProvider,
             emailService,
+            itemRepository,
             notificationRepository,
-            false
+            accessControlService
         );
     }
 

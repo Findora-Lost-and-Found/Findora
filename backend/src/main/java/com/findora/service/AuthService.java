@@ -15,11 +15,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.findora.dto.AuthResponse;
 import com.findora.dto.UserDTO;
+import com.findora.model.ItemStatus;
+import com.findora.model.ItemType;
 import com.findora.model.Notification;
 import com.findora.model.User;
+import com.findora.repository.ItemRepository;
 import com.findora.repository.NotificationRepository;
 import com.findora.repository.UserRepository;
 import com.findora.security.JwtTokenProvider;
+import com.findora.service.AccessControlService.AccessState;
 
 /**
  * AuthService - Authentication and user registration business logic.
@@ -34,8 +38,11 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final EmailService emailService;
+    private final ItemRepository itemRepository;
     private final NotificationRepository notificationRepository;
-    private final boolean exposeVerificationOtp;
+    private final AccessControlService accessControlService;
+    @Value("${app.dev.expose-verification-otp:false}")
+    private boolean exposeVerificationOtp;
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private static final Random RANDOM = new Random();
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
@@ -48,14 +55,16 @@ public class AuthService {
             PasswordEncoder passwordEncoder,
             JwtTokenProvider jwtTokenProvider,
             EmailService emailService,
+            ItemRepository itemRepository,
             NotificationRepository notificationRepository,
-            @Value("${app.dev.expose-verification-otp:false}") boolean exposeVerificationOtp) {
+            AccessControlService accessControlService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.emailService = emailService;
+        this.itemRepository = itemRepository;
         this.notificationRepository = notificationRepository;
-        this.exposeVerificationOtp = exposeVerificationOtp;
+        this.accessControlService = accessControlService;
     }
 
     /**
@@ -84,16 +93,17 @@ public class AuthService {
             throw new RuntimeException("Your account is pending admin approval");
         }
 
+        if (Boolean.TRUE.equals(user.getIsDeleted())) {
+            throw new RuntimeException("Account no longer exists. Please sign up again.");
+        }
+
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new RuntimeException("Invalid password");
         }
 
-        if (user.getIsBanned()) {
-            throw new RuntimeException("User is banned");
-        }
-
-        if (user.getIsSuspended()) {
-            throw new RuntimeException("User account is suspended");
+        AccessState accessState = accessControlService.refreshAndGetAccessState(user);
+        if (accessState != AccessState.ALLOWED) {
+            throw new RuntimeException(accessControlService.accessBlockedMessage(user, accessState));
         }
 
         // Generate JWT token
@@ -269,6 +279,10 @@ public class AuthService {
             .or(() -> userRepository.findByEmail(usernameOrEmail))
             .orElseThrow(() -> new RuntimeException("User not found"));
 
+        if (Boolean.TRUE.equals(user.getIsDeleted())) {
+            throw new RuntimeException("User not found");
+        }
+
         user.setVerificationOtp(generateOtp());
         user.setOtpExpiry(LocalDateTime.now().plusHours(24));
         userRepository.save(user);
@@ -330,6 +344,11 @@ public class AuthService {
             return null;
         }
 
+        if (Boolean.TRUE.equals(user.getIsDeleted())) {
+            log.info("Password reset requested for deleted account email: {}", email);
+            return null;
+        }
+
         String otp = generateOtp();
         user.setResetOtp(otp);
         user.setOtpExpiry(LocalDateTime.now().plusHours(24));
@@ -348,6 +367,10 @@ public class AuthService {
     public void resetPassword(String email, String otp, String newPassword) {
         User user = userRepository.findByEmail(email)
             .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (Boolean.TRUE.equals(user.getIsDeleted())) {
+            throw new RuntimeException("User not found");
+        }
 
         if (user.getOtpExpiry() == null || LocalDateTime.now().isAfter(user.getOtpExpiry())) {
             throw new RuntimeException("OTP expired");
@@ -390,7 +413,75 @@ public class AuthService {
             .or(() -> userRepository.findByEmail(principal))
             .orElseThrow(() -> new RuntimeException("User not found"));
 
+        if (Boolean.TRUE.equals(user.getIsDeleted())) {
+            throw new RuntimeException("User not found");
+        }
+
         return convertToUserDTO(user);
+    }
+
+    public void requestAccountDeletionOtp(String username) {
+        User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (Boolean.TRUE.equals(user.getIsDeleted())) {
+            throw new RuntimeException("Account no longer exists.");
+        }
+
+        if (hasUnclaimedFoundItems(user.getId())) {
+            throw new RuntimeException("You cannot delete your account while you have unclaimed found items.");
+        }
+
+        String otp = generateOtp();
+        user.setResetOtp(otp);
+        user.setOtpExpiry(LocalDateTime.now().plusHours(24));
+        userRepository.save(user);
+
+        emailService.sendAccountDeletionOtp(user.getEmail(), user.getFullName(), otp);
+        log.info("Account deletion OTP sent for user {}", user.getUsername());
+    }
+
+    public void confirmAccountDeletion(String username, String otp) {
+        User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (Boolean.TRUE.equals(user.getIsDeleted())) {
+            throw new RuntimeException("Account already deleted.");
+        }
+
+        if (hasUnclaimedFoundItems(user.getId())) {
+            throw new RuntimeException("You cannot delete your account while you have unclaimed found items.");
+        }
+
+        if (user.getOtpExpiry() == null || LocalDateTime.now().isAfter(user.getOtpExpiry())) {
+            throw new RuntimeException("OTP expired");
+        }
+
+        if (user.getResetOtp() == null || !user.getResetOtp().equals(otp)) {
+            throw new RuntimeException("Invalid OTP");
+        }
+
+        String deletionSuffix = String.valueOf(System.currentTimeMillis());
+        String deletedUsername = truncate("deleted_" + user.getId() + "_" + deletionSuffix, 50);
+        String deletedEmail = truncate("deleted+" + user.getId() + "+" + deletionSuffix + "@deleted.findora.local", 100);
+
+        user.setUsername(deletedUsername);
+        user.setEmail(deletedEmail);
+        user.setPhone(null);
+        user.setPendingPhone(null);
+        user.setVerificationOtp(null);
+        user.setPhoneVerificationOtp(null);
+        user.setResetOtp(null);
+        user.setOtpExpiry(null);
+        user.setPhoneOtpExpiry(null);
+        user.setIsDeleted(true);
+        user.setDeletedAt(LocalDateTime.now());
+        user.setIsVerified(false);
+        user.setIsApproved(false);
+        user.setPassword(passwordEncoder.encode(generateDeletionPasswordSeed()));
+        userRepository.save(user);
+
+        log.info("Account soft-deleted for user id={}", user.getId());
     }
 
     /**
@@ -398,6 +489,21 @@ public class AuthService {
      */
     private String generateOtp() {
         return String.format("%06d", RANDOM.nextInt(1000000));
+    }
+
+    private String generateDeletionPasswordSeed() {
+        return "deleted-" + System.currentTimeMillis() + "-" + RANDOM.nextInt(1_000_000);
+    }
+
+    private String truncate(String value, int maxLength) {
+        if (value == null) {
+            return null;
+        }
+        return value.length() <= maxLength ? value : value.substring(0, maxLength);
+    }
+
+    private boolean hasUnclaimedFoundItems(Long userId) {
+        return itemRepository.existsByUserIdAndTypeAndStatusNot(userId, ItemType.FOUND, ItemStatus.CLAIMED);
     }
 
     private void notifyAdminsOfSecurityApprovalRequest(User securityUser) {
@@ -438,6 +544,8 @@ public class AuthService {
             user.getIsApproved(),
             user.getIsBanned(),
             user.getIsSuspended(),
+            user.getBadPostAttempts(),
+            user.getSuspensionUntil() == null ? null : user.getSuspensionUntil().toString(),
             user.getCreatedAt() == null ? null : user.getCreatedAt().toString()
         );
     }

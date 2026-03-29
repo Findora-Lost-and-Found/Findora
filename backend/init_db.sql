@@ -1,10 +1,9 @@
--- Findora Database Schema
--- Lost and Found Management System
-
+﻿-- Initialize Findora Database
+DROP DATABASE IF EXISTS findora_db;
 CREATE DATABASE IF NOT EXISTS findora_db;
 USE findora_db;
 
--- Users Table
+-- Users Table with all columns including moderation
 CREATE TABLE users (
   id INT PRIMARY KEY AUTO_INCREMENT,
   username VARCHAR(50) UNIQUE NOT NULL,
@@ -26,6 +25,8 @@ CREATE TABLE users (
   phone_verification_otp VARCHAR(6),
   otp_expiry DATETIME,
   phone_otp_expiry DATETIME,
+  phone_otp_reset VARCHAR(6),
+  pending_phone_otp VARCHAR(6),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_email (email),
@@ -35,7 +36,7 @@ CREATE TABLE users (
   UNIQUE INDEX uq_users_pending_phone (pending_phone)
 );
 
--- Items Table (Lost and Found)
+-- Items Table
 CREATE TABLE items (
   id INT PRIMARY KEY AUTO_INCREMENT,
   user_id INT NOT NULL,
@@ -99,67 +100,62 @@ CREATE TABLE security_transactions (
   id INT PRIMARY KEY AUTO_INCREMENT,
   security_officer_id INT NOT NULL,
   item_id INT NOT NULL,
-  claim_id INT,
-  transaction_type ENUM('receive', 'release') NOT NULL,
-  status ENUM('requested', 'received') NOT NULL,
-  received_from VARCHAR(100),
-  released_to VARCHAR(100),
-  notes TEXT,
-  transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  transaction_type ENUM('received', 'released', 'transferred') NOT NULL,
+  description TEXT,
+  received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  released_at DATETIME,
   FOREIGN KEY (security_officer_id) REFERENCES users(id),
   FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE,
-  FOREIGN KEY (claim_id) REFERENCES claims(id),
-  INDEX idx_officer (security_officer_id),
-  INDEX idx_type (transaction_type),
-  INDEX idx_date (transaction_date)
+  INDEX idx_security_officer_id (security_officer_id),
+  INDEX idx_item_id (item_id)
+);
+
+-- Reports Table
+CREATE TABLE reports (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  user_id INT NOT NULL,
+  report_type ENUM('content_violation', 'fraud', 'other') NOT NULL,
+  item_id INT,
+  report_text TEXT NOT NULL,
+  status ENUM('pending', 'investigating', 'resolved') DEFAULT 'pending',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE SET NULL,
+  INDEX idx_user_id (user_id),
+  INDEX idx_status (status)
 );
 
 -- Notifications Table
 CREATE TABLE notifications (
   id INT PRIMARY KEY AUTO_INCREMENT,
   user_id INT NOT NULL,
-  type ENUM('match', 'otp', 'approval', 'report', 'claim', 'system') NOT NULL,
-  title VARCHAR(200) NOT NULL,
+  title VARCHAR(255) NOT NULL,
   message TEXT NOT NULL,
+  notification_type VARCHAR(50) NOT NULL,
   is_read BOOLEAN DEFAULT FALSE,
-  related_id INT,
+  appeal_id BIGINT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   INDEX idx_user_id (user_id),
-  INDEX idx_is_read (is_read),
-  INDEX idx_type (type)
+  INDEX idx_created_at (created_at)
 );
 
--- Reports Table (for reporting posts)
-CREATE TABLE post_reports (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  reporter_id INT NOT NULL,
-  item_id INT NOT NULL,
-  reason TEXT NOT NULL,
-  status ENUM('pending', 'reviewed', 'resolved') DEFAULT 'pending',
-  admin_notes TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  resolved_at DATETIME,
-  FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE,
-  INDEX idx_status (status),
-  INDEX idx_reporter (reporter_id)
-);
-
--- Access Appeals Table (for suspended/banned users)
-CREATE TABLE user_access_appeals (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  user_id INT NOT NULL,
+-- Access Appeals Table
+CREATE TABLE IF NOT EXISTS user_access_appeals (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
   action_type ENUM('suspension', 'ban') NOT NULL,
-  status ENUM('pending', 'approved', 'declined') DEFAULT 'pending',
+  status ENUM('pending', 'approved', 'declined') NOT NULL DEFAULT 'pending',
   appeal_text TEXT NOT NULL,
-  admin_notes TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  reviewed_at DATETIME,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  admin_notes TEXT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  reviewed_at DATETIME NULL,
+  CONSTRAINT fk_access_appeals_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   INDEX idx_access_appeals_user_id (user_id),
   INDEX idx_access_appeals_status (status),
   INDEX idx_access_appeals_created_at (created_at)
 );
 
--- Temporary test admin is seeded by backend/utils/seedTestAdmin.js in non-production environments.
+-- Insert test admin user
+INSERT INTO users (id, username, email, password, full_name, role, is_verified, is_approved, is_phone_verified) 
+VALUES (1, 'admin123', 'admin@findora.local', '\\\.ua0bV9c0r3yJKKJG0p2UVsQg0gKNZxXO', 'Admin User', 'admin', TRUE, TRUE, TRUE);

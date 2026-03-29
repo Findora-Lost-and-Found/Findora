@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import { itemsAPI } from '../services/api';
 import ItemCard from '../components/ItemCard';
 import Pagination from '../components/Pagination';
 import MatchCard from '../components/MatchCard';
 import matchesAPI from '../services/matchesAPI';
+import { FOUND_ITEM_SORT, isModerationRemovedItem } from '../utils/itemDisplayUtils';
 
 const PAGE_SIZE = 4;
 
@@ -22,13 +23,24 @@ const LostItems = () => {
   const [otpInputs, setOtpInputs] = useState({});
   const [filters, setFilters] = useState({
     category: '',
-    search: ''
+    search: '',
+    sortBy: FOUND_ITEM_SORT.LATEST
   });
   const [searchInput, setSearchInput] = useState('');
 
+  const sortParam = useMemo(() => {
+    if (filters.sortBy === FOUND_ITEM_SORT.NAME_ASC) {
+      return 'name,asc';
+    }
+    if (filters.sortBy === FOUND_ITEM_SORT.NAME_DESC) {
+      return 'name,desc';
+    }
+    return 'createdAt,desc';
+  }, [filters.sortBy]);
+
   useEffect(() => {
     loadItems();
-  }, [currentPage, filters.category, filters.search]);
+  }, [currentPage, filters.category, filters.search, sortParam]);
 
   const loadItems = async () => {
     try {
@@ -38,12 +50,13 @@ const LostItems = () => {
         type: 'lost',
         page: currentPage,
         size: PAGE_SIZE,
-        sort: 'createdAt,desc',
+        sort: sortParam,
         category: filters.category || undefined,
         keyword: filters.search.trim() || undefined
       });
 
-      setItems(response.data?.content || []);
+      const visibleItems = (response.data?.content || []).filter((item) => !isModerationRemovedItem(item));
+      setItems(visibleItems);
       setPagination({
         totalPages: response.data?.totalPages ?? 0,
         totalElements: response.data?.totalElements ?? 0,
@@ -171,6 +184,12 @@ const LostItems = () => {
             </svg>
           </button>
         </form>
+
+        <select name="sortBy" value={filters.sortBy} onChange={handleFilterChange}>
+          <option value={FOUND_ITEM_SORT.LATEST}>Latest</option>
+          <option value={FOUND_ITEM_SORT.NAME_ASC}>Alphabetical A {'->'} Z</option>
+          <option value={FOUND_ITEM_SORT.NAME_DESC}>Alphabetical Z {'->'} A</option>
+        </select>
       </div>
 
       <div className="items-grid">

@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.findora.dto.AuthResponse;
 import com.findora.dto.UpdatePhoneRequestDTO;
 import com.findora.dto.UserDTO;
+import com.findora.service.AccessControlService;
 import com.findora.service.AuthService;
 
 /**
@@ -31,12 +32,15 @@ import com.findora.service.AuthService;
 public class AuthController {
 
     private final AuthService authService;
+    private final AccessControlService accessControlService;
     private final boolean exposeResetOtp;
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
     public AuthController(AuthService authService,
+            AccessControlService accessControlService,
             @Value("${app.dev.expose-reset-otp:false}") boolean exposeResetOtp) {
         this.authService = authService;
+        this.accessControlService = accessControlService;
         this.exposeResetOtp = exposeResetOtp;
     }
 
@@ -257,10 +261,75 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/appeal-access")
+    public ResponseEntity<?> submitAccessAppeal(@RequestBody Map<String, String> request) {
+        try {
+            String identifier = firstNonBlank(
+                request.get("identifier"),
+                request.get("username"),
+                request.get("email")
+            );
+            String reason = firstNonBlank(request.get("reason"), request.get("appeal"));
+
+            Map<String, Object> result = accessControlService.submitAccessAppeal(identifier, reason);
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+                "success", true,
+                "message", result.get("message"),
+                "appeal_id", result.get("appeal_id"),
+                "status", result.get("status")
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("success", false, "message", "Server error"));
+        }
+    }
+
     @PutMapping("/update-phone")
     public ResponseEntity<?> updatePhone(@RequestBody UpdatePhoneRequestDTO request) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
             .body(Map.of("success", false, "message", "Phone number update is disabled"));
+    }
+
+    @PostMapping("/delete-account/request-otp")
+    public ResponseEntity<?> requestDeleteAccountOtp() {
+        try {
+            String username = getCurrentUsername();
+            authService.requestAccountDeletionOtp(username);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Account deletion OTP sent to your email"
+            ));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("success", false, "message", "Authentication required"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/delete-account/confirm")
+    public ResponseEntity<?> confirmDeleteAccount(@RequestBody Map<String, String> request) {
+        try {
+            String otp = request != null ? request.get("otp") : null;
+            if (otp == null || otp.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "OTP is required"));
+            }
+
+            String username = getCurrentUsername();
+            authService.confirmAccountDeletion(username, otp);
+
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Account deleted successfully"
+            ));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("success", false, "message", "Authentication required"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
     }
 
     /**

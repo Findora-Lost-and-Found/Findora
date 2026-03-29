@@ -1,5 +1,6 @@
 package com.findora.security;
 
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
@@ -32,6 +33,15 @@ public class CustomUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = userRepository.findByUsername(username)
             .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+
+        if (Boolean.TRUE.equals(user.getIsSuspended())
+                && user.getSuspensionUntil() != null
+                && LocalDateTime.now().isAfter(user.getSuspensionUntil())) {
+            user.setIsSuspended(false);
+            user.setSuspensionUntil(null);
+            user.setBadPostAttempts(0);
+            userRepository.save(user);
+        }
 
         return org.springframework.security.core.userdetails.User.builder()
             .username(user.getUsername())

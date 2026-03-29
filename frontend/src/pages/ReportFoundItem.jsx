@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { itemsAPI } from '../services/api';
 import { toast } from 'react-toastify';
-import { NIC_HELPER_TEXT, NIC_VALIDATION_MESSAGE, isValidNic, isValidNicNumber, normalizeNic, sanitizeNicInput } from '../utils/nicUtils';
+import { useAuth } from '../context/AuthContext';
+import { NIC_HELPER_TEXT, NIC_VALIDATION_MESSAGE, isValidNic, normalizeNic, sanitizeNicInput } from '../utils/nicUtils';
 import { isValidStudentIdNumber } from '../utils/studentIdUtils';
 import { getCardLast4, maskCardNumber } from '../utils/cardUtils';
 import './ReportFoundItem.css';
@@ -17,6 +18,7 @@ const CATEGORY_OPTIONS = [
 
 const ReportFoundItem = () => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const [category, setCategory] = useState('');
   const [purseOption, setPurseOption] = useState('with-id');
   const [submitted, setSubmitted] = useState(false);
@@ -26,8 +28,6 @@ const ReportFoundItem = () => {
     nicName: '',
     nicNumber: '',
     nicLocation1: '',
-    nicLocation2: '',
-    nicLocation3: '',
     idHolderType: '',
     idName: '',
     studentOrStaffId: '',
@@ -191,7 +191,7 @@ const ReportFoundItem = () => {
     if (category === 'Student / Staff ID') {
       item_name = `Student/Staff ID - ${formData.idName || 'Unknown'}`;
       description = `ID Number: ${formData.studentOrStaffId}`;
-      location = formData.idLocation1.trim() || location;
+      location = (formData.idLocation1 || '').trim() || location;
     }
 
     if (category === 'Bank Card') {
@@ -249,6 +249,7 @@ const ReportFoundItem = () => {
     if (!validate()) return;
 
     const payload = buildFoundItemPayload();
+
     console.log('Submitting found item payload:', {
       ...payload,
       private_card_number: payload.private_card_number ? '***hidden***' : undefined,
@@ -265,8 +266,14 @@ const ReportFoundItem = () => {
       // Refresh flow: redirect to listing where user can see newly posted found item.
       setTimeout(() => navigate('/found-items', { state: { refreshAt: Date.now() } }), 500);
     } catch (error) {
+      const message = error.response?.data?.message || 'Failed to report found item';
       console.error('Failed to create found item:', error.response?.data || error.message);
-      toast.error(error.response?.data?.message || 'Failed to report found item');
+      toast.error(message);
+
+      if (/suspend|banned|ban/i.test(String(message))) {
+        logout();
+        navigate('/login', { replace: true });
+      }
     } finally {
       setLoading(false);
     }

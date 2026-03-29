@@ -1,20 +1,23 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { itemsAPI, claimsAPI, securityAPI } from '../services/api';
+import { itemsAPI, claimsAPI, securityAPI, adminAPI } from '../services/api';
 import { toast } from 'react-toastify';
 import PostModal from '../components/PostModal';
 import FoundItemCard from '../components/FoundItemCard';
 import SecurityDashboard from './SecurityDashboard';
 import { normalizeCategory } from '../utils/categoryUtils';
-import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
-import { sampleFoundItems } from '../data/sampleFoundItems';
+import { FOUND_ITEM_SORT, isModerationRemovedItem, sortFoundItems } from '../utils/itemDisplayUtils';
+import SampleItemImage from '../components/SampleItemImage';
 
 const ADMIN_PREVIEW_LIMIT = 5;
+const INITIAL_FOUND_VISIBLE = 6;
+const FOUND_LOAD_STEP = 3;
 const configuredApiUrl = import.meta.env.VITE_API_URL;
 const API_ORIGIN = (configuredApiUrl?.includes('localhost:5000')
   ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')
   : configuredApiUrl || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
+const DASHBOARD_IMAGE_FALLBACK = 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%2280%22 viewBox=%220 0 120 80%22%3E%3Crect width=%22120%22 height=%2280%22 fill=%22%23E5E7EB%22/%3E%3Ctext x=%2260%22 y=%2244%22 text-anchor=%22middle%22 fill=%22%236B7280%22 font-size=%2212%22 font-family=%22Arial%22%3ENo image%3C/text%3E%3C/svg%3E';
 
 const readFirst = (obj, keys, fallback = '') => {
   for (const key of keys) {
@@ -27,11 +30,22 @@ const readFirst = (obj, keys, fallback = '') => {
 };
 
 const toImageUrl = (rawImage) => {
-  if (!rawImage) return 'https://via.placeholder.com/120x80?text=No+Image';
+  if (!rawImage) return DASHBOARD_IMAGE_FALLBACK;
   const normalized = String(rawImage).trim().replace(/\\/g, '/');
+  if (!normalized || normalized === 'null' || normalized === 'undefined') {
+    return DASHBOARD_IMAGE_FALLBACK;
+  }
+
   if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
     return normalized;
   }
+
+  // Guard against accidentally treating plain labels as file paths.
+  const looksLikePath = normalized.includes('/') || normalized.includes('.') || normalized.startsWith('uploads');
+  if (!looksLikePath) {
+    return DASHBOARD_IMAGE_FALLBACK;
+  }
+
   const normalizedPath = normalized.replace(/\/+/g, '/').replace(/^\/+/, '');
   return `${API_ORIGIN}/${normalizedPath}`;
 };
@@ -59,12 +73,14 @@ const normalizeAdminDashboardItem = (item, section) => {
   return {
     id: item.id,
     itemName: readFirst(item, ['name', 'item_name', 'itemName'], 'Unnamed Item'),
-    itemImage: toImageUrl(readFirst(item, ['image', 'image_url', 'imageUrl'])),
+    category: normalizeCategory(readFirst(item, ['category']), readFirst(item, ['name', 'item_name', 'itemName'])),
+    itemImage: toImageUrl(readFirst(item, ['image_url', 'imageUrl', 'image'])),
     founder: readFirst(item, ['founder_username', 'founderUsername', 'found_by_username', 'posted_by_username', 'username'], 'Unknown'),
     security: readFirst(item, ['security_username', 'securityUsername', 'received_by_username', 'released_by_username'], 'Unknown'),
     receiver: readFirst(item, ['receiver_username', 'receiverUsername', 'claimer_username', 'owner_username'], 'Unknown'),
     dateTime,
-    timestamp: toTimestamp(dateTime)
+    timestamp: toTimestamp(dateTime),
+    rawItem: item
   };
 };
 
@@ -75,6 +91,13 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [foundItems, setFoundItems] = useState([]);
+  const [filters, setFilters] = useState({
+    category: '',
+    search: '',
+    sortBy: FOUND_ITEM_SORT.LATEST
+  });
+  const [searchInput, setSearchInput] = useState('');
+  const [visibleFoundCount, setVisibleFoundCount] = useState(INITIAL_FOUND_VISIBLE);
   const [adminSections, setAdminSections] = useState({ found: [], received: [], released: [] });
   const [handoverLoadingById, setHandoverLoadingById] = useState({});
 
@@ -110,24 +133,28 @@ const Dashboard = () => {
             ...item,
             name: item.name || item.item_name,
             date_found: item.date_found || item.date || item.created_at,
-            image: toImageUrl(readFirst(item, ['image', 'image_url', 'imageUrl'])),
+            image: toImageUrl(readFirst(item, ['image_url', 'imageUrl', 'image'])),
             category: normalizeCategory(item.category, item.name || item.item_name),
             posted_by: item.posted_by || {
               id: item.userId || item.user_id,
               full_name: item.full_name || item.username || 'Unknown User'
             }
           }));
-          const sortedFoundItems = sortFoundItems(apiItems, FOUND_ITEM_SORT.LATEST);
-          setFoundItems(sortedFoundItems.length > 0 ? sortedFoundItems.slice(0, 6) : sampleFoundItems);
+          const visibleItems = apiItems.filter((item) => !isModerationRemovedItem(item));
+          const sortedFoundItems = sortFoundItems(visibleItems, FOUND_ITEM_SORT.LATEST);
+          setFoundItems(sortedFoundItems);
+          setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
         } else {
           console.error('Dashboard found items fetch failed:', foundRes.reason?.response?.data || foundRes.reason?.message);
-          setFoundItems(sampleFoundItems);
+          setFoundItems([]);
+          setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
         }
       } else if (user.role === 'admin') {
-        const [foundRes, receivedRes, releasedRes] = await Promise.allSettled([
-          itemsAPI.getAll({ type: 'found', status: 'active', page: 0, size: ADMIN_PREVIEW_LIMIT, sort: 'createdAt,desc' }),
-          itemsAPI.getAll({ type: 'found', status: 'claimed', page: 0, size: ADMIN_PREVIEW_LIMIT, sort: 'createdAt,desc' }),
-          itemsAPI.getAll({ type: 'found', status: 'closed', page: 0, size: ADMIN_PREVIEW_LIMIT, sort: 'createdAt,desc' })
+        const [foundRes, receivedRes, releasedRes, studentFoundRes] = await Promise.allSettled([
+          adminAPI.getItems({ status: 'found', page: 0, size: ADMIN_PREVIEW_LIMIT, sort: 'createdAt,desc' }),
+          adminAPI.getItems({ status: 'received', page: 0, size: ADMIN_PREVIEW_LIMIT, sort: 'createdAt,desc' }),
+          adminAPI.getItems({ status: 'released', page: 0, size: ADMIN_PREVIEW_LIMIT, sort: 'createdAt,desc' }),
+          itemsAPI.getAll({ type: 'found', status: 'active', page: 0, size: 300, sort: 'createdAt,desc' })
         ]);
 
         const extractItems = (result) => {
@@ -135,9 +162,25 @@ const Dashboard = () => {
           return result.value.data.items || result.value.data.content || [];
         };
 
+        const studentFoundImageById = new Map(
+          extractItems(studentFoundRes).map((item) => [
+            Number(item.id),
+            readFirst(item, ['image_url', 'imageUrl', 'image'])
+          ])
+        );
+
+        const mergeStudentImage = (item) => {
+          const id = Number(item?.id);
+          const studentRawImage = studentFoundImageById.get(id);
+          return studentRawImage
+            ? { ...item, image_url: studentRawImage, imageUrl: studentRawImage }
+            : item;
+        };
+
         // Found/Receive/Release sections are sourced from backend statuses: active/claimed/closed.
         setAdminSections({
           found: extractItems(foundRes)
+            .map(mergeStudentImage)
             .map((item) => normalizeAdminDashboardItem(item, 'found'))
             .sort((a, b) => b.timestamp - a.timestamp)
             .slice(0, ADMIN_PREVIEW_LIMIT),
@@ -175,6 +218,43 @@ const Dashboard = () => {
     } finally {
       setHandoverLoadingById((prev) => ({ ...prev, [itemId]: false }));
     }
+  };
+
+  const filteredFoundItems = useMemo(() => {
+    const searchTerm = filters.search.trim().toLowerCase();
+
+    const filtered = foundItems.filter((item) => {
+      const category = normalizeCategory(item.category, item.name || item.item_name);
+      const categoryMatches = !filters.category || category === filters.category;
+
+      if (!searchTerm) {
+        return categoryMatches;
+      }
+
+      const haystack = [item.name, item.description, item.location]
+        .map((value) => String(value || '').toLowerCase())
+        .join(' ');
+
+      return categoryMatches && haystack.includes(searchTerm);
+    });
+
+    return sortFoundItems(filtered, filters.sortBy);
+  }, [foundItems, filters.category, filters.search, filters.sortBy]);
+
+  const visibleFoundItems = filteredFoundItems.slice(0, visibleFoundCount);
+  const hasMoreFoundItems = visibleFoundCount < filteredFoundItems.length;
+  const canToggleFoundItems = filteredFoundItems.length > INITIAL_FOUND_VISIBLE;
+
+  const handleFilterChange = (event) => {
+    const { name, value } = event.target;
+    setFilters((prev) => ({ ...prev, [name]: value }));
+    setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
+  };
+
+  const handleSearchSubmit = (event) => {
+    event.preventDefault();
+    setFilters((prev) => ({ ...prev, search: searchInput.trim() }));
+    setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
   };
 
   if (loading) {
@@ -219,13 +299,43 @@ const Dashboard = () => {
           <div className="found-items-section">
             <div className="section-header">
               <h2>Recently Found Items</h2>
-              <Link to="/found-items" className="link-more">View All -&gt;</Link>
+            </div>
+            <div className="filters">
+              <select name="category" value={filters.category} onChange={handleFilterChange}>
+                <option value="">All Categories</option>
+                <option value="NIC">NIC</option>
+                <option value="Student ID">Student ID</option>
+                <option value="Bank Card">Bank Card</option>
+                <option value="Wallet">Wallet</option>
+                <option value="Other">Other</option>
+              </select>
+
+              <form className="search-form" onSubmit={handleSearchSubmit}>
+                <input
+                  type="text"
+                  name="search"
+                  placeholder="Search items..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                />
+                <button type="submit" className="search-icon-btn" aria-label="Search dashboard found items">
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+                    <path d="M10.5 3a7.5 7.5 0 0 1 5.93 12.1l4.24 4.23a1 1 0 1 1-1.41 1.42l-4.24-4.24A7.5 7.5 0 1 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11a5.5 5.5 0 0 0 0-11z" fill="currentColor"/>
+                  </svg>
+                </button>
+              </form>
+
+              <select name="sortBy" value={filters.sortBy} onChange={handleFilterChange}>
+                <option value={FOUND_ITEM_SORT.LATEST}>Latest</option>
+                <option value={FOUND_ITEM_SORT.NAME_ASC}>Alphabetical A {'->'} Z</option>
+                <option value={FOUND_ITEM_SORT.NAME_DESC}>Alphabetical Z {'->'} A</option>
+              </select>
             </div>
             <div className="found-items-grid">
-              {foundItems.length === 0 ? (
+              {filteredFoundItems.length === 0 ? (
                 <p>No found items available right now.</p>
               ) : (
-                foundItems.map((item) => (
+                visibleFoundItems.map((item) => (
                   <FoundItemCard
                     key={item.id}
                     item={item}
@@ -242,6 +352,24 @@ const Dashboard = () => {
                 ))
               )}
             </div>
+            {canToggleFoundItems && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                <button
+                  type="button"
+                  className="link-more"
+                  onClick={() => {
+                    if (hasMoreFoundItems) {
+                      setVisibleFoundCount((prev) => Math.min(prev + FOUND_LOAD_STEP, foundItems.length));
+                    } else {
+                      setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
+                    }
+                  }}
+                  style={{ background: 'none', border: 'none', padding: 0, fontWeight: 700, cursor: 'pointer' }}
+                >
+                  {hasMoreFoundItems ? 'Show more ↓' : 'Show less ↑'}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -250,7 +378,7 @@ const Dashboard = () => {
             <div className="section" style={{ marginTop: '2rem' }}>
               <div className="section-header" style={{ borderBottom: 'none', marginBottom: '0.25rem' }}>
                 <h2>Found</h2>
-                <Link to="/admin/items/found" className="link-more">View All -&gt;</Link>
+                <Link to="/admin/items/found" className="link-more">Show more ↓</Link>
               </div>
               <div className="table-container">
                 <table>
@@ -273,7 +401,28 @@ const Dashboard = () => {
                           <td>{item.founder}</td>
                           <td>{item.itemName}</td>
                           <td>
-                            <img src={item.itemImage} alt={item.itemName} style={{ width: '88px', height: '56px', objectFit: 'cover', borderRadius: '6px' }} />
+                            {item.itemImage && item.itemImage !== DASHBOARD_IMAGE_FALLBACK ? (
+                              <img
+                                src={item.itemImage}
+                                alt={item.itemName}
+                                style={{ width: '88px', height: '56px', objectFit: 'cover', borderRadius: '6px' }}
+                                onError={(event) => {
+                                  event.currentTarget.src = DASHBOARD_IMAGE_FALLBACK;
+                                }}
+                              />
+                            ) : (
+                              <div style={{ width: '88px', height: '56px', borderRadius: '6px', overflow: 'hidden' }}>
+                                <SampleItemImage
+                                  category={item.category}
+                                  item={{
+                                    ...item.rawItem,
+                                    item_name: item.itemName,
+                                    name: item.itemName,
+                                    category: item.category
+                                  }}
+                                />
+                              </div>
+                            )}
                           </td>
                           <td>{formatDateTime(item.dateTime)}</td>
                         </tr>
@@ -287,7 +436,7 @@ const Dashboard = () => {
             <div className="section" style={{ marginTop: '2rem' }}>
               <div className="section-header" style={{ borderBottom: 'none', marginBottom: '0.25rem' }}>
                 <h2>Receive</h2>
-                <Link to="/admin/items/receive" className="link-more">View All -&gt;</Link>
+                <Link to="/admin/items/receive" className="link-more">Show more ↓</Link>
               </div>
               <div className="table-container">
                 <table>
@@ -312,7 +461,28 @@ const Dashboard = () => {
                           <td>{item.founder}</td>
                           <td>{item.itemName}</td>
                           <td>
-                            <img src={item.itemImage} alt={item.itemName} style={{ width: '88px', height: '56px', objectFit: 'cover', borderRadius: '6px' }} />
+                            {item.itemImage && item.itemImage !== DASHBOARD_IMAGE_FALLBACK ? (
+                              <img
+                                src={item.itemImage}
+                                alt={item.itemName}
+                                style={{ width: '88px', height: '56px', objectFit: 'cover', borderRadius: '6px' }}
+                                onError={(event) => {
+                                  event.currentTarget.src = DASHBOARD_IMAGE_FALLBACK;
+                                }}
+                              />
+                            ) : (
+                              <div style={{ width: '88px', height: '56px', borderRadius: '6px', overflow: 'hidden' }}>
+                                <SampleItemImage
+                                  category={item.category}
+                                  item={{
+                                    ...item.rawItem,
+                                    item_name: item.itemName,
+                                    name: item.itemName,
+                                    category: item.category
+                                  }}
+                                />
+                              </div>
+                            )}
                           </td>
                           <td>{formatDateTime(item.dateTime)}</td>
                         </tr>
@@ -326,7 +496,7 @@ const Dashboard = () => {
             <div className="section" style={{ marginTop: '2rem' }}>
               <div className="section-header" style={{ borderBottom: 'none', marginBottom: '0.25rem' }}>
                 <h2>Release</h2>
-                <Link to="/admin/items/release" className="link-more">View All -&gt;</Link>
+                <Link to="/admin/items/release" className="link-more">Show more ↓</Link>
               </div>
               <div className="table-container">
                 <table>
@@ -351,7 +521,28 @@ const Dashboard = () => {
                           <td>{item.receiver}</td>
                           <td>{item.itemName}</td>
                           <td>
-                            <img src={item.itemImage} alt={item.itemName} style={{ width: '88px', height: '56px', objectFit: 'cover', borderRadius: '6px' }} />
+                            {item.itemImage && item.itemImage !== DASHBOARD_IMAGE_FALLBACK ? (
+                              <img
+                                src={item.itemImage}
+                                alt={item.itemName}
+                                style={{ width: '88px', height: '56px', objectFit: 'cover', borderRadius: '6px' }}
+                                onError={(event) => {
+                                  event.currentTarget.src = DASHBOARD_IMAGE_FALLBACK;
+                                }}
+                              />
+                            ) : (
+                              <div style={{ width: '88px', height: '56px', borderRadius: '6px', overflow: 'hidden' }}>
+                                <SampleItemImage
+                                  category={item.category}
+                                  item={{
+                                    ...item.rawItem,
+                                    item_name: item.itemName,
+                                    name: item.itemName,
+                                    category: item.category
+                                  }}
+                                />
+                              </div>
+                            )}
                           </td>
                           <td>{formatDateTime(item.dateTime)}</td>
                         </tr>

@@ -6,7 +6,7 @@ import { itemsAPI, securityAPI } from '../services/api';
 import FoundItemCard from '../components/FoundItemCard';
 import Pagination from '../components/Pagination';
 import { normalizeCategory } from '../utils/categoryUtils';
-import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
+import { FOUND_ITEM_SORT, isModerationRemovedItem, sortFoundItems } from '../utils/itemDisplayUtils';
 
 const PAGE_SIZE = 4;
 const configuredApiUrl = import.meta.env.VITE_API_URL;
@@ -119,7 +119,8 @@ const FoundItems = () => {
         }
         return String(ownerId) === String(user.id);
       });
-      const sortedItems = sortFoundItems(ownerOnlyItems, filters.sortBy);
+      const visibleItems = ownerOnlyItems.filter((item) => !isModerationRemovedItem(item));
+      const sortedItems = sortFoundItems(visibleItems, filters.sortBy);
 
       setAllItems(sortedItems);
       setPagination({
@@ -198,12 +199,7 @@ const FoundItems = () => {
 
   return (
     <div className="container">
-      <h1>Found Items</h1>
-      {user?.username && (
-        <p style={{ marginTop: '-0.5rem', color: '#4B5563' }}>
-          Showing posts uploaded by @{user.username}
-        </p>
-      )}
+      <h1>My Found Items</h1>
 
       <div className="filters">
         <select name="category" value={filters.category} onChange={handleFilterChange}>
