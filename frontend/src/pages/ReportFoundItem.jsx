@@ -184,20 +184,20 @@ const ReportFoundItem = () => {
     if (category === 'NIC') {
       item_name = `NIC - ${formData.nicName || 'Unknown'}`;
       description = `NIC Number: ${normalizeNic(formData.nicNumber)}`;
-      location = formData.nicLocation1.trim() || location;
+      // location defaults to 'Security Office'
     }
 
     if (category === 'Student / Staff ID') {
       item_name = `Student/Staff ID - ${formData.idName || 'Unknown'}`;
       description = `ID Number: ${formData.studentOrStaffId}`;
-      location = formData.idLocation1.trim() || location;
+      // location defaults to 'Security Office'
     }
 
     if (category === 'Bank Card') {
       item_name = `${formData.bankName} ${formData.cardType} Card`;
       const last4 = getCardLast4(formData.cardNumber);
       description = `Card: ${maskCardNumber(formData.cardNumber) || '**** **** **** ****'}${last4 ? ` (last 4: ${last4})` : ''}`;
-      location = [formData.bankPrivateLocation, formData.bankPrivateLocation2, formData.bankPrivateLocation3].filter(Boolean).join(', ') || location;
+      location = formData.bankPrivateLocation.trim() || location;
       date = formData.bankPrivateDate || date;
       time = formData.bankPrivateTime || time;
     }
@@ -210,7 +210,7 @@ const ReportFoundItem = () => {
         location = formData.purseWithIdLocation1.trim() || location;
       } else {
         description = `Items inside: ${formData.purseOtherItems || formData.purseMoney}`;
-        location = [formData.pursePrivateLocation, formData.pursePrivateLocation2, formData.pursePrivateLocation3].filter(Boolean).join(', ') || location;
+        location = formData.pursePrivateLocation.trim() || location;
         date = formData.pursePrivateDate || date;
         time = formData.pursePrivateTime || time;
       }
@@ -219,7 +219,7 @@ const ReportFoundItem = () => {
     if (category === 'Others') {
       item_name = formData.otherItemName || 'Other Found Item';
       description = formData.otherDescription || 'General found item report';
-      location = [formData.otherPrivateLocation, formData.otherPrivateLocation2, formData.otherPrivateLocation3].filter(Boolean).join(', ') || location;
+      location = formData.otherPrivateLocation.trim() || location;
       date = formData.otherPrivateDate || date;
       time = formData.otherPrivateTime || time;
       image = formData.otherPhoto;
@@ -404,17 +404,9 @@ const ReportFoundItem = () => {
               <div className="private-block">
                 <h4>Private Fields (not shown publicly)</h4>
                 <div className="form-group">
-                  <label className="required">Field 1</label>
+                  <label className="required">Location</label>
                   <input name="bankPrivateLocation" value={formData.bankPrivateLocation} onChange={handleInputChange} />
                   {errors.bankPrivateLocation && <p className="error-text">{errors.bankPrivateLocation}</p>}
-                </div>
-                <div className="form-group">
-                  <label>Field 2 (optional)</label>
-                  <input name="bankPrivateLocation2" value={formData.bankPrivateLocation2} onChange={handleInputChange} />
-                </div>
-                <div className="form-group">
-                  <label>Field 3 (optional)</label>
-                  <input name="bankPrivateLocation3" value={formData.bankPrivateLocation3} onChange={handleInputChange} />
                 </div>
                 <div className="form-row">
                   <div className="form-group">
@@ -512,17 +504,9 @@ const ReportFoundItem = () => {
                     {errors.purseOtherItems && <p className="error-text">{errors.purseOtherItems}</p>}
                   </div>
                   <div className="form-group">
-                    <label className="required">Field 1</label>
+                    <label className="required">Location</label>
                     <input name="pursePrivateLocation" value={formData.pursePrivateLocation} onChange={handleInputChange} />
                     {errors.pursePrivateLocation && <p className="error-text">{errors.pursePrivateLocation}</p>}
-                  </div>
-                  <div className="form-group">
-                    <label>Field 2 (optional)</label>
-                    <input name="pursePrivateLocation2" value={formData.pursePrivateLocation2} onChange={handleInputChange} />
-                  </div>
-                  <div className="form-group">
-                    <label>Field 3 (optional)</label>
-                    <input name="pursePrivateLocation3" value={formData.pursePrivateLocation3} onChange={handleInputChange} />
                   </div>
                   <div className="form-row">
                     <div className="form-group">
@@ -576,17 +560,9 @@ const ReportFoundItem = () => {
               <div className="private-block">
                 <h4>Private Fields (not shown publicly)</h4>
                 <div className="form-group">
-                  <label className="required">Field 1</label>
+                  <label className="required">Location</label>
                   <input name="otherPrivateLocation" value={formData.otherPrivateLocation} onChange={handleInputChange} />
                   {errors.otherPrivateLocation && <p className="error-text">{errors.otherPrivateLocation}</p>}
-                </div>
-                <div className="form-group">
-                  <label>Field 2 (optional)</label>
-                  <input name="otherPrivateLocation2" value={formData.otherPrivateLocation2} onChange={handleInputChange} />
-                </div>
-                <div className="form-group">
-                  <label>Field 3 (optional)</label>
-                  <input name="otherPrivateLocation3" value={formData.otherPrivateLocation3} onChange={handleInputChange} />
                 </div>
                 <div className="form-row">
                   <div className="form-group">

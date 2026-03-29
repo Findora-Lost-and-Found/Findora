@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { itemsAPI, claimsAPI, securityAPI, adminAPI } from '../services/api';
@@ -112,7 +112,7 @@ const Dashboard = () => {
         const [itemsRes, claimsRes, foundRes] = await Promise.allSettled([
           itemsAPI.getMy(),
           claimsAPI.getMy(),
-          itemsAPI.getMy({ type: 'found', page: 0, size: 6, sort: 'createdAt,desc' })
+          itemsAPI.getMy({ type: 'found', page: 0, size: 100, sort: 'createdAt,desc' })
         ]);
 
         setStats({
@@ -295,7 +295,7 @@ const Dashboard = () => {
                   }}
                   style={{ background: 'none', border: 'none', padding: 0, fontWeight: 700, cursor: 'pointer' }}
                 >
-                  {hasMoreFoundItems ? 'Show more ↓' : 'Show less ↑'}
+                  {hasMoreFoundItems ? 'Show more ?' : 'Show less ?'}
                 </button>
               </div>
             )}
@@ -307,7 +307,7 @@ const Dashboard = () => {
             <div className="section" style={{ marginTop: '2rem' }}>
               <div className="section-header" style={{ borderBottom: 'none', marginBottom: '0.25rem' }}>
                 <h2>Found</h2>
-                <Link to="/admin/items/found" className="link-more">Show more ↓</Link>
+                <Link to="/admin/items/found" className="link-more">Show more ?</Link>
               </div>
               <div className="table-container">
                 <table>
@@ -365,7 +365,7 @@ const Dashboard = () => {
             <div className="section" style={{ marginTop: '2rem' }}>
               <div className="section-header" style={{ borderBottom: 'none', marginBottom: '0.25rem' }}>
                 <h2>Receive</h2>
-                <Link to="/admin/items/receive" className="link-more">Show more ↓</Link>
+                <Link to="/admin/items/receive" className="link-more">Show more ?</Link>
               </div>
               <div className="table-container">
                 <table>
@@ -425,7 +425,7 @@ const Dashboard = () => {
             <div className="section" style={{ marginTop: '2rem' }}>
               <div className="section-header" style={{ borderBottom: 'none', marginBottom: '0.25rem' }}>
                 <h2>Release</h2>
-                <Link to="/admin/items/release" className="link-more">Show more ↓</Link>
+                <Link to="/admin/items/release" className="link-more">Show more ?</Link>
               </div>
               <div className="table-container">
                 <table>

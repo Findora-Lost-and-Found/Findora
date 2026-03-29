@@ -80,7 +80,7 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
       const [itemsRes, claimsRes, foundRes] = await Promise.allSettled([
         itemsAPI.getMy(),
         claimsAPI.getMy(),
-        itemsAPI.getMy({ type: 'found', page: 0, size: 6, sort: 'createdAt,desc' })
+        itemsAPI.getMy({ type: 'found', page: 0, size: 100, sort: 'createdAt,desc' })
       ]);
 
       setStats({
