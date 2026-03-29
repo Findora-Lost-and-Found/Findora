@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { securityAPI } from '../../services/api';
 import { toast } from 'react-toastify';
 import { itemsAPI } from '../../services/api';
@@ -28,6 +29,26 @@ const SecurityPendingClaims = () => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState('');
   const [previewAlt, setPreviewAlt] = useState('Claim item');
+
+  useEffect(() => {
+    const isAnyModalOpen = showSuccessPopup || isPreviewOpen;
+    if (!isAnyModalOpen) return undefined;
+
+    const { body, documentElement } = document;
+    const previousOverflow = body.style.overflow;
+    const previousPaddingRight = body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - documentElement.clientWidth;
+
+    body.style.overflow = 'hidden';
+    if (scrollbarWidth > 0) {
+      body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    return () => {
+      body.style.overflow = previousOverflow;
+      body.style.paddingRight = previousPaddingRight;
+    };
+  }, [showSuccessPopup, isPreviewOpen]);
 
   useEffect(() => {
     loadClaims();
@@ -277,7 +298,7 @@ const SecurityPendingClaims = () => {
         )}
       </div>
 
-      {showSuccessPopup && (
+      {showSuccessPopup && createPortal(
         <div className="modal-overlay" onClick={() => setShowSuccessPopup(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h2>Success</h2>
@@ -288,10 +309,11 @@ const SecurityPendingClaims = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {isPreviewOpen && (
+      {isPreviewOpen && createPortal(
         <div className="modal-overlay" onClick={closeImagePreview}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '95vw', width: '95vw', maxHeight: '92vh', overflow: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginBottom: '0.75rem' }}>
@@ -342,7 +364,8 @@ const SecurityPendingClaims = () => {
               <ThemePhotoPlaceholder modal />
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

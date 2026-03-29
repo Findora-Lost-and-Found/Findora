@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../services/api';
 import { toast } from 'react-toastify';
@@ -27,6 +28,26 @@ const Settings = () => {
     const storedTheme = localStorage.getItem('findora-theme') || 'light';
     setTheme(storedTheme);
   }, []);
+
+  useEffect(() => {
+    const isAnyModalOpen = isPasswordModalOpen || isDeleteModalOpen;
+    if (!isAnyModalOpen) return undefined;
+
+    const { body, documentElement } = document;
+    const previousOverflow = body.style.overflow;
+    const previousPaddingRight = body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - documentElement.clientWidth;
+
+    body.style.overflow = 'hidden';
+    if (scrollbarWidth > 0) {
+      body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    return () => {
+      body.style.overflow = previousOverflow;
+      body.style.paddingRight = previousPaddingRight;
+    };
+  }, [isPasswordModalOpen, isDeleteModalOpen]);
 
   const switchTheme = (nextTheme) => {
     setTheme(nextTheme);
@@ -214,7 +235,7 @@ const Settings = () => {
           </button>
         </div>
 
-        {isPasswordModalOpen && (
+        {isPasswordModalOpen && createPortal(
           <div className="profile-password-overlay" onClick={closePasswordModal}>
             <div className="profile-password-modal" onClick={(e) => e.stopPropagation()}>
               <div className="profile-password-header">
@@ -275,10 +296,11 @@ const Settings = () => {
                 </div>
               </form>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
-        {isDeleteModalOpen && (
+        {isDeleteModalOpen && createPortal(
           <div className="profile-password-overlay" onClick={closeDeleteModal}>
             <div className="profile-password-modal" onClick={(e) => e.stopPropagation()}>
               <div className="profile-password-header">
@@ -325,7 +347,8 @@ const Settings = () => {
                 </div>
               </form>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </div>
