@@ -223,6 +223,47 @@ body {
   padding: 0 0.3rem;
 }
 
+.notification-icon-btn[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 8px);
+  right: -8px;
+  background: #111827;
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 8px 16px rgba(17, 24, 39, 0.22);
+  pointer-events: none;
+  z-index: 20;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.notification-icon-btn[data-tooltip]::before {
+  content: '';
+  position: absolute;
+  top: calc(100% + 3px);
+  right: 18px;
+  width: 10px;
+  height: 10px;
+  background: #111827;
+  transform: rotate(45deg);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.notification-icon-btn[data-tooltip]:hover::after,
+.notification-icon-btn[data-tooltip]:hover::before,
+.notification-icon-btn[data-tooltip]:focus-visible::after,
+.notification-icon-btn[data-tooltip]:focus-visible::before {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .ellipsis-btn {
   color: inherit;
   border: none;
@@ -1363,6 +1404,16 @@ body.dark-mode .notification-icon-active {
 
 body.dark-mode .notification-icon-badge {
   border-color: #1f2937;
+}
+
+body.dark-mode .notification-icon-btn[data-tooltip]::after {
+  background: #f8fafc;
+  color: #111827;
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.35);
+}
+
+body.dark-mode .notification-icon-btn[data-tooltip]::before {
+  background: #f8fafc;
 }
 
 body.dark-mode .ellipsis-btn:hover {

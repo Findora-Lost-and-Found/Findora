@@ -123,6 +123,7 @@ const Navbar = () => {
                 to="/notifications"
                 className={({ isActive }) => (isActive ? 'nav-link notification-icon-btn notification-icon-active' : 'nav-link notification-icon-btn')}
                 aria-label="Notifications"
+                data-tooltip="Notifications"
               >
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                   <path d="M12 3a6 6 0 0 0-6 6v3.6l-1.6 2.6a1 1 0 0 0 .85 1.53h13.5a1 1 0 0 0 .85-1.53L18 12.6V9a6 6 0 0 0-6-6zm0 18a3 3 0 0 0 2.82-2H9.18A3 3 0 0 0 12 21z" />
