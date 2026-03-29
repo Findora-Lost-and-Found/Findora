@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import { itemsAPI } from '../services/api';
 import ItemCard from '../components/ItemCard';
+import FilterSelect from '../components/FilterSelect';
 import Pagination from '../components/Pagination';
 import MatchCard from '../components/MatchCard';
 import matchesAPI from '../services/matchesAPI';
@@ -159,14 +160,20 @@ const LostItems = () => {
   return (
     <div className="container">
         <div className="filters">
-          <select name="category" value={filters.category} onChange={handleFilterChange}>
-            <option value="">All Categories</option>
-            <option value="NIC">NIC</option>
-            <option value="Student ID">Student ID</option>
-            <option value="Bank Card">Bank Card</option>
-            <option value="Wallet">Wallet</option>
-            <option value="Other">Other</option>
-          </select>
+          <FilterSelect
+            name="category"
+            value={filters.category}
+            onChange={handleFilterChange}
+            ariaLabel="Filter by category"
+            options={[
+              { value: '', label: 'All Categories' },
+              { value: 'NIC', label: 'NIC' },
+              { value: 'Student ID', label: 'Student ID' },
+              { value: 'Bank Card', label: 'Bank Card' },
+              { value: 'Wallet', label: 'Wallet' },
+              { value: 'Other', label: 'Other' }
+            ]}
+          />
 
           <form className="search-form" onSubmit={handleSearchSubmit}>
             <input
@@ -183,11 +190,17 @@ const LostItems = () => {
             </button>
           </form>
 
-          <select name="sortBy" value={filters.sortBy} onChange={handleFilterChange}>
-            <option value={FOUND_ITEM_SORT.LATEST}>Latest</option>
-            <option value={FOUND_ITEM_SORT.NAME_ASC}>Alphabetical A → Z</option>
-            <option value={FOUND_ITEM_SORT.NAME_DESC}>Alphabetical Z → A</option>
-          </select>
+          <FilterSelect
+            name="sortBy"
+            value={filters.sortBy}
+            onChange={handleFilterChange}
+            ariaLabel="Sort items"
+            options={[
+              { value: FOUND_ITEM_SORT.LATEST, label: 'Latest' },
+              { value: FOUND_ITEM_SORT.NAME_ASC, label: 'Alphabetical A → Z' },
+              { value: FOUND_ITEM_SORT.NAME_DESC, label: 'Alphabetical Z → A' }
+            ]}
+          />
         </div>
 
         <div className="items-grid">

@@ -1050,7 +1050,147 @@ body:not(.dark-mode) .item-card .category-badge {
   color: var(--text-primary);
 }
 
-.filters select {
+.filters .filter-select {
+  position: relative;
+  min-width: 165px;
+}
+
+.filter-select-trigger {
+  width: 100%;
+  min-height: 42px;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid #9ccfca;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 0.96rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  cursor: pointer;
+  text-align: left;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04) inset;
+  position: relative;
+}
+
+.filter-select-trigger::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 2.15rem;
+  width: 1px;
+  height: 62%;
+  background: #d1d5db;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.filter-select-trigger:focus-visible {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.18);
+}
+
+.filter-select-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filter-select-arrow {
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 8px solid #0f766e;
+  flex-shrink: 0;
+}
+
+.filter-select-menu {
+  position: absolute;
+  top: calc(100% + 3px);
+  left: 0;
+  right: 0;
+  border: 1px solid #94a3b8;
+  border-radius: 9px;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.14);
+  z-index: 80;
+  overflow: hidden;
+}
+
+.filter-select-option {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #0f172a;
+  padding: 0.58rem 0.72rem;
+  text-align: left;
+  font-size: 0.96rem;
+  line-height: 1.25;
+  cursor: pointer;
+}
+
+.filter-select-option:first-child {
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+
+.filter-select-option:last-child {
+  border-bottom: none;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
+.filter-select-option:hover,
+.filter-select-option:focus-visible {
+  background: #eaf3ff;
+  outline: none;
+}
+
+.filter-select-option.is-active {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+body.dark-mode .filter-select-trigger {
+  background: #1f2937;
+  color: #f8fafc;
+  border-color: #4b5563;
+}
+
+body.dark-mode .filter-select-trigger::after {
+  background: #475569;
+}
+
+body.dark-mode .filter-select-arrow {
+  border-top-color: #67e8f9;
+}
+
+body.dark-mode .filter-select-menu {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+body.dark-mode .filter-select-option {
+  background: #0f172a;
+  color: #e5e7eb;
+  border-bottom-color: #334155;
+}
+
+body.dark-mode .filter-select-option:hover,
+body.dark-mode .filter-select-option:focus-visible {
+  background: #1e293b;
+}
+
+body.dark-mode .filter-select-option.is-active {
+  background: #1d4ed8;
+}
+
+.filters select,
+.form-group select {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
@@ -1071,14 +1211,35 @@ body:not(.dark-mode) .item-card .category-badge {
   border-color: color-mix(in srgb, var(--brand) 55%, #ffffff);
   box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.16);
   outline: none;
+}
+
+.filters select:focus,
+.form-group select:focus {
   background-image:
     linear-gradient(45deg, transparent 50%, var(--brand) 50%),
     linear-gradient(135deg, var(--brand) 50%, transparent 50%),
     linear-gradient(to right, #99f6e4, #99f6e4);
 }
 
-.filters select::-ms-expand {
+.filters select::-ms-expand,
+.form-group select::-ms-expand {
   display: none;
+}
+
+body.dark-mode .filters select,
+body.dark-mode .form-group select {
+  background-image:
+    linear-gradient(45deg, transparent 50%, #cbd5e1 50%),
+    linear-gradient(135deg, #cbd5e1 50%, transparent 50%),
+    linear-gradient(to right, #475569, #475569);
+}
+
+body.dark-mode .filters select:focus,
+body.dark-mode .form-group select:focus {
+  background-image:
+    linear-gradient(45deg, transparent 50%, #5eead4 50%),
+    linear-gradient(135deg, #5eead4 50%, transparent 50%),
+    linear-gradient(to right, #0d9488, #0d9488);
 }
 
 .search-form {
