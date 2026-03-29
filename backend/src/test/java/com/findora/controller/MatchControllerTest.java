@@ -46,6 +46,7 @@ class MatchControllerTest {
 
     @Test
     @WithMockUser(username = "testuser", roles = {"STUDENT"})
+    @SuppressWarnings("unused")
     void claimMatchWithValidOtpShouldReturnCreated() throws Exception {
         User user = new User();
         user.setId(10L);
@@ -73,6 +74,7 @@ class MatchControllerTest {
 
     @Test
     @WithMockUser(username = "testuser", roles = {"STUDENT"})
+    @SuppressWarnings("unused")
     void claimMatchWithInvalidOtpShouldReturnBadRequest() throws Exception {
         User user = new User();
         user.setId(10L);
@@ -94,6 +96,7 @@ class MatchControllerTest {
 
     @Test
     @WithMockUser(username = "testuser", roles = {"STUDENT"})
+    @SuppressWarnings("unused")
     void claimMatchWithExpiredOtpShouldReturnBadRequest() throws Exception {
         User user = new User();
         user.setId(10L);

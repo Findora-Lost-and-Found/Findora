@@ -62,8 +62,8 @@ public class AdminController {
 
     @GetMapping("/users")
     public ResponseEntity<?> getUsers(
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "50") Integer size) {
+            @RequestParam(name = "page", defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "50") Integer size) {
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "createdAt"));
 
         List<Map<String, Object>> users = userRepository.findAll(pageable)
@@ -79,8 +79,8 @@ public class AdminController {
 
     @GetMapping("/pending-approvals")
     public ResponseEntity<?> getPendingApprovals(
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "100") Integer size) {
+            @RequestParam(name = "page", defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "100") Integer size) {
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "createdAt"));
 
         List<Map<String, Object>> approvals = userRepository.findAll(pageable)
@@ -98,7 +98,7 @@ public class AdminController {
     }
 
     @PutMapping("/approve-user/{id}")
-    public ResponseEntity<?> approveUser(@PathVariable Long id) {
+    public ResponseEntity<?> approveUser(@PathVariable("id") Long id) {
         User user = userRepository.findById(id)
             .orElse(null);
 
@@ -115,7 +115,7 @@ public class AdminController {
     }
 
     @PutMapping("/decline-user/{id}")
-    public ResponseEntity<?> declineUser(@PathVariable Long id) {
+    public ResponseEntity<?> declineUser(@PathVariable("id") Long id) {
         User user = userRepository.findById(id)
             .orElse(null);
 
@@ -135,7 +135,7 @@ public class AdminController {
     }
 
     @PutMapping("/ban-user/{id}")
-    public ResponseEntity<?> banUser(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
+    public ResponseEntity<?> banUser(@PathVariable("id") Long id, @RequestBody(required = false) Map<String, Object> body) {
         User user = userRepository.findById(id)
             .orElse(null);
 
@@ -152,7 +152,7 @@ public class AdminController {
     }
 
     @PutMapping("/suspend-user/{id}")
-    public ResponseEntity<?> suspendUser(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
+    public ResponseEntity<?> suspendUser(@PathVariable("id") Long id, @RequestBody(required = false) Map<String, Object> body) {
         User user = userRepository.findById(id)
             .orElse(null);
 
@@ -170,9 +170,9 @@ public class AdminController {
 
     @GetMapping("/reports")
     public ResponseEntity<?> getReports(
-            @RequestParam(required = false) String status,
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "20") Integer size) {
+            @RequestParam(name = "status", required = false) String status,
+            @RequestParam(name = "page", defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "20") Integer size) {
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "createdAt"));
 
         List<Report> reportRows = status == null || status.isBlank()
@@ -191,7 +191,7 @@ public class AdminController {
     }
 
     @PutMapping("/reports/{id}")
-    public ResponseEntity<?> updateReport(@PathVariable Long id, @RequestBody Map<String, String> updateData) {
+    public ResponseEntity<?> updateReport(@PathVariable("id") Long id, @RequestBody Map<String, String> updateData) {
         try {
             Report report = reportRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Report not found"));
@@ -220,7 +220,7 @@ public class AdminController {
     }
 
     @PostMapping("/reports/{id}/hide-item")
-    public ResponseEntity<?> hideReportedItem(@PathVariable Long id) {
+    public ResponseEntity<?> hideReportedItem(@PathVariable("id") Long id) {
         try {
             Report report = reportRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Report not found"));
@@ -250,9 +250,9 @@ public class AdminController {
 
     @GetMapping("/items")
     public ResponseEntity<?> getItems(
-            @RequestParam(defaultValue = "found") String status,
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "100") Integer size) {
+            @RequestParam(name = "status", defaultValue = "found") String status,
+            @RequestParam(name = "page", defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "100") Integer size) {
         String normalizedStatus = status == null ? "found" : status.trim().toLowerCase(Locale.ROOT);
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "createdAt"));
 

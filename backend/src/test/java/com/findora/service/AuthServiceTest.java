@@ -48,10 +48,11 @@ class AuthServiceTest {
     @BeforeEach
     @SuppressWarnings("unused")
     void setUp() {
-        authService = new AuthService(userRepository, passwordEncoder, jwtTokenProvider, emailService, notificationRepository);
+        authService = new AuthService(userRepository, passwordEncoder, jwtTokenProvider, emailService, notificationRepository, false);
     }
 
     @Test
+    @SuppressWarnings("unused")
     void getCurrentUserByUsernameShouldIncludeCreatedAtMapping() {
         User user = new User();
         user.setId(1L);

@@ -96,6 +96,7 @@ class ReportControllerIntegrationTest {
 
     @Test
     @WithMockUser(username = "reporter", roles = {"STUDENT"})
+    @SuppressWarnings("unused")
     void createReportShouldPersistReportAndReturnCreatedPayload() throws Exception {
         mockMvc.perform(
             post("/api/reports")
