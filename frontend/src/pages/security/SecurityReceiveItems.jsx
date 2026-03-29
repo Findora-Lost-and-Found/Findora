@@ -120,7 +120,7 @@ const SecurityReceiveItems = () => {
                 <tr>
                   <th>Name</th>
                   <th>Photo</th>
-                  <th>Finder Name</th>
+                  <th>Finder</th>
                   <th>Location</th>
                   <th>Date</th>
                   <th>Action</th>
@@ -160,7 +160,14 @@ const SecurityReceiveItems = () => {
                           <ThemePhotoPlaceholder />
                         )}
                       </td>
-                      <td>{item.finderName || item.full_name || 'Unknown Finder'}</td>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                          <span>{item.finderName || item.full_name || 'Unknown Finder'}</span>
+                          <small style={{ color: '#64748b' }}>
+                            Student ID: {item.student_id || item.studentId || 'Not available'}
+                          </small>
+                        </div>
+                      </td>
                       <td>{item.location || 'Unknown location'}</td>
                       <td>{formatDate(item)}</td>
                       <td>
