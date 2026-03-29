@@ -1153,7 +1153,7 @@ body:not(.dark-mode) .item-card .category-badge {
 }
 
 .filter-select-option.is-active {
-  background: #2563eb;
+  background: #0d9488;
   color: #ffffff;
 }
 
@@ -1188,7 +1188,7 @@ body.dark-mode .filter-select-option:focus-visible {
 }
 
 body.dark-mode .filter-select-option.is-active {
-  background: #1d4ed8;
+  background: #0d9488;
 }
 
 .filters select,
