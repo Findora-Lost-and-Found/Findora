@@ -245,9 +245,9 @@ export const buildIdentityPreviewImage = (item = {}) => {
     const name = extractAfterPrefix(itemName, /Student\/?Staff\s+ID\s*-\s*(.+)$/i)
       || extractAfterPrefix(description, /Name\s*:\s*([^|,\n]+)/i)
       || 'UNKNOWN';
-    const idNumber = extractAfterPrefix(description, /ID\s*Number\s*:\s*([A-Za-z0-9\-]+)/i)
-      || extractAfterPrefix(description, /Staff\s*ID\s*:\s*([A-Za-z0-9\-]+)/i)
-      || extractAfterPrefix(description, /Registration\s*No\s*:\s*([A-Za-z0-9\-]+)/i)
+    const idNumber = extractAfterPrefix(description, /ID\s*Number\s*:\s*([A-Za-z0-9-]+)/i)
+      || extractAfterPrefix(description, /Staff\s*ID\s*:\s*([A-Za-z0-9-]+)/i)
+      || extractAfterPrefix(description, /Registration\s*No\s*:\s*([A-Za-z0-9-]+)/i)
       || 'N/A';
     const faculty = extractAfterPrefix(description, /Faculty\s*:\s*([^|,\n]+)/i) || 'Faculty of XXXXXX';
     const idTypeFromDescription = extractAfterPrefix(description, /ID\s*Type\s*:\s*(Student|Staff)/i);

@@ -34,6 +34,7 @@ import com.findora.service.SecurityService;
  */
 @RestController
 @RequestMapping("/api/security")
+@SuppressWarnings("null")
 public class SecurityController {
 
     private static final Logger log = LoggerFactory.getLogger(SecurityController.class);

@@ -19,6 +19,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const PendingApproval = lazy(() => import('./pages/PendingApproval'));
 const SecurityDashboard = lazy(() => import('./pages/SecurityDashboard'));
 const Profile = lazy(() => import('./pages/Profile'));
+const Settings = lazy(() => import('./pages/Settings'));
 const Notifications = lazy(() => import('./pages/Notifications'));
 
 const ReportLostItem = lazy(() => import('./pages/ReportLostItem'));
@@ -65,6 +66,7 @@ function App() {
               {/* Protected Routes */}
               <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
               <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+              <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
               <Route path="/notifications" element={<PrivateRoute><Notifications /></PrivateRoute>} />
 
               {/* Item Routes */}
@@ -92,7 +94,7 @@ function App() {
               <Route path="/admin/items/:section" element={<PrivateRoute roles={['admin']}><AdminItemsByStatus /></PrivateRoute>} />
             </Routes>
           </Suspense>
-          <ToastContainer position="top-right" autoClose={3000} />
+            <ToastContainer position="bottom-right" autoClose={3000} />
         </AppShell>
       </AuthProvider>
     </Router>

@@ -9,6 +9,7 @@ public class AuthResponse {
     private String token;             // JWT Bearer token; frontend expects this exact key
     private UserDTO user;             // User info
     private String message;           // Optional status message
+    private String verificationOtp;   // Development fallback OTP when email delivery fails
 
     public AuthResponse() {
     }
@@ -17,6 +18,13 @@ public class AuthResponse {
         this.token = token;
         this.user = user;
         this.message = message;
+    }
+
+    public AuthResponse(String token, UserDTO user, String message, String verificationOtp) {
+        this.token = token;
+        this.user = user;
+        this.message = message;
+        this.verificationOtp = verificationOtp;
     }
 
     public String getToken() {
@@ -41,5 +49,13 @@ public class AuthResponse {
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public String getVerificationOtp() {
+        return verificationOtp;
+    }
+
+    public void setVerificationOtp(String verificationOtp) {
+        this.verificationOtp = verificationOtp;
     }
 }

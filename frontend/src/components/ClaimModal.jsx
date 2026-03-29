@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { claimsAPI } from '../services/api';
 import './ClaimModal.css';
@@ -11,6 +12,7 @@ import OtherItemClaim from './claims/OtherItemClaim';
 import OTPDisplay from './OTPDisplay';
 
 const ClaimModal = ({ isOpen, onClose, item }) => {
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState('select'); // select, form, otp
   const [generatedOTP, setGeneratedOTP] = useState('');
   const [claimData, setClaimData] = useState(null);
@@ -41,15 +43,19 @@ const ClaimModal = ({ isOpen, onClose, item }) => {
     setSubmitting(true);
     try {
       const response = await claimsAPI.create(itemId, Object.keys(claimMeta).length > 0 ? claimMeta : undefined);
+      const createdClaimId = response.data?.claim?.id;
       const apiOtp = response.data?.otp || response.data?.claim?.otp;
-
-      if (!apiOtp) {
-        throw new Error('OTP not returned by server');
-      }
-
       setClaimData(userData);
-      setGeneratedOTP(String(apiOtp));
-      setCurrentStep('otp');
+
+      // Backward-compatible path: some claim modes may still issue OTP immediately.
+      if (apiOtp) {
+        setGeneratedOTP(String(apiOtp));
+        setCurrentStep('otp');
+      } else {
+        toast.success(response.data?.message || 'Claim submitted successfully. Generate OTP from My Claims.');
+        onClose();
+        navigate(createdClaimId ? `/my-claims?claimId=${createdClaimId}` : '/my-claims');
+      }
     } catch (error) {
       const message = error.response?.data?.message || 'Failed to submit claim';
       toast.error(message);
