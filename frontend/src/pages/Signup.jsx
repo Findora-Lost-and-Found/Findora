@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getHomeRouteForUser } from '../utils/navigation';
 import { isValidEmail, isValidPhone, normalizeEmail, normalizePhone } from '../utils/contactValidation';
+import { isValidStudentIdNumber, normalizeStudentIdNumber } from '../utils/studentIdUtils';
 import PasswordInput from '../components/PasswordInput';
 
 const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d])\S{8,64}$/;

@@ -21,6 +21,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import com.findora.dto.UserDTO;
 import com.findora.model.Notification;
 import com.findora.model.User;
+import com.findora.repository.ItemRepository;
 import com.findora.repository.NotificationRepository;
 import com.findora.repository.UserRepository;
 import com.findora.security.JwtTokenProvider;
@@ -46,6 +47,9 @@ class AuthServiceTest {
     private NotificationRepository notificationRepository;
 
     @Mock
+    private ItemRepository itemRepository;
+
+    @Mock
     private AccessControlService accessControlService;
 
     private AuthService authService;
@@ -58,6 +62,7 @@ class AuthServiceTest {
             passwordEncoder,
             jwtTokenProvider,
             emailService,
+            itemRepository,
             notificationRepository,
             accessControlService
         );

@@ -77,8 +77,14 @@ public class User {
     @Column(name = "is_suspended", nullable = false)
     private Boolean isSuspended = false;
 
+    @Column(name = "is_deleted", nullable = false)
+    private Boolean isDeleted = false;
+
     @Column(name = "bad_post_attempts", nullable = false)
     private Integer badPostAttempts = 0;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 
     @Column(name = "suspension_until")
     private LocalDateTime suspensionUntil;
@@ -265,6 +271,14 @@ public class User {
         this.isSuspended = isSuspended;
     }
 
+    public Boolean getIsDeleted() {
+        return isDeleted;
+    }
+
+    public void setIsDeleted(Boolean isDeleted) {
+        this.isDeleted = isDeleted;
+    }
+
     public Integer getBadPostAttempts() {
         return badPostAttempts;
     }
@@ -279,6 +293,14 @@ public class User {
 
     public void setSuspensionUntil(LocalDateTime suspensionUntil) {
         this.suspensionUntil = suspensionUntil;
+    }
+
+    public LocalDateTime getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void setDeletedAt(LocalDateTime deletedAt) {
+        this.deletedAt = deletedAt;
     }
 
     public String getVerificationOtp() {
