@@ -393,10 +393,34 @@ body {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  margin-top: 0.25rem;
 }
 
 .appeal-access-actions a {
   text-decoration: none;
+}
+
+.appeal-access-actions .btn-primary,
+.appeal-access-actions .btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--btn-min-height);
+  min-width: var(--btn-min-width);
+  padding: var(--btn-padding-y) var(--btn-padding-x);
+  border-radius: var(--radius-sm);
+  font-size: var(--btn-font-size);
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.appeal-access-actions .btn-secondary {
+  border: 1px solid var(--border-soft);
+}
+
+.appeal-access-actions .btn-secondary:hover {
+  background: #4b5563;
 }
 
 .appeal-access-success {
@@ -538,11 +562,17 @@ body {
 
 /* Buttons */
 button.btn,
+a.btn,
 button.btn-primary,
+a.btn-primary,
 button.btn-secondary,
+a.btn-secondary,
 button.btn-danger,
+a.btn-danger,
 button.btn-success,
-button.btn-warning {
+a.btn-success,
+button.btn-warning,
+a.btn-warning {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -562,11 +592,17 @@ button.btn-warning {
 }
 
 button.btn:focus-visible,
+a.btn:focus-visible,
 button.btn-primary:focus-visible,
+a.btn-primary:focus-visible,
 button.btn-secondary:focus-visible,
+a.btn-secondary:focus-visible,
 button.btn-danger:focus-visible,
+a.btn-danger:focus-visible,
 button.btn-success:focus-visible,
-button.btn-warning:focus-visible {
+a.btn-success:focus-visible,
+button.btn-warning:focus-visible,
+a.btn-warning:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--brand) 55%, #ffffff);
   outline-offset: 2px;
 }

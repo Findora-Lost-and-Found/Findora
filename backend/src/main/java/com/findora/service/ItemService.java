@@ -65,6 +65,7 @@ public class ItemService {
      * @return PaginatedResponse with items DTO
      * @throws IllegalArgumentException if page or size is invalid
      */
+    @Transactional
     public PaginatedResponse<ItemDTO> getPaginatedItems(
             int page,
             int size,
@@ -107,7 +108,7 @@ public class ItemService {
             }
         }
 
-        ItemStatus itemStatus = null;
+        ItemStatus itemStatus = ItemStatus.ACTIVE;
         if (status != null && !status.isEmpty()) {
             try {
                 itemStatus = ItemStatus.valueOf(status.toUpperCase());
@@ -126,6 +127,17 @@ public class ItemService {
             itemStatus,
             pageable
         );
+
+        boolean moderatedAny = autoCloseBadLanguageItems(itemPage.getContent());
+        if (moderatedAny) {
+            itemPage = itemRepository.findPaginatedItems(
+                itemCategory,
+                normalizedKeyword,
+                itemType,
+                itemStatus,
+                pageable
+            );
+        }
 
         // Convert items to DTOs
         List<ItemDTO> dtos = itemPage.getContent().stream()
@@ -146,7 +158,9 @@ public class ItemService {
      * Get single item by ID as DTO.
      */
     public Optional<ItemDTO> getItemById(Long id) {
-        return itemRepository.findById(id).map(this::convertToDTO);
+        return itemRepository.findById(id)
+            .filter(item -> !autoCloseBadLanguageItem(item))
+            .map(this::convertToDTO);
     }
 
     /**
@@ -166,6 +180,7 @@ public class ItemService {
     /**
      * Get items by user ID with optional type/status/category/keyword filters.
      */
+    @Transactional
     public PaginatedResponse<ItemDTO> getUserItems(
             Long userId,
             int page,
@@ -210,6 +225,18 @@ public class ItemService {
             normalizedKeyword,
             pageable
         );
+
+        boolean moderatedAny = autoCloseBadLanguageItems(itemPage.getContent());
+        if (moderatedAny) {
+            itemPage = itemRepository.findUserItemsFiltered(
+                userId,
+                itemType,
+                itemStatus,
+                itemCategory,
+                normalizedKeyword,
+                pageable
+            );
+        }
 
         List<ItemDTO> dtos = itemPage.getContent().stream()
             .map(this::convertToDTO)
@@ -294,6 +321,34 @@ public class ItemService {
 
         String sanitized = PRIVATE_BANK_MARKER_PATTERN.matcher(rawDescription).replaceAll("").trim();
         return sanitized;
+    }
+
+    private boolean autoCloseBadLanguageItems(List<Item> items) {
+        boolean moderatedAny = false;
+        for (Item item : items) {
+            moderatedAny = autoCloseBadLanguageItem(item) || moderatedAny;
+        }
+        return moderatedAny;
+    }
+
+    private boolean autoCloseBadLanguageItem(Item item) {
+        if (item == null || item.getStatus() == ItemStatus.CLOSED) {
+            return false;
+        }
+
+        boolean hasBlockedLanguage = accessControlService.containsBlockedLanguageInText(
+            item.getItemName(),
+            sanitizeDescriptionForClient(item.getDescription()),
+            item.getLocation()
+        );
+
+        if (!hasBlockedLanguage) {
+            return false;
+        }
+
+        item.setStatus(ItemStatus.CLOSED);
+        itemRepository.save(item);
+        return true;
     }
 
     private ItemCategory parseCategory(String category) {

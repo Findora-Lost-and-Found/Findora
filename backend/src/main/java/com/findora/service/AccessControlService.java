@@ -14,6 +14,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.findora.model.AccessAppeal;
 import com.findora.model.Notification;
@@ -28,6 +31,8 @@ import com.findora.repository.UserRepository;
 public class AccessControlService {
 
     private static final int MAX_BAD_ATTEMPTS_ALLOWED = 5;
+    private static final long APPEAL_BAD_LANGUAGE_COOLDOWN_HOURS = 24;
+    private static final String APPEAL_AUTO_DECLINE_BAD_LANGUAGE_NOTE = "AUTO_DECLINED_BAD_LANGUAGE_24H";
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private static final Set<String> BLOCKED_TERMS = Set.of(
@@ -48,16 +53,20 @@ public class AccessControlService {
     private final NotificationRepository notificationRepository;
     private final AccessAppealRepository accessAppealRepository;
     private final ReportRepository reportRepository;
+    private final TransactionTemplate requiresNewTransaction;
 
     public AccessControlService(
             UserRepository userRepository,
             NotificationRepository notificationRepository,
             AccessAppealRepository accessAppealRepository,
-            ReportRepository reportRepository) {
+            ReportRepository reportRepository,
+            PlatformTransactionManager transactionManager) {
         this.userRepository = userRepository;
         this.notificationRepository = notificationRepository;
         this.accessAppealRepository = accessAppealRepository;
         this.reportRepository = reportRepository;
+        this.requiresNewTransaction = new TransactionTemplate(transactionManager);
+        this.requiresNewTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     public void validatePostLanguage(Long userId, String... textSegments) {
@@ -95,18 +104,29 @@ public class AccessControlService {
         );
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void saveUserBadAttempt(User user, int attempts) {
-        user.setBadPostAttempts(attempts);
-        userRepository.save(user);
+    public boolean containsBlockedLanguageInText(String... textSegments) {
+        String joined = String.join(" ", sanitizeSegments(textSegments));
+        return containsBlockedLanguage(joined);
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void saveUserBadAttempt(User user, int attempts) {
+        requiresNewTransaction.executeWithoutResult(status -> {
+            User managedUser = userRepository.findById(user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            managedUser.setBadPostAttempts(attempts);
+            userRepository.save(managedUser);
+        });
+    }
+
     public void saveUserSuspension(User user, int attempts) {
-        user.setBadPostAttempts(attempts);
-        user.setIsSuspended(true);
-        user.setSuspensionUntil(LocalDateTime.now().plusMonths(6));
-        userRepository.save(user);
+        requiresNewTransaction.executeWithoutResult(status -> {
+            User managedUser = userRepository.findById(user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            managedUser.setBadPostAttempts(attempts);
+            managedUser.setIsSuspended(true);
+            managedUser.setSuspensionUntil(LocalDateTime.now().plusMonths(6));
+            userRepository.save(managedUser);
+        });
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -132,6 +152,11 @@ public class AccessControlService {
     }
 
     public String accessBlockedMessage(User user, AccessState state) {
+        String appealCooldownMessage = getAppealCooldownMessage(user.getId());
+        if (appealCooldownMessage != null) {
+            return appealCooldownMessage;
+        }
+
         if (state == AccessState.BANNED) {
             return "Your account is permanently banned. You can submit an appeal.";
         }
@@ -146,6 +171,21 @@ public class AccessControlService {
         }
 
         return "Access granted";
+    }
+
+    private String getAppealCooldownMessage(Long userId) {
+        LocalDateTime now = LocalDateTime.now();
+        return accessAppealRepository
+            .findFirstByUserIdAndStatusAndAdminNotesOrderByCreatedAtDesc(
+                userId,
+                AccessAppeal.AppealStatus.DECLINED,
+                APPEAL_AUTO_DECLINE_BAD_LANGUAGE_NOTE
+            )
+            .map(AccessAppeal::getCreatedAt)
+            .filter(createdAt -> createdAt != null && createdAt.plusHours(APPEAL_BAD_LANGUAGE_COOLDOWN_HOURS).isAfter(now))
+            .map(createdAt -> "Appeal blocked for inappropriate language. You can submit another appeal after "
+                + createdAt.plusHours(APPEAL_BAD_LANGUAGE_COOLDOWN_HOURS).format(DATE_TIME_FORMATTER))
+            .orElse(null);
     }
 
     @Transactional
@@ -165,6 +205,8 @@ public class AccessControlService {
         if (accessState == AccessState.ALLOWED) {
             throw new IllegalArgumentException("Your account is active. Appeal can be submitted only for suspended or banned accounts.");
         }
+
+        enforceAppealCooldownAndModeration(user, accessState, reason);
 
         accessAppealRepository.findFirstByUserIdAndStatusOrderByCreatedAtDesc(user.getId(), AccessAppeal.AppealStatus.PENDING)
             .ifPresent(existing -> {
@@ -187,6 +229,55 @@ public class AccessControlService {
             "status", savedAppeal.getStatus().name().toLowerCase(Locale.ROOT),
             "message", "Appeal submitted successfully"
         );
+    }
+
+    private void enforceAppealCooldownAndModeration(User user, AccessState accessState, String reason) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime cooldownThreshold = now.minusHours(APPEAL_BAD_LANGUAGE_COOLDOWN_HOURS);
+
+        accessAppealRepository
+            .findFirstByUserIdAndStatusAndAdminNotesOrderByCreatedAtDesc(
+                user.getId(),
+                AccessAppeal.AppealStatus.DECLINED,
+                APPEAL_AUTO_DECLINE_BAD_LANGUAGE_NOTE
+            )
+            .ifPresent(lastAutoDeclined -> {
+                LocalDateTime createdAt = lastAutoDeclined.getCreatedAt();
+                if (createdAt != null && createdAt.isAfter(cooldownThreshold)) {
+                    LocalDateTime availableAt = createdAt.plusHours(APPEAL_BAD_LANGUAGE_COOLDOWN_HOURS);
+                    throw new IllegalArgumentException(
+                        "Appeal blocked for inappropriate language. You can submit another appeal after "
+                            + availableAt.format(DATE_TIME_FORMATTER)
+                    );
+                }
+            });
+
+        if (!containsBlockedLanguage(reason)) {
+            return;
+        }
+
+        saveAutoDeclinedAppeal(user.getId(), accessState, reason, now);
+
+        LocalDateTime nextAllowedAt = now.plusHours(APPEAL_BAD_LANGUAGE_COOLDOWN_HOURS);
+        throw new IllegalArgumentException(
+            "Appeal blocked for inappropriate language. You can submit another appeal after "
+                + nextAllowedAt.format(DATE_TIME_FORMATTER)
+        );
+    }
+
+    private void saveAutoDeclinedAppeal(Long userId, AccessState accessState, String reason, LocalDateTime reviewedAt) {
+        requiresNewTransaction.executeWithoutResult(status -> {
+            AccessAppeal autoDeclined = new AccessAppeal();
+            autoDeclined.setUserId(userId);
+            autoDeclined.setActionType(accessState == AccessState.BANNED
+                ? AccessAppeal.AppealActionType.BAN
+                : AccessAppeal.AppealActionType.SUSPENSION);
+            autoDeclined.setStatus(AccessAppeal.AppealStatus.DECLINED);
+            autoDeclined.setAppealText(reason.trim());
+            autoDeclined.setAdminNotes(APPEAL_AUTO_DECLINE_BAD_LANGUAGE_NOTE);
+            autoDeclined.setReviewedAt(reviewedAt);
+            accessAppealRepository.save(autoDeclined);
+        });
     }
 
     @Transactional(readOnly = true)

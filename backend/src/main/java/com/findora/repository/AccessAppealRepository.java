@@ -12,6 +12,11 @@ import com.findora.model.AccessAppeal;
 @Repository
 public interface AccessAppealRepository extends JpaRepository<AccessAppeal, Long> {
     Optional<AccessAppeal> findFirstByUserIdAndStatusOrderByCreatedAtDesc(Long userId, AccessAppeal.AppealStatus status);
+    Optional<AccessAppeal> findFirstByUserIdAndStatusAndAdminNotesOrderByCreatedAtDesc(
+        Long userId,
+        AccessAppeal.AppealStatus status,
+        String adminNotes
+    );
     Page<AccessAppeal> findByStatusOrderByCreatedAtDesc(AccessAppeal.AppealStatus status, Pageable pageable);
     Page<AccessAppeal> findAllByOrderByCreatedAtDesc(Pageable pageable);
 }

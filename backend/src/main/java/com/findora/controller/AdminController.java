@@ -175,6 +175,7 @@ public class AdminController {
         boolean suspended = parseBoolean(body != null ? body.get("suspended") : null, true);
         user.setIsSuspended(suspended);
         if (suspended) {
+            user.setIsBanned(false);
             user.setSuspensionUntil(LocalDateTime.now().plusMonths(6));
         } else {
             user.setSuspensionUntil(null);
