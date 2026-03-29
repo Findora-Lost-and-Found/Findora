@@ -70,7 +70,6 @@ public class AccessControlService {
         this.requiresNewTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
-    @SuppressWarnings("null")
     public void validatePostLanguage(Long userId, String... textSegments) {
         String joined = String.join(" ", sanitizeSegments(textSegments));
         if (!containsBlockedLanguage(joined)) {
@@ -292,7 +291,6 @@ public class AccessControlService {
     }
 
     @Transactional(readOnly = true)
-    @SuppressWarnings("null")
     public Map<String, Object> getAppealDetails(Long appealId) {
         AccessAppeal appeal = accessAppealRepository.findById(appealId)
             .orElseThrow(() -> new IllegalArgumentException("Appeal not found"));
@@ -313,7 +311,6 @@ public class AccessControlService {
     }
 
     @Transactional
-    @SuppressWarnings("null")
     public Map<String, Object> reviewAppeal(Long appealId, boolean approve, String adminNotes) {
         AccessAppeal appeal = accessAppealRepository.findById(appealId)
             .orElseThrow(() -> new IllegalArgumentException("Appeal not found"));
