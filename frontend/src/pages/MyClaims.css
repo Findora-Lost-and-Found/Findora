@@ -1,7 +1,7 @@
-.my-claims-page {
+.container.my-claims-page {
   max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
+  margin: 16px auto 0 !important;
+  padding: 12px 20px 20px !important;
 }
 
 .my-claims-page h1 {
@@ -232,8 +232,9 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .my-claims-page {
-    padding: 15px;
+  .container.my-claims-page {
+    margin-top: 12px !important;
+    padding: 10px 15px 15px !important;
   }
 
   .my-claims-page h1 {
@@ -264,8 +265,9 @@
 }
 
 @media (max-width: 480px) {
-  .my-claims-page {
-    padding: 10px;
+  .container.my-claims-page {
+    margin-top: 10px !important;
+    padding: 8px 10px 10px !important;
   }
 
   .my-claims-page h1 {

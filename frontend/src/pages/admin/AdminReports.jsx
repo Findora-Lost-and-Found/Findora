@@ -56,7 +56,7 @@ const AdminReports = () => {
   }, [filterStatus]);
 
   if (loading) {
-    return <div className="loading">Loading reports...</div>;
+    return <div className="ar-loading">Loading reports...</div>;
   }
 
   if (isMobile) {
@@ -64,18 +64,18 @@ const AdminReports = () => {
   }
 
   return (
-    <div className="container">
-      <div className="section-header">
+    <div className="admin-reports-page">
+      <div className="ar-section-header">
         <h1>Admin Reports</h1>
-        <div className="header-controls">
-          <span className="pending-badge">Pending: {pendingReports}</span>
-          <div className="filter-group">
+        <div className="ar-header-controls">
+          <span className="ar-pending-badge">Pending: {pendingReports}</span>
+          <div className="ar-filter-group">
             <label htmlFor="status-filter">Filter by Status:</label>
             <select
               id="status-filter"
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="filter-select"
+              className="ar-filter-select"
             >
               <option value="">All Reports</option>
               <option value="pending">Pending</option>
@@ -86,7 +86,7 @@ const AdminReports = () => {
         </div>
       </div>
 
-      <div className="table-container">
+      <div className="ar-table-container">
         <table className="reports-table">
           <thead>
             <tr>
@@ -114,17 +114,17 @@ const AdminReports = () => {
                   <tr key={report.id} className={`report-row status-${report.status}`}>
                   <td>
                     <button
-                      className="item-link"
+                      className="ar-item-link"
                       onClick={() => setSelectedReport(report)}
                       title="Click to view details"
                     >
-                      <span className="username">{report.reporter_username || 'Unknown'}</span>
+                      <span className="ar-username">{report.reporter_username || 'Unknown'}</span>
                     </button>
-                    <span className="user-id">{report.reporter_name}</span>
+                    <span className="ar-user-id">{report.reporter_name}</span>
                   </td>
                   <td>
                     <button
-                      className="item-link"
+                      className="ar-item-link"
                       onClick={() => setSelectedReport(report)}
                       title="Click to view details"
                     >
@@ -132,20 +132,20 @@ const AdminReports = () => {
                     </button>
                   </td>
                   <td>
-                    <div className="reason-cell">
+                    <div className="ar-reason-cell">
                       {maskedReason.split('\n')[0] || 'N/A'}
                       {maskedReason.length > 50 && '...'}
                     </div>
                   </td>
                   <td>
                     <button
-                      className="item-link"
+                      className="ar-item-link"
                       onClick={() => setSelectedReport(report)}
                       title="Click to view details"
                     >
-                      <span className="username">{report.posted_by_username || 'Unknown'}</span>
+                      <span className="ar-username">{report.posted_by_username || 'Unknown'}</span>
                     </button>
-                    <span className="user-id">{report.posted_by_name}</span>
+                    <span className="ar-user-id">{report.posted_by_name}</span>
                   </td>
                   <td>
                     <span className={`status-badge status-${report.item_status || 'active'}`}>
@@ -158,11 +158,11 @@ const AdminReports = () => {
                     </span>
                   </td>
                   <td>
-                    <span className="datetime">{formatDateTime(report.created_at)}</span>
+                    <span className="ar-datetime">{formatDateTime(report.created_at)}</span>
                   </td>
                   <td>
                     <button
-                      className="btn-action"
+                      className="ar-btn-action"
                       onClick={() => setSelectedReport(report)}
                       title="View and manage"
                     >
