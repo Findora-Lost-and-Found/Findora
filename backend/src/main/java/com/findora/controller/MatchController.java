@@ -55,7 +55,7 @@ public class MatchController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('STUDENT', 'STAFF', 'SECURITY', 'ADMIN')")
-    public ResponseEntity<?> getMatchById(@PathVariable Long id) {
+    public ResponseEntity<?> getMatchById(@PathVariable("id") Long id) {
         try {
             Long currentUserId = getCurrentUserId();
             Map<String, Object> match = matchService.getMatchDetail(id, currentUserId);
@@ -71,7 +71,7 @@ public class MatchController {
 
     @PostMapping("/{matchId}/resend-otp")
     @PreAuthorize("hasAnyRole('STUDENT', 'STAFF', 'SECURITY', 'ADMIN')")
-    public ResponseEntity<?> resendOtp(@PathVariable Long matchId) {
+    public ResponseEntity<?> resendOtp(@PathVariable("matchId") Long matchId) {
         try {
             Long currentUserId = getCurrentUserId();
             Map<String, Object> result = matchService.resendOtp(matchId, currentUserId);
@@ -93,7 +93,7 @@ public class MatchController {
 
     @PostMapping("/{matchId}/claim")
     @PreAuthorize("hasAnyRole('STUDENT', 'STAFF', 'SECURITY', 'ADMIN')")
-    public ResponseEntity<?> claimMatch(@PathVariable Long matchId, @RequestBody Map<String, String> request) {
+    public ResponseEntity<?> claimMatch(@PathVariable("matchId") Long matchId, @RequestBody Map<String, String> request) {
         try {
             Long currentUserId = getCurrentUserId();
             String otp = request != null ? request.get("otp") : null;

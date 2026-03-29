@@ -213,7 +213,7 @@ public class ClaimController {
     @PostMapping("/{id}/otp")
     @PreAuthorize("hasAnyRole('STUDENT', 'STAFF')")
     @Transactional
-    public ResponseEntity<?> generateOtp(@PathVariable Long id) {
+    public ResponseEntity<?> generateOtp(@PathVariable("id") Long id) {
         try {
             Long currentUserId = getCurrentUserId();
             Claim claim = claimCreationService.generateOtpForClaim(id, currentUserId);
@@ -295,7 +295,7 @@ public class ClaimController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getClaimById(@PathVariable Long id) {
+    public ResponseEntity<?> getClaimById(@PathVariable("id") Long id) {
         return claimRepository.findById(id)
             .<ResponseEntity<?>>map(claim -> ResponseEntity.ok(Map.of(
                 "success", true,

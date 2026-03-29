@@ -77,6 +77,12 @@ public class User {
     @Column(name = "is_suspended", nullable = false)
     private Boolean isSuspended = false;
 
+    @Column(name = "bad_post_attempts", nullable = false)
+    private Integer badPostAttempts = 0;
+
+    @Column(name = "suspension_until")
+    private LocalDateTime suspensionUntil;
+
     @Column(name = "verification_otp", length = 6)
     private String verificationOtp;
 
@@ -110,7 +116,8 @@ public class User {
     public User(Long id, String username, String email, String password, String fullName, UserRole role, String phone,
                 String pendingPhone, String phoneVerificationOtp, LocalDateTime phoneOtpExpiry, Boolean isPhoneVerified,
                 Boolean isVerified, Boolean isApproved, Boolean isBanned, Boolean isSuspended, String verificationOtp,
-                String resetOtp, LocalDateTime otpExpiry, LocalDateTime createdAt, LocalDateTime updatedAt,
+                Integer badPostAttempts, LocalDateTime suspensionUntil, String resetOtp, LocalDateTime otpExpiry,
+                LocalDateTime createdAt, LocalDateTime updatedAt,
                 List<Item> items, List<Notification> notifications) {
         this.id = id;
         this.username = username;
@@ -127,6 +134,8 @@ public class User {
         this.isApproved = isApproved;
         this.isBanned = isBanned;
         this.isSuspended = isSuspended;
+        this.badPostAttempts = badPostAttempts;
+        this.suspensionUntil = suspensionUntil;
         this.verificationOtp = verificationOtp;
         this.resetOtp = resetOtp;
         this.otpExpiry = otpExpiry;
@@ -254,6 +263,22 @@ public class User {
 
     public void setIsSuspended(Boolean isSuspended) {
         this.isSuspended = isSuspended;
+    }
+
+    public Integer getBadPostAttempts() {
+        return badPostAttempts;
+    }
+
+    public void setBadPostAttempts(Integer badPostAttempts) {
+        this.badPostAttempts = badPostAttempts;
+    }
+
+    public LocalDateTime getSuspensionUntil() {
+        return suspensionUntil;
+    }
+
+    public void setSuspensionUntil(LocalDateTime suspensionUntil) {
+        this.suspensionUntil = suspensionUntil;
     }
 
     public String getVerificationOtp() {

@@ -109,6 +109,7 @@ const Navbar = () => {
                   <Link to="/admin-panel" className="nav-link">Admin Panel</Link>
                   <Link to="/admin/users" className="nav-link">Users</Link>
                   <Link to="/admin/pending-approvals" className="nav-link">Pending Approvals</Link>
+                  <Link to="/admin/appeals" className="nav-link">Appeals</Link>
                   <Link to="/admin/items" className="nav-link">Items</Link>
                   <Link to="/admin/reports" className="nav-link">Reports</Link>
                 </>
