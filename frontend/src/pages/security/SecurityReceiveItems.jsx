@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { toast } from 'react-toastify';
 import { securityAPI } from '../../services/api';
 
@@ -26,6 +27,25 @@ const SecurityReceiveItems = () => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState('');
   const [previewAlt, setPreviewAlt] = useState('Found item');
+
+  useEffect(() => {
+    if (!isPreviewOpen) return undefined;
+
+    const { body, documentElement } = document;
+    const previousOverflow = body.style.overflow;
+    const previousPaddingRight = body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - documentElement.clientWidth;
+
+    body.style.overflow = 'hidden';
+    if (scrollbarWidth > 0) {
+      body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    return () => {
+      body.style.overflow = previousOverflow;
+      body.style.paddingRight = previousPaddingRight;
+    };
+  }, [isPreviewOpen]);
 
   const loadReceiveItems = async () => {
     try {
@@ -120,7 +140,7 @@ const SecurityReceiveItems = () => {
                 <tr>
                   <th>Name</th>
                   <th>Photo</th>
-                  <th>Finder Name</th>
+                  <th>Finder</th>
                   <th>Location</th>
                   <th>Date</th>
                   <th>Action</th>
@@ -160,7 +180,14 @@ const SecurityReceiveItems = () => {
                           <ThemePhotoPlaceholder />
                         )}
                       </td>
-                      <td>{item.finderName || item.full_name || 'Unknown Finder'}</td>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                          <span>{item.finderName || item.full_name || 'Unknown Finder'}</span>
+                          <small style={{ color: '#64748b' }}>
+                            ID: {item.student_id || item.studentId || 'Not available'}
+                          </small>
+                        </div>
+                      </td>
                       <td>{item.location || 'Unknown location'}</td>
                       <td>{formatDate(item)}</td>
                       <td>
@@ -181,7 +208,7 @@ const SecurityReceiveItems = () => {
         )}
       </div>
 
-      {isPreviewOpen && (
+      {isPreviewOpen && createPortal(
         <div className="modal-overlay" onClick={closeImagePreview}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '95vw', width: '95vw', maxHeight: '92vh', overflow: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginBottom: '0.75rem' }}>
@@ -232,7 +259,8 @@ const SecurityReceiveItems = () => {
               <ThemePhotoPlaceholder modal />
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

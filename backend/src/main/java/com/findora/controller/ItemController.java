@@ -48,6 +48,7 @@ import com.findora.model.ItemType;
 import com.findora.repository.ItemRepository;
 import com.findora.repository.UserRepository;
 import com.findora.service.ItemService;
+import com.findora.service.MatchService;
 
 /**
  * ItemController - REST endpoints for items (lost/found).
@@ -66,6 +67,7 @@ public class ItemController {
     private final ItemService itemService;
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
+    private final MatchService matchService;
     private static final Logger log = LoggerFactory.getLogger(ItemController.class);
     private static final Pattern CARD_NUMBER_PATTERN = Pattern.compile("^\\d{16}$");
 
@@ -75,10 +77,12 @@ public class ItemController {
     public ItemController(
             ItemService itemService,
             ItemRepository itemRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            MatchService matchService) {
         this.itemService = itemService;
         this.itemRepository = itemRepository;
         this.userRepository = userRepository;
+        this.matchService = matchService;
     }
 
     /**
@@ -236,6 +240,15 @@ public class ItemController {
                 log.info("Item created with ID: {}, image_url: {}", saved.getId(), savedDto.get().getImageUrl());
             }
 
+            try {
+                int immediateNotifications = matchService.runImmediateIdBasedMatching(saved.getId());
+                if (immediateNotifications > 0) {
+                    log.info("Immediate ID-based matching sent notifications={} for itemId={}", immediateNotifications, saved.getId());
+                }
+            } catch (Exception immediateMatchError) {
+                log.warn("Immediate ID-based matching failed for itemId={}: {}", saved.getId(), immediateMatchError.getMessage());
+            }
+
             return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Map.of(
                     "success", true,
@@ -359,18 +372,6 @@ public class ItemController {
         return userRepository.findByUsername(username)
             .map(user -> user.getId())
             .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
-    }
-
-    /**
-     * Check if current user has admin role.
-     */
-    private boolean isAdmin() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null) {
-            return false;
-        }
-        return auth.getAuthorities().stream()
-            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("admin"));
     }
 
     private Map<String, Object> toItemPayload(Item item) {

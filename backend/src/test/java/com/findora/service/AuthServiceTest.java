@@ -10,9 +10,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.lenient;
 import org.mockito.Mock;
-import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -21,13 +20,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import com.findora.dto.UserDTO;
 import com.findora.model.Notification;
 import com.findora.model.User;
+import com.findora.repository.ItemRepository;
 import com.findora.repository.NotificationRepository;
 import com.findora.repository.UserRepository;
 import com.findora.security.JwtTokenProvider;
 import com.findora.service.AccessControlService.AccessState;
 
 @ExtendWith(MockitoExtension.class)
-@SuppressWarnings("null")
 class AuthServiceTest {
 
     @Mock
@@ -46,11 +45,15 @@ class AuthServiceTest {
     private NotificationRepository notificationRepository;
 
     @Mock
+    private ItemRepository itemRepository;
+
+    @Mock
     private AccessControlService accessControlService;
 
     private AuthService authService;
 
     @BeforeEach
+    @SuppressWarnings("unused")
     void setUp() {
         lenient().when(accessControlService.refreshAndGetAccessState(any(User.class))).thenReturn(AccessState.ALLOWED);
         authService = new AuthService(
@@ -58,6 +61,7 @@ class AuthServiceTest {
             passwordEncoder,
             jwtTokenProvider,
             emailService,
+            itemRepository,
             notificationRepository,
             accessControlService
         );
@@ -126,7 +130,13 @@ class AuthServiceTest {
 
         authService.verifyEmail(3L, "123456");
 
-        verify(notificationRepository).save(any(Notification.class));
+        boolean savedNotification = org.mockito.Mockito.mockingDetails(notificationRepository)
+            .getInvocations()
+            .stream()
+            .anyMatch(invocation -> "save".equals(invocation.getMethod().getName())
+                && invocation.getArguments().length == 1
+                && invocation.getArgument(0) instanceof Notification);
+        assertThat(savedNotification).isTrue();
         verify(userRepository).save(securityUser);
     }
 
@@ -147,6 +157,10 @@ class AuthServiceTest {
 
         authService.verifyEmail(4L, "654321");
 
-        verify(notificationRepository, never()).save(any(Notification.class));
+        boolean savedNotification = org.mockito.Mockito.mockingDetails(notificationRepository)
+            .getInvocations()
+            .stream()
+            .anyMatch(invocation -> "save".equals(invocation.getMethod().getName()));
+        assertThat(savedNotification).isFalse();
     }
 }

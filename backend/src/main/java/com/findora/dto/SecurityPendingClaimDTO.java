@@ -12,12 +12,15 @@ public class SecurityPendingClaimDTO {
     private String fullName;
     private String phone;
     private LocalDateTime claimedAt;
+    private String itemStatus;
+    private Boolean receivedBySecurity;
 
     public SecurityPendingClaimDTO() {
     }
 
     public SecurityPendingClaimDTO(Long id, Long itemId, String itemName, String imageUrl, String category, String location,
-                                   String fullName, String phone, LocalDateTime claimedAt) {
+                                   String fullName, String phone, LocalDateTime claimedAt,
+                                   String itemStatus, Boolean receivedBySecurity) {
         this.id = id;
         this.itemId = itemId;
         this.itemName = itemName;
@@ -27,6 +30,8 @@ public class SecurityPendingClaimDTO {
         this.fullName = fullName;
         this.phone = phone;
         this.claimedAt = claimedAt;
+        this.itemStatus = itemStatus;
+        this.receivedBySecurity = receivedBySecurity;
     }
 
     public Long getId() {
@@ -99,5 +104,21 @@ public class SecurityPendingClaimDTO {
 
     public void setClaimedAt(LocalDateTime claimedAt) {
         this.claimedAt = claimedAt;
+    }
+
+    public String getItemStatus() {
+        return itemStatus;
+    }
+
+    public void setItemStatus(String itemStatus) {
+        this.itemStatus = itemStatus;
+    }
+
+    public Boolean getReceivedBySecurity() {
+        return receivedBySecurity;
+    }
+
+    public void setReceivedBySecurity(Boolean receivedBySecurity) {
+        this.receivedBySecurity = receivedBySecurity;
     }
 }

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { toast } from 'react-toastify';
 import { adminAPI } from '../../services/api';
 import { maskSensitiveDescription } from '../../utils/itemDisplayUtils';
@@ -12,6 +13,25 @@ const ReportDetailsModal = ({ report, onClose, onAction }) => {
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [adminNotes, setAdminNotes] = useState(report?.admin_notes || '');
   const maskedReason = maskSensitiveDescription(report?.reason || '');
+
+  useEffect(() => {
+    if (!report) return undefined;
+
+    const { body, documentElement } = document;
+    const previousOverflow = body.style.overflow;
+    const previousPaddingRight = body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - documentElement.clientWidth;
+
+    body.style.overflow = 'hidden';
+    if (scrollbarWidth > 0) {
+      body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    return () => {
+      body.style.overflow = previousOverflow;
+      body.style.paddingRight = previousPaddingRight;
+    };
+  }, [report]);
 
   const handleHideItem = async () => {
     if (!report?.id) {
@@ -100,7 +120,7 @@ const ReportDetailsModal = ({ report, onClose, onAction }) => {
   };
   if (!report) return null;
 
-  return (
+  return createPortal(
     <div className="modal-overlay" onClick={onClose}>
       <div className="report-details-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
@@ -330,7 +350,8 @@ const ReportDetailsModal = ({ report, onClose, onAction }) => {
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

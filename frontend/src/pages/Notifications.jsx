@@ -59,7 +59,6 @@ const Notifications = () => {
   return (
     <div className="container">
       <div className="notifications-header">
-        <h1>Notifications</h1>
         {notifications.some(n => !n.is_read) && (
           <button onClick={markAllAsRead} className="notifications-mark-all-btn">Mark All as Read</button>
         )}

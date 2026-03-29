@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import { itemsAPI } from '../services/api';
 import ItemCard from '../components/ItemCard';
 import Pagination from '../components/Pagination';
 import MatchCard from '../components/MatchCard';
 import matchesAPI from '../services/matchesAPI';
-import { isModerationRemovedItem } from '../utils/itemDisplayUtils';
+import { FOUND_ITEM_SORT, isModerationRemovedItem } from '../utils/itemDisplayUtils';
 
 const PAGE_SIZE = 4;
 
@@ -23,13 +23,24 @@ const LostItems = () => {
   const [otpInputs, setOtpInputs] = useState({});
   const [filters, setFilters] = useState({
     category: '',
-    search: ''
+    search: '',
+    sortBy: FOUND_ITEM_SORT.LATEST
   });
   const [searchInput, setSearchInput] = useState('');
 
+  const sortParam = useMemo(() => {
+    if (filters.sortBy === FOUND_ITEM_SORT.NAME_ASC) {
+      return 'name,asc';
+    }
+    if (filters.sortBy === FOUND_ITEM_SORT.NAME_DESC) {
+      return 'name,desc';
+    }
+    return 'createdAt,desc';
+  }, [filters.sortBy]);
+
   useEffect(() => {
     loadItems();
-  }, [currentPage, filters.category, filters.search]);
+  }, [currentPage, filters.category, filters.search, sortParam]);
 
   const loadItems = async () => {
     try {
@@ -39,7 +50,7 @@ const LostItems = () => {
         type: 'lost',
         page: currentPage,
         size: PAGE_SIZE,
-        sort: 'createdAt,desc',
+        sort: sortParam,
         category: filters.category || undefined,
         keyword: filters.search.trim() || undefined
       });
@@ -147,67 +158,71 @@ const LostItems = () => {
 
   return (
     <div className="container">
-      <h1>My Lost Items</h1>
+        <div className="filters">
+          <select name="category" value={filters.category} onChange={handleFilterChange}>
+            <option value="">All Categories</option>
+            <option value="NIC">NIC</option>
+            <option value="Student ID">Student ID</option>
+            <option value="Bank Card">Bank Card</option>
+            <option value="Wallet">Wallet</option>
+            <option value="Other">Other</option>
+          </select>
 
-      <div className="filters">
-        <select name="category" value={filters.category} onChange={handleFilterChange}>
-          <option value="">All Categories</option>
-          <option value="NIC">NIC</option>
-          <option value="Student ID">Student ID</option>
-          <option value="Bank Card">Bank Card</option>
-          <option value="Wallet">Wallet</option>
-          <option value="Other">Other</option>
-        </select>
+          <form className="search-form" onSubmit={handleSearchSubmit}>
+            <input
+              type="text"
+              name="search"
+              placeholder="Search items..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+            />
+            <button type="submit" className="search-icon-btn" aria-label="Search lost items">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+                <path d="M10.5 3a7.5 7.5 0 0 1 5.93 12.1l4.24 4.23a1 1 0 1 1-1.41 1.42l-4.24-4.24A7.5 7.5 0 1 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11a5.5 5.5 0 0 0 0-11z" fill="currentColor"/>
+              </svg>
+            </button>
+          </form>
 
-        <form className="search-form" onSubmit={handleSearchSubmit}>
-          <input
-            type="text"
-            name="search"
-            placeholder="Search items..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-          />
-          <button type="submit" className="search-icon-btn" aria-label="Search lost items">
-            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
-              <path d="M10.5 3a7.5 7.5 0 0 1 5.93 12.1l4.24 4.23a1 1 0 1 1-1.41 1.42l-4.24-4.24A7.5 7.5 0 1 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11a5.5 5.5 0 0 0 0-11z" fill="currentColor"/>
-            </svg>
-          </button>
-        </form>
-      </div>
+          <select name="sortBy" value={filters.sortBy} onChange={handleFilterChange}>
+            <option value={FOUND_ITEM_SORT.LATEST}>Latest</option>
+            <option value={FOUND_ITEM_SORT.NAME_ASC}>Alphabetical A → Z</option>
+            <option value={FOUND_ITEM_SORT.NAME_DESC}>Alphabetical Z → A</option>
+          </select>
+        </div>
 
-      <div className="items-grid">
-        {items.length === 0 ? (
-          <p>You have not posted any lost items yet.</p>
-        ) : (
-          items.map(item => (
-            <div key={item.id}>
-              <ItemCard item={item} />
+        <div className="items-grid">
+          {items.length === 0 ? (
+            <p>You have not posted any lost items yet.</p>
+          ) : (
+            items.map(item => (
+              <div key={item.id}>
+                <ItemCard item={item} />
 
-              {(matchesByLostId[item.id] || []).length > 0 && (
-                <div className="suggested-matches-block">
-                  <h3>Suggested Matches</h3>
-                  {(matchesByLostId[item.id] || []).map((match) => (
-                    <MatchCard
-                      key={match.matchId}
-                      match={match}
-                      otpValue={otpInputs[match.matchId]}
-                      onOtpChange={handleOtpInput}
-                      onClaimViaOtp={handleClaimViaOtp}
-                      onResendOtp={handleResendOtp}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          ))
-        )}
-      </div>
+                {(matchesByLostId[item.id] || []).length > 0 && (
+                  <div className="suggested-matches-block">
+                    <h3>Suggested Matches</h3>
+                    {(matchesByLostId[item.id] || []).map((match) => (
+                      <MatchCard
+                        key={match.matchId}
+                        match={match}
+                        otpValue={otpInputs[match.matchId]}
+                        onOtpChange={handleOtpInput}
+                        onClaimViaOtp={handleClaimViaOtp}
+                        onResendOtp={handleResendOtp}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
 
-      <Pagination
-        currentPage={pagination.pageNumber}
-        totalPages={pagination.totalPages}
-        onPageChange={setCurrentPage}
-      />
+        <Pagination
+          currentPage={pagination.pageNumber}
+          totalPages={pagination.totalPages}
+          onPageChange={setCurrentPage}
+        />
     </div>
   );
 };

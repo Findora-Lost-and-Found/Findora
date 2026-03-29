@@ -4,9 +4,11 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -20,16 +22,13 @@ import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.MailException;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.findora.model.Claim;
 import com.findora.model.Item;
+import com.findora.model.ItemCategory;
 import com.findora.model.ItemStatus;
 import com.findora.model.ItemType;
 import com.findora.model.Match;
@@ -48,6 +47,8 @@ public class MatchService {
     private static final int MAX_OTP_ATTEMPTS = 2;
     private static final Pattern NIC_PATTERN = Pattern.compile("\\b(?:\\d{12}|\\d{9}[VvXx])\\b");
     private static final Pattern ID_PATTERN = Pattern.compile("\\b[A-Z]{2,4}[- ]?\\d{4,10}\\b");
+    private static final Pattern LABELED_IDENTIFIER_PATTERN = Pattern.compile(
+        "(?i)(?:nic\\s*number|id\\s*number|student\\s*id|staff\\s*id|employee\\s*id)\\s*[:#-]?\\s*([a-z0-9-]{4,30})");
     private static final Pattern CARD16_PATTERN = Pattern.compile("\\b\\d{16}\\b");
     private static final Pattern PRIVATE_CARD_PATTERN = Pattern.compile("__PRIVATE_CARD__=(\\d{16})");
     private static final Pattern CARD_LAST4_HINT_PATTERN = Pattern.compile("(?i)(?:last\\s*4[^0-9]*|ending[^0-9]*)(\\d{4})");
@@ -58,7 +59,6 @@ public class MatchService {
     private final NotificationRepository notificationRepository;
     private final ClaimCreationService claimCreationService;
     private final Clock clock;
-    private final JavaMailSender mailSender;
 
     @Value("${app.matching.threshold.found:0.75}")
     private double strongThreshold;
@@ -81,21 +81,22 @@ public class MatchService {
     @Value("${app.matching.resend.cooldown.seconds:60}")
     private long resendCooldownSeconds;
 
+    @Value("${app.matching.notification.cooldown.hours:6}")
+    private long notificationCooldownHours;
+
     public MatchService(
             MatchRepository matchRepository,
             ItemRepository itemRepository,
             UserRepository userRepository,
             NotificationRepository notificationRepository,
             ClaimCreationService claimCreationService,
-            Clock clock,
-            ObjectProvider<JavaMailSender> mailSenderProvider) {
+            Clock clock) {
         this.matchRepository = matchRepository;
         this.itemRepository = itemRepository;
         this.userRepository = userRepository;
         this.notificationRepository = notificationRepository;
         this.claimCreationService = claimCreationService;
         this.clock = clock;
-        this.mailSender = mailSenderProvider.getIfAvailable();
     }
 
     @Transactional
@@ -118,6 +119,22 @@ public class MatchService {
 
             List<Item> candidates = foundByCategory.getOrDefault(lost.getCategory(), List.of());
             if (candidates.isEmpty()) {
+                continue;
+            }
+
+            if (isStrictIdentifierMode(lost)) {
+                MatchCandidate bestExactIdCandidate = selectBestExactIdCandidate(lost, candidates);
+                if (bestExactIdCandidate == null) {
+                    continue;
+                }
+
+                Match match = upsertMatch(bestExactIdCandidate, 100);
+                enforceSingleIdentifierMatchForLost(lost.getId(), bestExactIdCandidate.found.getId());
+
+                if (canNotify(match, now)) {
+                    issueOtpAndNotify(match, bestExactIdCandidate, 100, now);
+                    notificationsSent++;
+                }
                 continue;
             }
 
@@ -156,6 +173,27 @@ public class MatchService {
                     notificationsSent++;
                 }
             }
+        }
+
+        return notificationsSent;
+    }
+
+    @Transactional
+    public int runImmediateIdBasedMatching(Long itemId) {
+        Item createdItem = itemRepository.findById(itemId)
+            .orElseThrow(() -> new IllegalArgumentException("Item not found"));
+
+        if (createdItem.getStatus() != ItemStatus.ACTIVE || !hasIdentifierContent(createdItem)) {
+            return 0;
+        }
+
+        Instant now = Instant.now(clock);
+        int notificationsSent = 0;
+
+        if (createdItem.getType() == ItemType.LOST) {
+            notificationsSent += processImmediateMatchesForLost(createdItem, now);
+        } else if (createdItem.getType() == ItemType.FOUND) {
+            notificationsSent += processImmediateMatchesForFound(createdItem, now);
         }
 
         return notificationsSent;
@@ -345,9 +383,44 @@ public class MatchService {
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getMyMatches(Long userId) {
-        return matchRepository.findForLostReporter(userId).stream()
-            .map(this::toMatchSummary)
-            .toList();
+        List<Match> rawMatches = matchRepository.findForLostReporter(userId);
+        List<Match> visibleMatches = new ArrayList<>();
+        Map<Long, Match> strictOnePerLost = new HashMap<>();
+
+        for (Match match : rawMatches) {
+            Item lostItem = resolveLostItem(match);
+            if (lostItem == null) {
+                continue;
+            }
+
+            if (!isStrictIdentifierMode(lostItem)) {
+                visibleMatches.add(match);
+                continue;
+            }
+
+            Item foundItem = resolveFoundItem(match);
+            if (foundItem == null || !isSpecialExactIdMatch(lostItem, foundItem)) {
+                continue;
+            }
+
+            Double score = Optional.ofNullable(match.getScore()).orElse(0.0);
+            Integer threshold = Optional.ofNullable(match.getThreshold()).orElse(0);
+            if (score < 100.0 || threshold < 100) {
+                continue;
+            }
+
+            Match existing = strictOnePerLost.get(lostItem.getId());
+            if (existing == null || compareMatchPriority(match, existing) < 0) {
+                strictOnePerLost.put(lostItem.getId(), match);
+            }
+        }
+
+        visibleMatches.addAll(strictOnePerLost.values());
+        visibleMatches.sort(Comparator.comparing(
+            (Match m) -> Optional.ofNullable(m.getCreatedAt()).orElse(Instant.EPOCH))
+            .reversed());
+
+        return visibleMatches.stream().map(this::toMatchSummary).toList();
     }
 
     @Transactional(readOnly = true)
@@ -459,7 +532,7 @@ public class MatchService {
             return true;
         }
 
-        return match.getNotifiedAt().plusSeconds(resendCooldownSeconds).isBefore(now);
+        return match.getNotifiedAt().plus(Duration.ofHours(Math.max(1, notificationCooldownHours))).isBefore(now);
     }
 
     private void issueOtpAndNotify(Match match, MatchCandidate candidate, int threshold, Instant now) {
@@ -475,11 +548,14 @@ public class MatchService {
             .orElseThrow(() -> new IllegalArgumentException("Lost reporter not found"));
 
         int strongThresholdPercent = (int) Math.round(strongThreshold * 100.0);
+        String confidence = confidenceLabel(candidate.score, candidate.exactIdMatch, strongThresholdPercent);
         String title = threshold >= strongThresholdPercent
             ? "Strong match found for your lost item"
             : "Possible match found for your lost item";
-        String message = "Match #" + match.getId() + " scored " + round(match.getScore()) + "% (threshold " + threshold
-            + "%). OTP: " + otp;
+        String message = "Match #" + match.getId() + " is " + confidence + " confidence (score " + round(match.getScore())
+            + "%). Found post: " + safeText(candidate.found.getItemName(), "Unnamed item")
+            + " at " + safeText(candidate.found.getLocation(), "unknown location")
+            + ". Verify with OTP " + otp + " within 24 hours.";
 
         Notification notification = new Notification();
         notification.setUserId(recipient.getId());
@@ -489,8 +565,6 @@ public class MatchService {
         notification.setRelatedId(match.getId());
         notificationRepository.save(notification);
 
-        sendOptionalEmail(recipient.getEmail(), title, message);
-
         log.info(
             "match notification sent matchId={} score={} threshold={} notifiedAt={}",
             match.getId(),
@@ -499,20 +573,21 @@ public class MatchService {
             match.getNotifiedAt());
     }
 
-    private void sendOptionalEmail(String email, String title, String message) {
-        if (mailSender == null || email == null || email.isBlank()) {
-            return;
+    private String confidenceLabel(double score, boolean exactIdMatch, int strongThresholdPercent) {
+        if (exactIdMatch) {
+            return "Very High";
         }
+        if (score >= strongThresholdPercent) {
+            return "High";
+        }
+        if (score >= (possibleThreshold * 100.0)) {
+            return "Medium";
+        }
+        return "Low";
+    }
 
-        try {
-            SimpleMailMessage mail = new SimpleMailMessage();
-            mail.setTo(email);
-            mail.setSubject(title);
-            mail.setText(message);
-            mailSender.send(mail);
-        } catch (MailException ex) {
-            log.warn("unable to send match email to {}: {}", email, ex.getMessage());
-        }
+    private String safeText(String value, String fallback) {
+        return (value == null || value.isBlank()) ? fallback : value;
     }
 
     private Match getOwnedMatch(Long matchId, Long userId) {
@@ -677,6 +752,166 @@ public class MatchService {
         return tokens;
     }
 
+    private boolean hasIdentifierContent(Item item) {
+        return !extractNicIdentifiers(item).isEmpty()
+            || !extractGeneralIdentifiers(item).isEmpty()
+            || !extractCardLast4Identifiers(item).isEmpty();
+    }
+
+    private int processImmediateMatchesForLost(Item lost, Instant now) {
+        List<Item> foundItems = itemRepository.findByTypeAndStatus(ItemType.FOUND, ItemStatus.ACTIVE);
+        MatchCandidate candidate = selectBestExactIdCandidate(lost, foundItems);
+        if (candidate == null) {
+            return 0;
+        }
+
+        Match match = upsertMatch(candidate, 100);
+        enforceSingleIdentifierMatchForLost(lost.getId(), candidate.found.getId());
+        if (canNotify(match, now)) {
+            issueOtpAndNotify(match, candidate, 100, now);
+            return 1;
+        }
+        return 0;
+    }
+
+    private int processImmediateMatchesForFound(Item found, Instant now) {
+        List<Item> lostItems = itemRepository.findByTypeAndStatus(ItemType.LOST, ItemStatus.ACTIVE);
+        MatchCandidate bestCandidate = null;
+
+        for (Item lost : lostItems) {
+            if (!isSpecialExactIdMatch(lost, found)) {
+                continue;
+            }
+            MatchCandidate candidate = new MatchCandidate(lost, found, 100.0, true);
+            if (bestCandidate == null || compareItemRecency(candidate.lost, bestCandidate.lost) < 0) {
+                bestCandidate = candidate;
+            }
+        }
+
+        if (bestCandidate == null) {
+            return 0;
+        }
+
+        Match match = upsertMatch(bestCandidate, 100);
+        enforceSingleIdentifierMatchForLost(bestCandidate.lost.getId(), found.getId());
+        if (canNotify(match, now)) {
+            issueOtpAndNotify(match, bestCandidate, 100, now);
+            return 1;
+        }
+        return 0;
+    }
+
+    private MatchCandidate selectBestExactIdCandidate(Item lost, List<Item> candidates) {
+        MatchCandidate best = null;
+        for (Item found : candidates) {
+            if (!isSpecialExactIdMatch(lost, found)) {
+                continue;
+            }
+            MatchCandidate current = new MatchCandidate(lost, found, 100.0, true);
+            if (best == null || compareItemRecency(current.found, best.found) < 0) {
+                best = current;
+            }
+        }
+        return best;
+    }
+
+    private void enforceSingleIdentifierMatchForLost(Long lostItemId, Long keepFoundItemId) {
+        List<Match> matches = matchRepository.findByLostItemId(lostItemId);
+        List<Match> staleMatches = new ArrayList<>();
+
+        for (Match match : matches) {
+            if (keepFoundItemId.equals(match.getFoundItemId())) {
+                continue;
+            }
+            if (match.getStatus() == Match.MatchStatus.CLAIMED) {
+                continue;
+            }
+            staleMatches.add(match);
+        }
+
+        if (!staleMatches.isEmpty()) {
+            matchRepository.deleteAll(staleMatches);
+        }
+    }
+
+    private boolean isStrictIdentifierMode(Item lost) {
+        if (lost == null) {
+            return false;
+        }
+
+        if (lost.getCategory() == ItemCategory.NIC || lost.getCategory() == ItemCategory.STUDENT_ID) {
+            return true;
+        }
+
+        return hasIdentifierContent(lost);
+    }
+
+    private Item resolveLostItem(Match match) {
+        Item lost = match.getLostItem();
+        if (lost != null) {
+            return lost;
+        }
+        return itemRepository.findById(match.getLostItemId()).orElse(null);
+    }
+
+    private Item resolveFoundItem(Match match) {
+        Item found = match.getFoundItem();
+        if (found != null) {
+            return found;
+        }
+        return itemRepository.findById(match.getFoundItemId()).orElse(null);
+    }
+
+    private int compareMatchPriority(Match left, Match right) {
+        int leftRank = statusRank(left.getStatus());
+        int rightRank = statusRank(right.getStatus());
+        if (leftRank != rightRank) {
+            return Integer.compare(leftRank, rightRank);
+        }
+
+        Instant leftTime = Optional.ofNullable(left.getNotifiedAt())
+            .orElse(Optional.ofNullable(left.getCreatedAt()).orElse(Instant.EPOCH));
+        Instant rightTime = Optional.ofNullable(right.getNotifiedAt())
+            .orElse(Optional.ofNullable(right.getCreatedAt()).orElse(Instant.EPOCH));
+        return rightTime.compareTo(leftTime);
+    }
+
+    private int statusRank(Match.MatchStatus status) {
+        if (status == Match.MatchStatus.NOTIFIED) {
+            return 0;
+        }
+        if (status == Match.MatchStatus.CLAIMED) {
+            return 1;
+        }
+        if (status == Match.MatchStatus.PENDING) {
+            return 2;
+        }
+        return 3;
+    }
+
+    private int compareItemRecency(Item left, Item right) {
+        if (left == null && right == null) {
+            return 0;
+        }
+        if (left == null) {
+            return 1;
+        }
+        if (right == null) {
+            return -1;
+        }
+
+        LocalDateTime leftCreated = Optional.ofNullable(left.getCreatedAt()).orElse(LocalDateTime.MIN);
+        LocalDateTime rightCreated = Optional.ofNullable(right.getCreatedAt()).orElse(LocalDateTime.MIN);
+        int createdCompare = rightCreated.compareTo(leftCreated);
+        if (createdCompare != 0) {
+            return createdCompare;
+        }
+
+        long leftId = Optional.ofNullable(left.getId()).orElse(0L);
+        long rightId = Optional.ofNullable(right.getId()).orElse(0L);
+        return Long.compare(rightId, leftId);
+    }
+
     private boolean isSpecialExactIdMatch(Item lost, Item found) {
         if (lost == null || found == null) {
             return false;
@@ -725,11 +960,30 @@ public class MatchService {
     private Set<String> extractGeneralIdentifiers(Item item) {
         Set<String> values = new HashSet<>();
         String searchable = toSearchableCorpus(item);
+
         Matcher idMatcher = ID_PATTERN.matcher(searchable);
         while (idMatcher.find()) {
-            values.add(idMatcher.group().replace(" ", "").replace("-", ""));
+            values.add(normalizeIdentifierToken(idMatcher.group()));
         }
+
+        Matcher labeledMatcher = LABELED_IDENTIFIER_PATTERN.matcher(searchable);
+        while (labeledMatcher.find()) {
+            String normalized = normalizeIdentifierToken(labeledMatcher.group(1));
+            if (normalized.length() >= 4) {
+                values.add(normalized);
+            }
+        }
+
         return values;
+    }
+
+    private String normalizeIdentifierToken(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value
+            .toUpperCase(Locale.ROOT)
+            .replaceAll("[^A-Z0-9]", "");
     }
 
     private Set<String> extractCardLast4Identifiers(Item item) {

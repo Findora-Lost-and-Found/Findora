@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { securityAPI } from '../../services/api';
 import { toast } from 'react-toastify';
 import { itemsAPI } from '../../services/api';
@@ -28,6 +29,26 @@ const SecurityPendingClaims = () => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState('');
   const [previewAlt, setPreviewAlt] = useState('Claim item');
+
+  useEffect(() => {
+    const isAnyModalOpen = showSuccessPopup || isPreviewOpen;
+    if (!isAnyModalOpen) return undefined;
+
+    const { body, documentElement } = document;
+    const previousOverflow = body.style.overflow;
+    const previousPaddingRight = body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - documentElement.clientWidth;
+
+    body.style.overflow = 'hidden';
+    if (scrollbarWidth > 0) {
+      body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    return () => {
+      body.style.overflow = previousOverflow;
+      body.style.paddingRight = previousPaddingRight;
+    };
+  }, [showSuccessPopup, isPreviewOpen]);
 
   useEffect(() => {
     loadClaims();
@@ -144,6 +165,12 @@ const SecurityPendingClaims = () => {
   };
 
   const handleVerify = async (claim) => {
+    const isReceivedBySecurity = Boolean(claim.received_by_security ?? claim.receivedBySecurity);
+    if (!isReceivedBySecurity) {
+      toast.info('Item is not received by Security yet');
+      return;
+    }
+
     const enteredOtp = (otpInputs[claim.id] || '').trim();
     if (!enteredOtp) {
       return;
@@ -203,9 +230,10 @@ const SecurityPendingClaims = () => {
               <tr>
                 <th>Name</th>
                 <th>Photo</th>
-                <th>Claimant Name</th>
+                <th>Claimant</th>
                 <th>Location</th>
                 <th>Date</th>
+                <th>Receive Status</th>
                 <th>OTP Input</th>
                 <th>Verify Button</th>
               </tr>
@@ -215,6 +243,10 @@ const SecurityPendingClaims = () => {
                 const enteredOtp = otpInputs[claim.id] || '';
                 const isSubmitting = verifyingClaimId === claim.id;
                 const claimImageUrl = brokenImageByClaimId[claim.id] ? '' : getClaimImageUrl(claim);
+                const isReceivedBySecurity = Boolean(claim.received_by_security ?? claim.receivedBySecurity);
+                const receiveLabel = isReceivedBySecurity ? 'Received' : 'Not received yet';
+                const claimantName = claim.full_name || claim.fullName || 'Unknown claimer';
+                const studentId = claim.student_id || claim.studentId || null;
                 return (
                   <tr key={claim.id}>
                     <td>{claim.item_name || claim.itemName || 'Unnamed Item'}</td>
@@ -245,16 +277,27 @@ const SecurityPendingClaims = () => {
                         <ThemePhotoPlaceholder />
                       )}
                     </td>
-                    <td>{claim.full_name || claim.fullName || 'Unknown claimer'}</td>
+                    <td>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                        <span>{claimantName}</span>
+                        <small style={{ color: '#64748b' }}>
+                          ID: {studentId || 'Not available'}
+                        </small>
+                      </div>
+                    </td>
                     <td>{claim.location || 'Unknown location'}</td>
                     <td>{formatClaimDate(claim)}</td>
+                    <td style={{ fontWeight: 600, color: isReceivedBySecurity ? '#1f7a1f' : '#b45309' }}>
+                      {receiveLabel}
+                    </td>
                     <td>
                       <input
                         type="text"
-                        placeholder="Enter OTP"
+                        placeholder={isReceivedBySecurity ? 'Enter OTP' : 'Not received yet'}
                         value={enteredOtp}
                         onChange={(e) => handleOtpChange(claim.id, e.target.value)}
                         maxLength="6"
+                        disabled={!isReceivedBySecurity || isSubmitting}
                         style={{ minWidth: '120px' }}
                       />
                     </td>
@@ -262,10 +305,10 @@ const SecurityPendingClaims = () => {
                       <button
                         type="button"
                         className="btn-primary btn-small"
-                        disabled={!enteredOtp || isSubmitting}
+                        disabled={!isReceivedBySecurity || !enteredOtp || isSubmitting}
                         onClick={() => handleVerify(claim)}
                       >
-                        {isSubmitting ? 'Verifying...' : 'Verify OTP'}
+                        {isReceivedBySecurity ? (isSubmitting ? 'Verifying...' : 'Verify OTP') : 'Awaiting Receive'}
                       </button>
                     </td>
                   </tr>
@@ -277,7 +320,7 @@ const SecurityPendingClaims = () => {
         )}
       </div>
 
-      {showSuccessPopup && (
+      {showSuccessPopup && createPortal(
         <div className="modal-overlay" onClick={() => setShowSuccessPopup(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h2>Success</h2>
@@ -288,10 +331,11 @@ const SecurityPendingClaims = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {isPreviewOpen && (
+      {isPreviewOpen && createPortal(
         <div className="modal-overlay" onClick={closeImagePreview}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '95vw', width: '95vw', maxHeight: '92vh', overflow: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginBottom: '0.75rem' }}>
@@ -342,7 +386,8 @@ const SecurityPendingClaims = () => {
               <ThemePhotoPlaceholder modal />
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

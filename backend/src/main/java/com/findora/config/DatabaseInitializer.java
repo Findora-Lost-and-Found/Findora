@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.Statement;
 
 @Component
@@ -58,8 +59,10 @@ public class DatabaseInitializer {
                       is_approved BOOLEAN DEFAULT TRUE,
                       is_banned BOOLEAN DEFAULT FALSE,
                       is_suspended BOOLEAN DEFAULT FALSE,
+                      is_deleted BOOLEAN DEFAULT FALSE,
                       bad_post_attempts INT DEFAULT 0,
                       suspension_until DATETIME,
+                      deleted_at DATETIME,
                       verification_otp VARCHAR(6),
                       reset_otp VARCHAR(6),
                       phone_verification_otp VARCHAR(6),
@@ -88,10 +91,11 @@ public class DatabaseInitializer {
             checkTableSQL = "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='findora_db' AND TABLE_NAME='user_access_appeals'";
             if (!stmt.executeQuery(checkTableSQL).next()) {
                 log.info("Creating user_access_appeals table...");
+                String usersIdType = resolveUsersIdColumnType(stmt);
                 stmt.executeUpdate("""
                     CREATE TABLE user_access_appeals (
                       id BIGINT PRIMARY KEY AUTO_INCREMENT,
-                      user_id BIGINT NOT NULL,
+                      user_id %s NOT NULL,
                       action_type ENUM('suspension', 'ban') NOT NULL,
                       status ENUM('pending', 'approved', 'declined') NOT NULL DEFAULT 'pending',
                       appeal_text TEXT NOT NULL,
@@ -103,7 +107,7 @@ public class DatabaseInitializer {
                       INDEX idx_access_appeals_status (status),
                       INDEX idx_access_appeals_created_at (created_at)
                     )
-                    """);
+                    """.formatted(usersIdType));
             }
 
             // Create other tables if they don't exist
@@ -204,4 +208,48 @@ public class DatabaseInitializer {
         }
         rs.close();
     }
+
+      private void ensureColumnExists(Statement stmt, String tableName, String columnName, String columnDefinition) throws Exception {
+        String sql = "SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS "
+          + "WHERE TABLE_SCHEMA='findora_db' AND TABLE_NAME='" + tableName + "' AND COLUMN_NAME='" + columnName + "'";
+        ResultSet rs = stmt.executeQuery(sql);
+        boolean exists = rs.next();
+        rs.close();
+
+        if (!exists) {
+          log.info("Adding missing column {}.{}", tableName, columnName);
+          stmt.executeUpdate("ALTER TABLE " + tableName + " ADD COLUMN " + columnName + " " + columnDefinition);
+        }
+      }
+
+      private void ensureUniqueIndexIfMissing(Statement stmt, String tableName, String indexName, String columnName) throws Exception {
+        String sql = "SELECT 1 FROM INFORMATION_SCHEMA.STATISTICS "
+          + "WHERE TABLE_SCHEMA='findora_db' AND TABLE_NAME='" + tableName + "' AND INDEX_NAME='" + indexName + "'";
+        ResultSet rs = stmt.executeQuery(sql);
+        boolean exists = rs.next();
+        rs.close();
+
+        if (!exists) {
+          log.info("Creating missing unique index {} on {}({})", indexName, tableName, columnName);
+          stmt.executeUpdate("CREATE UNIQUE INDEX " + indexName + " ON " + tableName + " (" + columnName + ")");
+        }
+      }
+
+      private String resolveUsersIdColumnType(Statement stmt) {
+        try {
+          ResultSet rs = stmt.executeQuery(
+            "SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS "
+              + "WHERE TABLE_SCHEMA='findora_db' AND TABLE_NAME='users' AND COLUMN_NAME='id'"
+          );
+          if (rs.next()) {
+            String columnType = rs.getString(1);
+            rs.close();
+            return columnType == null || columnType.isBlank() ? "INT" : columnType.toUpperCase();
+          }
+          rs.close();
+        } catch (Exception e) {
+          log.warn("Could not resolve users.id column type, falling back to INT", e);
+        }
+        return "INT";
+      }
 }

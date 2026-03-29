@@ -12,8 +12,10 @@ import org.springframework.transaction.annotation.Transactional;
 import com.findora.model.Claim;
 import com.findora.model.Item;
 import com.findora.model.ItemType;
+import com.findora.model.Notification;
 import com.findora.repository.ClaimRepository;
 import com.findora.repository.ItemRepository;
+import com.findora.repository.NotificationRepository;
 
 /**
  * Reusable claim creation service that preserves existing ClaimController behavior.
@@ -29,10 +31,15 @@ public class ClaimCreationService {
 
     private final ClaimRepository claimRepository;
     private final ItemRepository itemRepository;
+    private final NotificationRepository notificationRepository;
 
-    public ClaimCreationService(ClaimRepository claimRepository, ItemRepository itemRepository) {
+    public ClaimCreationService(
+            ClaimRepository claimRepository,
+            ItemRepository itemRepository,
+            NotificationRepository notificationRepository) {
         this.claimRepository = claimRepository;
         this.itemRepository = itemRepository;
+        this.notificationRepository = notificationRepository;
     }
 
     @Transactional
@@ -61,7 +68,20 @@ public class ClaimCreationService {
         claim.setOtp("");
         claim.setOtpExpiry(LocalDateTime.now(ZoneOffset.UTC));
         claim.setStatus(Claim.ClaimStatus.PENDING);
-        return claimRepository.save(claim);
+        Claim savedClaim = claimRepository.save(claim);
+
+        if (item.getUserId() != null) {
+            Notification notification = new Notification();
+            notification.setUserId(item.getUserId());
+            notification.setType(Notification.NotificationType.CLAIM);
+            notification.setTitle("Claim Submitted - Submit Item Within 24 Hours");
+            notification.setMessage("A claimant has submitted a claim for your found item. Please hand over the item to Security within 24 hours. Status: Not received by Security yet.");
+            notification.setRelatedId(itemId);
+            notification.setIsRead(false);
+            notificationRepository.save(notification);
+        }
+
+        return savedClaim;
     }
 
     @Transactional

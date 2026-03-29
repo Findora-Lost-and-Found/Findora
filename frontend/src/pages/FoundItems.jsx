@@ -199,13 +199,6 @@ const FoundItems = () => {
 
   return (
     <div className="container">
-      <h1>Found Items</h1>
-      {user?.username && (
-        <p style={{ marginTop: '-0.5rem', color: '#4B5563' }}>
-          Showing posts uploaded by @{user.username}
-        </p>
-      )}
-
       <div className="filters">
         <select name="category" value={filters.category} onChange={handleFilterChange}>
           <option value="">All Categories</option>
@@ -233,8 +226,8 @@ const FoundItems = () => {
 
         <select name="sortBy" value={filters.sortBy} onChange={handleFilterChange}>
           <option value={FOUND_ITEM_SORT.LATEST}>Latest</option>
-          <option value={FOUND_ITEM_SORT.NAME_ASC}>Alphabetical A {'->'} Z</option>
-          <option value={FOUND_ITEM_SORT.NAME_DESC}>Alphabetical Z {'->'} A</option>
+          <option value={FOUND_ITEM_SORT.NAME_ASC}>Alphabetical A → Z</option>
+          <option value={FOUND_ITEM_SORT.NAME_DESC}>Alphabetical Z → A</option>
         </select>
       </div>
 

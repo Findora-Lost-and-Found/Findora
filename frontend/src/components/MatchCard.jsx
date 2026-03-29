@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import './MatchCard.css';
 
 const MatchCard = ({ match, otpValue, onOtpChange, onClaimViaOtp, onResendOtp }) => {
@@ -6,6 +7,25 @@ const MatchCard = ({ match, otpValue, onOtpChange, onClaimViaOtp, onResendOtp })
   const score = Number(match?.score || 0).toFixed(2);
   const threshold = match?.threshold || 70;
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isOtpModalOpen) return undefined;
+
+    const { body, documentElement } = document;
+    const previousOverflow = body.style.overflow;
+    const previousPaddingRight = body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - documentElement.clientWidth;
+
+    body.style.overflow = 'hidden';
+    if (scrollbarWidth > 0) {
+      body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    return () => {
+      body.style.overflow = previousOverflow;
+      body.style.paddingRight = previousPaddingRight;
+    };
+  }, [isOtpModalOpen]);
 
   const handleOtpSubmit = () => {
     const otp = String(otpValue || '').trim();
@@ -39,11 +59,11 @@ const MatchCard = ({ match, otpValue, onOtpChange, onClaimViaOtp, onResendOtp })
         </button>
       </div>
 
-      {isOtpModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsOtpModalOpen(false)}>
-          <div className="modal-content" onClick={(event) => event.stopPropagation()}>
+      {isOtpModalOpen && createPortal(
+        <div className="match-modal-root" onClick={() => setIsOtpModalOpen(false)}>
+          <div className="match-modal-panel" role="dialog" aria-modal="true" aria-labelledby="match-otp-title" onClick={(event) => event.stopPropagation()}>
             {/* Keep the OTP entry isolated so users cannot accidentally bypass the match flow. */}
-            <h3>Enter Match OTP</h3>
+            <h3 id="match-otp-title">Enter Match OTP</h3>
             <p>Please enter the OTP from your match notification to create the claim.</p>
             <div className="match-otp-row" style={{ marginTop: '1rem' }}>
               <input
@@ -63,7 +83,8 @@ const MatchCard = ({ match, otpValue, onOtpChange, onClaimViaOtp, onResendOtp })
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

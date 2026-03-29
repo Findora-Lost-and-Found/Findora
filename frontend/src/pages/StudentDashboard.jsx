@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { itemsAPI, claimsAPI } from '../services/api';
 import PostModal from '../components/PostModal';
 import FoundItemCard from '../components/FoundItemCard';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
-import { sampleFoundItems } from '../data/sampleFoundItems';
 
 const DEFAULT_POST_ROLES = ['student', 'staff', 'security'];
+const INITIAL_FOUND_VISIBLE = 6;
+const FOUND_LOAD_STEP = 3;
 const configuredApiUrl = import.meta.env.VITE_API_URL;
 const API_ORIGIN = (configuredApiUrl?.includes('localhost:5000')
   ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')
@@ -56,6 +57,13 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
   const [loading, setLoading] = useState(true);
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [foundItems, setFoundItems] = useState([]);
+  const [filters, setFilters] = useState({
+    category: '',
+    search: '',
+    sortBy: FOUND_ITEM_SORT.LATEST
+  });
+  const [searchInput, setSearchInput] = useState('');
+  const [visibleFoundCount, setVisibleFoundCount] = useState(INITIAL_FOUND_VISIBLE);
 
   const canUseItemDashboard = !!user && postRoles.includes(user.role);
 
@@ -78,8 +86,7 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
       const [itemsRes, claimsRes, foundRes] = await Promise.allSettled([
         itemsAPI.getMy(),
         claimsAPI.getMy(),
-        // Reuse the same found-items feed for any role that shares the dashboard UI.
-        itemsAPI.getAll({ type: 'found' })
+        itemsAPI.getMy({ type: 'found', page: 0, size: 100, sort: 'createdAt,desc' })
       ]);
 
       setStats({
@@ -100,17 +107,57 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
           }
         }));
         const sortedFoundItems = sortFoundItems(apiItems, FOUND_ITEM_SORT.LATEST);
-        setFoundItems(sortedFoundItems.length > 0 ? sortedFoundItems.slice(0, 6) : sampleFoundItems);
+        setFoundItems(sortedFoundItems);
+        setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
       } else {
         console.error('Dashboard found items fetch failed:', foundRes.reason?.response?.data || foundRes.reason?.message);
-        setFoundItems(sampleFoundItems);
+        setFoundItems([]);
+        setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
       }
     } catch (error) {
       console.error('Error loading dashboard:', error);
       setFoundItems([]);
+      setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
     } finally {
       setLoading(false);
     }
+  };
+
+  const filteredFoundItems = useMemo(() => {
+    const searchTerm = filters.search.trim().toLowerCase();
+
+    const filtered = foundItems.filter((item) => {
+      const category = normalizeCategory(item.category, item.name || item.item_name);
+      const categoryMatches = !filters.category || category === filters.category;
+
+      if (!searchTerm) {
+        return categoryMatches;
+      }
+
+      const haystack = [item.name, item.description, item.location]
+        .map((value) => String(value || '').toLowerCase())
+        .join(' ');
+
+      return categoryMatches && haystack.includes(searchTerm);
+    });
+
+    return sortFoundItems(filtered, filters.sortBy);
+  }, [foundItems, filters.category, filters.search, filters.sortBy]);
+
+  const visibleFoundItems = filteredFoundItems.slice(0, visibleFoundCount);
+  const hasMoreFoundItems = visibleFoundCount < filteredFoundItems.length;
+  const canToggleFoundItems = filteredFoundItems.length > INITIAL_FOUND_VISIBLE;
+
+  const handleFilterChange = (event) => {
+    const { name, value } = event.target;
+    setFilters((prev) => ({ ...prev, [name]: value }));
+    setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
+  };
+
+  const handleSearchSubmit = (event) => {
+    event.preventDefault();
+    setFilters((prev) => ({ ...prev, search: searchInput.trim() }));
+    setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
   };
 
   if (loading) {
@@ -149,27 +196,79 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
         {/* Inject role-specific controls without duplicating the shared dashboard layout. */}
         {extraPanel}
 
-        {canUseItemDashboard && foundItems.length > 0 && (
+        {canUseItemDashboard && (
           <div className="found-items-section">
             <div className="section-header">
               <h2>Recently Found Items</h2>
-              <Link to="/found-items" className="link-more">View All →</Link>
+            </div>
+            <div className="filters">
+              <select name="category" value={filters.category} onChange={handleFilterChange}>
+                <option value="">All Categories</option>
+                <option value="NIC">NIC</option>
+                <option value="Student ID">Student ID</option>
+                <option value="Bank Card">Bank Card</option>
+                <option value="Wallet">Wallet</option>
+                <option value="Other">Other</option>
+              </select>
+
+              <form className="search-form" onSubmit={handleSearchSubmit}>
+                <input
+                  type="text"
+                  name="search"
+                  placeholder="Search items..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                />
+                <button type="submit" className="search-icon-btn" aria-label="Search dashboard found items">
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+                    <path d="M10.5 3a7.5 7.5 0 0 1 5.93 12.1l4.24 4.23a1 1 0 1 1-1.41 1.42l-4.24-4.24A7.5 7.5 0 1 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11a5.5 5.5 0 0 0 0-11z" fill="currentColor"/>
+                  </svg>
+                </button>
+              </form>
+
+              <select name="sortBy" value={filters.sortBy} onChange={handleFilterChange}>
+                <option value={FOUND_ITEM_SORT.LATEST}>Latest</option>
+                <option value={FOUND_ITEM_SORT.NAME_ASC}>Alphabetical A → Z</option>
+                <option value={FOUND_ITEM_SORT.NAME_DESC}>Alphabetical Z → A</option>
+              </select>
             </div>
             <div className="found-items-grid">
-              {foundItems.map((item) => (
-                <FoundItemCard
-                  key={item.id}
-                  item={item}
-                  onClaim={() => {
-                    claimsAPI.create(item.id).then(() => {
-                      navigate('/my-claims');
-                    }).catch((err) => {
-                      console.error('Claim error:', err);
-                    });
-                  }}
-                />
-              ))}
+              {filteredFoundItems.length === 0 ? (
+                <p>No found items available right now.</p>
+              ) : (
+                visibleFoundItems.map((item) => (
+                  <FoundItemCard
+                    key={item.id}
+                    item={item}
+                    onClaim={() => {
+                      claimsAPI.create(item.id).then(() => {
+                        navigate('/my-claims');
+                      }).catch((err) => {
+                        console.error('Claim error:', err);
+                      });
+                    }}
+                  />
+                ))
+              )}
             </div>
+            {canToggleFoundItems && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                <button
+                  type="button"
+                  className="link-more"
+                  onClick={() => {
+                    if (hasMoreFoundItems) {
+                      setVisibleFoundCount((prev) => Math.min(prev + FOUND_LOAD_STEP, foundItems.length));
+                    } else {
+                      setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
+                    }
+                  }}
+                  style={{ background: 'none', border: 'none', padding: 0, fontWeight: 700, cursor: 'pointer' }}
+                >
+                  {hasMoreFoundItems ? 'Show more ▼' : 'Show less ▲'}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

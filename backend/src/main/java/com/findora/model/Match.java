@@ -51,7 +51,7 @@ public class Match {
     @JoinColumn(name = "found_item_id", referencedColumnName = "id", insertable = false, updatable = false)
     private Item foundItem;
 
-    @Column(name = "score", nullable = false)
+    @Column(name = "match_score", nullable = false)
     private Double score;
 
     @Column(name = "threshold", nullable = false)
