@@ -35,7 +35,7 @@ import com.findora.service.MatchService;
 
 @WebMvcTest(ClaimController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@SuppressWarnings("unused")
+@SuppressWarnings("null")
 class ClaimControllerTest {
 
     @Autowired
@@ -220,6 +220,7 @@ class ClaimControllerTest {
                 .content(objectMapper.writeValueAsString(Map.of(
                     "item_id", 99,
                     "claimType", "without-id",
+                    "date", "2026-03-17",
                     "location1", "wala",
                     "items1", "dress",
                     "date", "2026-03-28",
@@ -252,7 +253,7 @@ class ClaimControllerTest {
 
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
         when(itemRepository.findById(99L)).thenReturn(Optional.of(item));
-        when(matchService.computeScore(org.mockito.ArgumentMatchers.any(Item.class), eq(item))).thenReturn(80.0);
+        when(matchService.computeScore(org.mockito.ArgumentMatchers.any(Item.class), eq(item))).thenReturn(90.0);
 
         mockMvc.perform(
             post("/api/claims")
@@ -260,6 +261,7 @@ class ClaimControllerTest {
                 .content(objectMapper.writeValueAsString(Map.of(
                     "item_id", 99,
                     "claimType", "without-id",
+                    "date", "2026-03-17",
                     "location1", "library",
                     "items1", "key",
                     "date", "2026-03-28",
@@ -299,7 +301,7 @@ class ClaimControllerTest {
 
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
         when(itemRepository.findById(99L)).thenReturn(Optional.of(item));
-        when(matchService.computeScore(org.mockito.ArgumentMatchers.any(Item.class), eq(item))).thenReturn(80.0);
+        when(matchService.computeScore(org.mockito.ArgumentMatchers.any(Item.class), eq(item))).thenReturn(90.0);
         when(claimCreationService.createClaimForItem(eq(99L), anyLong())).thenReturn(claim);
 
         mockMvc.perform(
@@ -308,6 +310,7 @@ class ClaimControllerTest {
                 .content(objectMapper.writeValueAsString(Map.of(
                     "item_id", 99,
                     "claimType", "without-id",
+                    "date", "2026-03-17",
                     "location1", "library",
                     "items1", "key",
                     "date", "2026-03-28",

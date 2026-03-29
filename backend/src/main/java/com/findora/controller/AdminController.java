@@ -33,6 +33,7 @@ import com.findora.repository.ItemRepository;
 import com.findora.repository.ReportRepository;
 import com.findora.repository.SecurityTransactionRepository;
 import com.findora.repository.UserRepository;
+import com.findora.service.AccessControlService;
 
 /**
  * AdminController - Administrative endpoints.
@@ -41,23 +42,27 @@ import com.findora.repository.UserRepository;
 @RestController
 @RequestMapping("/api/admin")
 @PreAuthorize("hasRole('ADMIN')")
+@SuppressWarnings("null")
 public class AdminController {
 
     private final UserRepository userRepository;
     private final ItemRepository itemRepository;
     private final ReportRepository reportRepository;
     private final SecurityTransactionRepository securityTransactionRepository;
+    private final AccessControlService accessControlService;
     private static final Logger log = LoggerFactory.getLogger(AdminController.class);
 
     public AdminController(
             UserRepository userRepository,
             ItemRepository itemRepository,
             ReportRepository reportRepository,
-            SecurityTransactionRepository securityTransactionRepository) {
+            SecurityTransactionRepository securityTransactionRepository,
+            AccessControlService accessControlService) {
         this.userRepository = userRepository;
         this.itemRepository = itemRepository;
         this.reportRepository = reportRepository;
         this.securityTransactionRepository = securityTransactionRepository;
+        this.accessControlService = accessControlService;
     }
 
     @GetMapping("/users")
@@ -109,6 +114,8 @@ public class AdminController {
 
         user.setIsApproved(true);
         user.setIsSuspended(false);
+        user.setSuspensionUntil(null);
+        user.setBadPostAttempts(0);
         userRepository.save(user);
 
         return ResponseEntity.ok(Map.of("success", true, "message", "User approved"));
@@ -146,6 +153,10 @@ public class AdminController {
 
         boolean banned = parseBoolean(body != null ? body.get("banned") : null, true);
         user.setIsBanned(banned);
+        if (banned) {
+            user.setIsSuspended(false);
+            user.setSuspensionUntil(null);
+        }
         userRepository.save(user);
 
         return ResponseEntity.ok(Map.of("success", true, "message", banned ? "User banned" : "User unbanned"));
@@ -163,6 +174,12 @@ public class AdminController {
 
         boolean suspended = parseBoolean(body != null ? body.get("suspended") : null, true);
         user.setIsSuspended(suspended);
+        if (suspended) {
+            user.setSuspensionUntil(LocalDateTime.now().plusMonths(6));
+        } else {
+            user.setSuspensionUntil(null);
+            user.setBadPostAttempts(0);
+        }
         userRepository.save(user);
 
         return ResponseEntity.ok(Map.of("success", true, "message", suspended ? "User suspended" : "User unsuspended"));
@@ -336,6 +353,74 @@ public class AdminController {
         ));
     }
 
+    @GetMapping("/appeals")
+    public ResponseEntity<?> getAppeals(
+            @RequestParam(name = "status", required = false) String status,
+            @RequestParam(name = "page", defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "20") Integer size) {
+        try {
+            Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "createdAt"));
+
+            var appealPage = accessControlService.getAppeals(status, pageable);
+            List<Map<String, Object>> appeals = appealPage.getContent().stream()
+                .map(accessControlService::toAppealPayload)
+                .toList();
+
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "appeals", appeals,
+                "count", appealPage.getTotalElements(),
+                "page", appealPage.getNumber(),
+                "size", appealPage.getSize()
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Invalid appeal status"));
+        }
+    }
+
+    @GetMapping("/appeals/{id}")
+    public ResponseEntity<?> getAppealById(@PathVariable("id") Long id) {
+        try {
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "data", accessControlService.getAppealDetails(id)
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/appeals/{id}/approve")
+    public ResponseEntity<?> approveAppeal(@PathVariable("id") Long id, @RequestBody(required = false) Map<String, Object> body) {
+        try {
+            String notes = body == null ? null : String.valueOf(body.getOrDefault("admin_notes", ""));
+            Map<String, Object> result = accessControlService.reviewAppeal(id, true, notes);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Appeal approved",
+                "appeal", result
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/appeals/{id}/decline")
+    public ResponseEntity<?> declineAppeal(@PathVariable("id") Long id, @RequestBody(required = false) Map<String, Object> body) {
+        try {
+            String notes = body == null ? null : String.valueOf(body.getOrDefault("admin_notes", ""));
+            Map<String, Object> result = accessControlService.reviewAppeal(id, false, notes);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Appeal declined",
+                "appeal", result
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
     private Map<String, Object> toUserPayload(User user) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("id", user.getId());
@@ -347,6 +432,8 @@ public class AdminController {
         payload.put("is_approved", user.getIsApproved());
         payload.put("is_banned", user.getIsBanned());
         payload.put("is_suspended", user.getIsSuspended());
+        payload.put("bad_post_attempts", user.getBadPostAttempts());
+        payload.put("suspension_until", user.getSuspensionUntil() == null ? null : user.getSuspensionUntil().toString());
         payload.put("created_at", user.getCreatedAt() == null ? null : user.getCreatedAt().toString());
         return payload;
     }

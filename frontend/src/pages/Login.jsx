@@ -2,14 +2,15 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getHomeRouteForUser } from '../utils/navigation';
+import PasswordInput from '../components/PasswordInput';
 
 const Login = () => {
   const [formData, setFormData] = useState({
     identifier: '',
     password: ''
   });
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [accessBlockedMessage, setAccessBlockedMessage] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -24,7 +25,12 @@ const Login = () => {
     const result = await login(formData.identifier, formData.password);
 
     if (result.success) {
+      setAccessBlockedMessage('');
       navigate(getHomeRouteForUser(result.user));
+    } else {
+      const message = String(result.message || '');
+      const isAccessBlocked = /suspend|banned|ban/i.test(message);
+      setAccessBlockedMessage(isAccessBlocked ? message : '');
     }
 
     setLoading(false);
@@ -49,24 +55,14 @@ const Login = () => {
 
           <div className="form-group">
             <label>Password</label>
-            <div className="password-input-wrapper">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                placeholder="Enter password"
-              />
-              <button
-                type="button"
-                className="password-toggle-btn"
-                onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? '🙈' : '👁️'}
-              </button>
-            </div>
+            <PasswordInput
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              placeholder="Enter password"
+              autoComplete="current-password"
+            />
           </div>
 
           <button type="submit" className="btn-primary" disabled={loading}>
@@ -79,6 +75,18 @@ const Login = () => {
           <span>|</span>
           <Link to="/signup">Create Account</Link>
         </div>
+
+        {accessBlockedMessage && (
+          <div className="login-appeal-block">
+            <p>{accessBlockedMessage}</p>
+            <Link
+              to={`/appeal-access?identifier=${encodeURIComponent(formData.identifier || '')}`}
+              className="btn-secondary login-appeal-link"
+            >
+              Submit Access Appeal
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

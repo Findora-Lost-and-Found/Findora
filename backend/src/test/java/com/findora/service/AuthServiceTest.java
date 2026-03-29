@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -23,9 +24,10 @@ import com.findora.model.User;
 import com.findora.repository.NotificationRepository;
 import com.findora.repository.UserRepository;
 import com.findora.security.JwtTokenProvider;
+import com.findora.service.AccessControlService.AccessState;
 
 @ExtendWith(MockitoExtension.class)
-@SuppressWarnings("unused")
+@SuppressWarnings("null")
 class AuthServiceTest {
 
     @Mock
@@ -43,12 +45,23 @@ class AuthServiceTest {
     @Mock
     private NotificationRepository notificationRepository;
 
+    @Mock
+    private AccessControlService accessControlService;
+
     private AuthService authService;
 
     @BeforeEach
     @SuppressWarnings("unused")
     void setUp() {
-        authService = new AuthService(userRepository, passwordEncoder, jwtTokenProvider, emailService, notificationRepository, false);
+        lenient().when(accessControlService.refreshAndGetAccessState(any(User.class))).thenReturn(AccessState.ALLOWED);
+        authService = new AuthService(
+            userRepository,
+            passwordEncoder,
+            jwtTokenProvider,
+            emailService,
+            notificationRepository,
+            accessControlService
+        );
     }
 
     @Test

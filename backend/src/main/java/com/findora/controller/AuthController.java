@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.findora.dto.AuthResponse;
 import com.findora.dto.UpdatePhoneRequestDTO;
 import com.findora.dto.UserDTO;
+import com.findora.service.AccessControlService;
 import com.findora.service.AuthService;
 
 /**
@@ -31,12 +32,15 @@ import com.findora.service.AuthService;
 public class AuthController {
 
     private final AuthService authService;
+    private final AccessControlService accessControlService;
     private final boolean exposeResetOtp;
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
     public AuthController(AuthService authService,
+            AccessControlService accessControlService,
             @Value("${app.dev.expose-reset-otp:false}") boolean exposeResetOtp) {
         this.authService = authService;
+        this.accessControlService = accessControlService;
         this.exposeResetOtp = exposeResetOtp;
     }
 
@@ -254,6 +258,31 @@ public class AuthController {
             return ResponseEntity.ok(Map.of("success", true, "message", "Password reset successful"));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/appeal-access")
+    public ResponseEntity<?> submitAccessAppeal(@RequestBody Map<String, String> request) {
+        try {
+            String identifier = firstNonBlank(
+                request.get("identifier"),
+                request.get("username"),
+                request.get("email")
+            );
+            String reason = firstNonBlank(request.get("reason"), request.get("appeal"));
+
+            Map<String, Object> result = accessControlService.submitAccessAppeal(identifier, reason);
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+                "success", true,
+                "message", result.get("message"),
+                "appeal_id", result.get("appeal_id"),
+                "status", result.get("status")
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("success", false, "message", "Server error"));
         }
     }
 

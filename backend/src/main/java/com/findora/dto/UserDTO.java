@@ -28,6 +28,10 @@ public class UserDTO {
     private Boolean isBanned;
     @JsonProperty("is_suspended")
     private Boolean isSuspended;
+    @JsonProperty("bad_post_attempts")
+    private Integer badPostAttempts;
+    @JsonProperty("suspension_until")
+    private String suspensionUntil;
     @JsonProperty("created_at")
     private String createdAt;
 
@@ -36,7 +40,8 @@ public class UserDTO {
 
     public UserDTO(Long id, String username, String name, String fullName, String role, String email, String phone,
                    String pendingPhone, Boolean isPhoneVerified, Boolean isVerified, Boolean isApproved,
-                   Boolean isBanned, Boolean isSuspended, String createdAt) {
+                   Boolean isBanned, Boolean isSuspended, Integer badPostAttempts, String suspensionUntil,
+                   String createdAt) {
         this.id = id;
         this.username = username;
         this.name = name;
@@ -50,6 +55,8 @@ public class UserDTO {
         this.isApproved = isApproved;
         this.isBanned = isBanned;
         this.isSuspended = isSuspended;
+        this.badPostAttempts = badPostAttempts;
+        this.suspensionUntil = suspensionUntil;
         this.createdAt = createdAt;
     }
 
@@ -155,6 +162,22 @@ public class UserDTO {
 
     public void setIsSuspended(Boolean isSuspended) {
         this.isSuspended = isSuspended;
+    }
+
+    public Integer getBadPostAttempts() {
+        return badPostAttempts;
+    }
+
+    public void setBadPostAttempts(Integer badPostAttempts) {
+        this.badPostAttempts = badPostAttempts;
+    }
+
+    public String getSuspensionUntil() {
+        return suspensionUntil;
+    }
+
+    public void setSuspensionUntil(String suspensionUntil) {
+        this.suspensionUntil = suspensionUntil;
     }
 
     public String getCreatedAt() {

@@ -26,7 +26,6 @@ import com.findora.service.MatchService;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@SuppressWarnings("unused")
 class MatchSchedulerIntegrationTest {
 
     @Autowired
@@ -48,7 +47,6 @@ class MatchSchedulerIntegrationTest {
     private ClaimRepository claimRepository;
 
     @BeforeEach
-    @SuppressWarnings("unused")
     void setUp() {
         claimRepository.deleteAll();
         notificationRepository.deleteAll();
