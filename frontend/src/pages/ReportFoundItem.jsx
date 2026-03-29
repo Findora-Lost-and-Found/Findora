@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { itemsAPI } from '../services/api';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
-import { NIC_HELPER_TEXT, NIC_VALIDATION_MESSAGE, isValidNic, normalizeNic, sanitizeNicInput } from '../utils/nicUtils';
+import { NIC_HELPER_TEXT, NIC_VALIDATION_MESSAGE, isValidNic, normalizeNic, sanitizeNicInput, isValidNicNumber } from '../utils/nicUtils';
 import { isValidStudentIdNumber } from '../utils/studentIdUtils';
 import { getCardLast4, maskCardNumber } from '../utils/cardUtils';
 import TimeInputPicker from '../components/TimeInputPicker';
@@ -361,6 +361,10 @@ const ReportFoundItem = () => {
                 <small style={{ color: '#6B7280' }}>{NIC_HELPER_TEXT}</small>
                 {errors.nicNumber && <p className="error-text">{errors.nicNumber}</p>}
               </div>
+              <div className="form-group">
+                <label>Location Found</label>
+                <input name="nicLocation1" value={formData.nicLocation1} onChange={handleInputChange} placeholder="e.g. Bus stand, Library" />
+              </div>
             </div>
           )}
 
@@ -391,6 +395,10 @@ const ReportFoundItem = () => {
                   maxLength={7}
                 />
                 {errors.studentOrStaffId && <p className="error-text">{errors.studentOrStaffId}</p>}
+              </div>
+              <div className="form-group">
+                <label>Location Found</label>
+                <input name="idLocation1" value={formData.idLocation1} onChange={handleInputChange} placeholder="e.g. Cafeteria, Classroom" />
               </div>
             </div>
           )}

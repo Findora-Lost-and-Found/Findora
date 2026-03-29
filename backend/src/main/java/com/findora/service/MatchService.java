@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -84,6 +85,12 @@ public class MatchService {
     @Value("${app.matching.notification.cooldown.hours:6}")
     private long notificationCooldownHours;
 
+    @Value("${app.matching.threshold.instant-otp:90.0}")
+    private double instantOtpThreshold;
+
+    @Value("${app.matching.verification.delay.hours:24}")
+    private long delayedVerificationHours;
+
     public MatchService(
             MatchRepository matchRepository,
             ItemRepository itemRepository,
@@ -111,6 +118,7 @@ public class MatchService {
         }
 
         int notificationsSent = 0;
+        Map<Long, PendingOtpNotification> delayedWinnersByFoundItem = new HashMap<>();
 
         for (Item lost : lostItems) {
             if (!hasRequiredDescription(lost)) {
@@ -157,21 +165,30 @@ public class MatchService {
                 continue;
             }
 
-            boolean hasStrongMatch = scoredCandidates.stream()
-                .anyMatch(candidate -> candidate.score >= (strongThreshold * 100.0) || candidate.exactIdMatch);
-
             for (MatchCandidate candidate : scoredCandidates) {
-                int threshold = candidate.exactIdMatch
-                    ? 100
-                    : (candidate.score >= (strongThreshold * 100.0)
-                        ? (int) Math.round(strongThreshold * 100.0)
-                        : (int) Math.round(possibleThreshold * 100.0));
+                if (!candidate.exactIdMatch && candidate.score < (possibleThreshold * 100.0)) {
+                    continue;
+                }
+
+                int threshold = resolveThreshold(candidate);
                 Match match = upsertMatch(candidate, threshold);
 
-                if (shouldNotify(candidate, hasStrongMatch) && canNotify(match, now)) {
+                if (shouldNotifyImmediately(candidate) && canNotify(match, now)) {
                     issueOtpAndNotify(match, candidate, threshold, now);
                     notificationsSent++;
+                    continue;
                 }
+
+                if (shouldQueueDelayedVerification(candidate, now)) {
+                    queueBestDelayedWinner(delayedWinnersByFoundItem, match, candidate, threshold);
+                }
+            }
+        }
+
+        for (PendingOtpNotification delayedWinner : delayedWinnersByFoundItem.values()) {
+            if (canNotify(delayedWinner.match, now)) {
+                issueOtpAndNotify(delayedWinner.match, delayedWinner.candidate, delayedWinner.threshold, now);
+                notificationsSent++;
             }
         }
 
@@ -434,6 +451,10 @@ public class MatchService {
         Match match = getOwnedMatch(matchId, userId);
         Instant now = Instant.now(clock);
 
+        if (!isOtpActionAllowed(match)) {
+            throw new IllegalArgumentException("OTP is not available for this match score");
+        }
+
         if (match.getStatus() == Match.MatchStatus.CLAIMED) {
             throw new IllegalArgumentException("Match is already claimed");
         }
@@ -461,6 +482,10 @@ public class MatchService {
     public Claim claimMatch(Long matchId, String otp, Long userId) {
         Match match = getOwnedMatch(matchId, userId);
         Instant now = Instant.now(clock);
+
+        if (!isOtpActionAllowed(match)) {
+            throw new IllegalArgumentException("This match is view-only and cannot be claimed via OTP");
+        }
 
         if (match.getStatus() == Match.MatchStatus.CLAIMED) {
             throw new IllegalArgumentException("Match already claimed");
@@ -511,16 +536,91 @@ public class MatchService {
         return matchRepository.save(match);
     }
 
-    private boolean shouldNotify(MatchCandidate candidate, boolean hasStrongMatch) {
+    private boolean shouldNotifyImmediately(MatchCandidate candidate) {
         if (candidate.exactIdMatch) {
             return true;
         }
 
-        if (candidate.score >= (strongThreshold * 100.0)) {
+        return isImmediateOtpScore(candidate.score);
+    }
+
+    private boolean shouldQueueDelayedVerification(MatchCandidate candidate, Instant now) {
+        return isDelayedVerificationScore(candidate.score) && isFoundVerificationWindowReached(candidate.found, now);
+    }
+
+    private int resolveThreshold(MatchCandidate candidate) {
+        if (candidate.exactIdMatch) {
+            return 100;
+        }
+
+        if (isImmediateOtpScore(candidate.score)) {
+            return (int) Math.round(instantOtpThreshold);
+        }
+
+        if (isDelayedVerificationScore(candidate.score)) {
+            return (int) Math.round(strongThreshold * 100.0);
+        }
+
+        return (int) Math.round(possibleThreshold * 100.0);
+    }
+
+    private boolean isImmediateOtpScore(double score) {
+        return score > instantOtpThreshold;
+    }
+
+    private boolean isDelayedVerificationScore(double score) {
+        double strongThresholdPercent = strongThreshold * 100.0;
+        return score >= strongThresholdPercent && score <= instantOtpThreshold;
+    }
+
+    private boolean isFoundVerificationWindowReached(Item found, Instant now) {
+        if (found == null || found.getCreatedAt() == null) {
+            return false;
+        }
+
+        Instant foundCreatedAt = found.getCreatedAt().toInstant(ZoneOffset.UTC);
+        Instant readyAt = foundCreatedAt.plus(Duration.ofHours(Math.max(1, delayedVerificationHours)));
+        return !readyAt.isAfter(now);
+    }
+
+    private void queueBestDelayedWinner(
+            Map<Long, PendingOtpNotification> delayedWinnersByFoundItem,
+            Match match,
+            MatchCandidate candidate,
+            int threshold) {
+        Long foundItemId = candidate.found != null ? candidate.found.getId() : null;
+        if (foundItemId == null) {
+            return;
+        }
+
+        PendingOtpNotification existing = delayedWinnersByFoundItem.get(foundItemId);
+        if (existing == null || isHigherPriorityDelayedCandidate(candidate, existing.candidate)) {
+            delayedWinnersByFoundItem.put(foundItemId, new PendingOtpNotification(match, candidate, threshold));
+        }
+    }
+
+    private boolean isHigherPriorityDelayedCandidate(MatchCandidate candidate, MatchCandidate existing) {
+        int scoreCompare = Double.compare(candidate.score, existing.score);
+        if (scoreCompare != 0) {
+            return scoreCompare > 0;
+        }
+
+        return compareItemRecency(candidate.lost, existing.lost) < 0;
+    }
+
+    private boolean isOtpActionAllowed(Match match) {
+        double score = Optional.ofNullable(match.getScore()).orElse(0.0);
+
+        if (score < (strongThreshold * 100.0)) {
+            return false;
+        }
+
+        if (isImmediateOtpScore(score)) {
             return true;
         }
 
-        return candidate.score >= (possibleThreshold * 100.0) && !hasStrongMatch;
+        // For 75-90 matches, only the selected highest claimant receives notification/OTP.
+        return match.getNotifiedAt() != null;
     }
 
     private boolean canNotify(Match match, Instant now) {
@@ -640,6 +740,7 @@ public class MatchService {
         payload.put("notifiedAt", match.getNotifiedAt());
         payload.put("createdAt", match.getCreatedAt());
         payload.put("otpExpiry", match.getOtpExpiry());
+        payload.put("otpEligible", isOtpActionAllowed(match));
         payload.put("foundItem", foundSnippet);
         return payload;
     }
@@ -1034,6 +1135,18 @@ public class MatchService {
             this.found = found;
             this.score = score;
             this.exactIdMatch = exactIdMatch;
+        }
+    }
+
+    private static final class PendingOtpNotification {
+        private final Match match;
+        private final MatchCandidate candidate;
+        private final int threshold;
+
+        private PendingOtpNotification(Match match, MatchCandidate candidate, int threshold) {
+            this.match = match;
+            this.candidate = candidate;
+            this.threshold = threshold;
         }
     }
 }

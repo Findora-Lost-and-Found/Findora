@@ -50,3 +50,4 @@ backend/uploads/*
 # Local developer tools (keep local only)
 .tools/
 .tools/**
+test_found_item.ps1
