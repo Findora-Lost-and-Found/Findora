@@ -365,7 +365,7 @@ const Dashboard = () => {
                   }}
                   style={{ background: 'none', border: 'none', padding: 0, fontWeight: 700, cursor: 'pointer' }}
                 >
-                  {hasMoreFoundItems ? 'Show more ?' : 'Show less ?'}
+                  {hasMoreFoundItems ? 'Show more ▼' : 'Show less ?'}
                 </button>
               </div>
             )}
@@ -377,7 +377,7 @@ const Dashboard = () => {
             <div className="section" style={{ marginTop: '2rem' }}>
               <div className="section-header" style={{ borderBottom: 'none', marginBottom: '0.25rem' }}>
                 <h2>Found</h2>
-                <Link to="/admin/items/found" className="link-more">Show more ?</Link>
+                <Link to="/admin/items/found" className="link-more">Show more ▼</Link>
               </div>
               <div className="table-container">
                 <table>
@@ -435,7 +435,7 @@ const Dashboard = () => {
             <div className="section" style={{ marginTop: '2rem' }}>
               <div className="section-header" style={{ borderBottom: 'none', marginBottom: '0.25rem' }}>
                 <h2>Receive</h2>
-                <Link to="/admin/items/receive" className="link-more">Show more ?</Link>
+                <Link to="/admin/items/receive" className="link-more">Show more ▼</Link>
               </div>
               <div className="table-container">
                 <table>
@@ -495,7 +495,7 @@ const Dashboard = () => {
             <div className="section" style={{ marginTop: '2rem' }}>
               <div className="section-header" style={{ borderBottom: 'none', marginBottom: '0.25rem' }}>
                 <h2>Release</h2>
-                <Link to="/admin/items/release" className="link-more">Show more ?</Link>
+                <Link to="/admin/items/release" className="link-more">Show more ▼</Link>
               </div>
               <div className="table-container">
                 <table>
