@@ -44,8 +44,8 @@ public class NotificationController {
     @GetMapping
     @Transactional(readOnly = true)
     public ResponseEntity<?> getNotifications(
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
+            @RequestParam(name = "page", defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "10") Integer size) {
         try {
             Long userId = getCurrentUserId();
             Page<Notification> notificationPage = notificationRepository.findByUserId(
@@ -84,7 +84,7 @@ public class NotificationController {
 
     @PutMapping("/{id}/read")
     @Transactional
-    public ResponseEntity<?> markAsRead(@PathVariable Long id) {
+    public ResponseEntity<?> markAsRead(@PathVariable("id") Long id) {
         try {
             Long userId = getCurrentUserId();
             Notification notification = notificationRepository.findByIdAndUserId(id, userId)
@@ -129,7 +129,7 @@ public class NotificationController {
 
     @DeleteMapping("/{id}")
     @Transactional
-    public ResponseEntity<?> deleteNotification(@PathVariable Long id) {
+    public ResponseEntity<?> deleteNotification(@PathVariable("id") Long id) {
         try {
             Long userId = getCurrentUserId();
             Notification notification = notificationRepository.findByIdAndUserId(id, userId)
@@ -162,6 +162,12 @@ public class NotificationController {
 
         if (notification.getType() == Notification.NotificationType.CLAIM) {
             mapped.put("claim_id", notification.getRelatedId());
+        }
+
+        if (notification.getType() == Notification.NotificationType.APPROVAL
+                && notification.getTitle() != null
+                && notification.getTitle().toLowerCase().contains("appeal")) {
+            mapped.put("appeal_id", notification.getRelatedId());
         }
 
         return mapped;

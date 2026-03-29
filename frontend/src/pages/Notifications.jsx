@@ -61,7 +61,7 @@ const Notifications = () => {
       <div className="notifications-header">
         <h1>Notifications</h1>
         {notifications.some(n => !n.is_read) && (
-          <button onClick={markAllAsRead} className="btn-secondary">Mark All as Read</button>
+          <button onClick={markAllAsRead} className="notifications-mark-all-btn">Mark All as Read</button>
         )}
       </div>
 
@@ -81,7 +81,7 @@ const Notifications = () => {
                 {notification.type === 'match' && notification.found_item_id && (
                   <Link
                     to={`/found-items?focusItem=${notification.found_item_id}`}
-                    className="btn-link"
+                    className="notification-action-btn"
                     onClick={() => {
                       if (!notification.is_read) {
                         markAsRead(notification.id);
@@ -94,7 +94,7 @@ const Notifications = () => {
                 {notification.type === 'claim' && (
                   <Link
                     to={notification.claim_id ? `/my-claims?claimId=${notification.claim_id}` : '/my-claims'}
-                    className="btn-link"
+                    className="notification-action-btn"
                     onClick={() => {
                       if (!notification.is_read) {
                         markAsRead(notification.id);
@@ -104,10 +104,25 @@ const Notifications = () => {
                     View Claim
                   </Link>
                 )}
-                {!notification.is_read && (
-                  <button onClick={() => markAsRead(notification.id)} className="btn-link">Mark as Read</button>
+                {notification.appeal_id && (
+                  <Link
+                    to={`/admin/appeals?appealId=${notification.appeal_id}`}
+                    className="notification-action-btn"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => {
+                      if (!notification.is_read) {
+                        markAsRead(notification.id);
+                      }
+                    }}
+                  >
+                    Review Appeal
+                  </Link>
                 )}
-                <button onClick={() => deleteNotification(notification.id)} className="btn-link delete">Delete</button>
+                {!notification.is_read && (
+                  <button onClick={() => markAsRead(notification.id)} className="notification-action-btn">Mark as Read</button>
+                )}
+                <button onClick={() => deleteNotification(notification.id)} className="notification-action-btn notification-action-btn-delete">Delete</button>
               </div>
             </div>
           ))}

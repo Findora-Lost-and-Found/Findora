@@ -1,9 +1,10 @@
 import axios from 'axios';
 
 const configuredApiUrl = import.meta.env.VITE_API_URL;
-const API_URL = configuredApiUrl?.includes('localhost:5000')
-  ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')
-  : configuredApiUrl || 'http://localhost:8080/api';
+const normalizedConfiguredApiUrl = configuredApiUrl ? String(configuredApiUrl).trim() : '';
+const API_URL = normalizedConfiguredApiUrl
+  ? normalizedConfiguredApiUrl.replace(/(localhost|127\.0\.0\.1|0\.0\.0\.0):(5000|8083)/gi, '$1:8080')
+  : 'http://localhost:8080/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -30,6 +31,7 @@ api.interceptors.request.use(
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
   login: (data) => api.post('/auth/login', data),
+  submitAccessAppeal: (data) => api.post('/auth/appeal-access', data),
   verifyEmail: (payload) => api.post('/auth/verify-email', payload),
   resendOTP: (payload) => api.post('/auth/resend-otp', payload),
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
@@ -88,11 +90,21 @@ export const adminAPI = {
   getPendingApprovals: (params) => api.get('/admin/pending-approvals', { params }),
   approveUser: (id) => api.put(`/admin/approve-user/${id}`),
   declineUser: (id) => api.put(`/admin/decline-user/${id}`),
-  banUser: (id, banned) => api.put(`/admin/ban-user/${id}`, { banned }),
-  suspendUser: (id, suspended) => api.put(`/admin/suspend-user/${id}`, { suspended }),
+  banUser: (id, banned) => {
+    const payload = typeof banned === 'object' && banned !== null ? banned : { banned };
+    return api.put(`/admin/ban-user/${id}`, payload);
+  },
+  suspendUser: (id, suspended) => {
+    const payload = typeof suspended === 'object' && suspended !== null ? suspended : { suspended };
+    return api.put(`/admin/suspend-user/${id}`, payload);
+  },
   getReports: (params) => api.get('/admin/reports', { params }),
   handleReport: (id, data) => api.put(`/admin/reports/${id}`, data),
   hideReportedItem: (id) => api.post(`/admin/reports/${id}/hide-item`),
+  getAppeals: (params) => api.get('/admin/appeals', { params }),
+  getAppealById: (id) => api.get(`/admin/appeals/${id}`),
+  approveAppeal: (id, data) => api.put(`/admin/appeals/${id}/approve`, data),
+  declineAppeal: (id, data) => api.put(`/admin/appeals/${id}/decline`, data),
   getStats: () => api.get('/admin/stats'),
   getItems: (params) => api.get('/admin/items', { params }),
   getTransactions: (params) => api.get('/admin/transactions', { params })
