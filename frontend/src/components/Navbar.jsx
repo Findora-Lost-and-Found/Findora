@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect, useRef } from 'react';
 import { notificationsAPI } from '../services/api';
@@ -65,6 +65,10 @@ const Navbar = () => {
     setIsMoreMenuOpen(false);
   };
 
+  const getNavLinkClassName = ({ isActive }) => (
+    isActive ? 'nav-link nav-link-active' : 'nav-link'
+  );
+
   return (
     <nav className="navbar">
       <div className="nav-container">
@@ -81,37 +85,37 @@ const Navbar = () => {
         {user && (
           <div className="nav-actions" aria-label="Navigation actions">
             <div className="nav-menu">
-              <Link to="/dashboard" className="nav-link">Dashboard</Link>
+              <NavLink to="/dashboard" className={getNavLinkClassName}>Dashboard</NavLink>
 
               {(user.role === 'student' || user.role === 'staff' || user.role === 'security') && (
                 <>
-                  <Link to="/lost-items" className="nav-link">My Lost Items</Link>
-                  <Link to="/found-items" className="nav-link">My Found Items</Link>
+                  <NavLink to="/lost-items" className={getNavLinkClassName}>My Lost Items</NavLink>
+                  <NavLink to="/found-items" className={getNavLinkClassName}>My Found Items</NavLink>
                 </>
               )}
 
               {(user.role === 'student' || user.role === 'staff') && (
                 <>
-                  <Link to="/my-claims" className="nav-link">My Claims</Link>
+                  <NavLink to="/my-claims" className={getNavLinkClassName}>My Claims</NavLink>
                 </>
               )}
 
               {user.role === 'security' && (
                 <>
-                  <Link to="/security/receive" className="nav-link">Receive Item</Link>
-                  <Link to="/security/pending-claims" className="nav-link">Pending Claims</Link>
-                  <Link to="/security/transactions" className="nav-link">Transactions</Link>
+                  <NavLink to="/security/receive" className={getNavLinkClassName}>Receive Item</NavLink>
+                  <NavLink to="/security/pending-claims" className={getNavLinkClassName}>Pending Claims</NavLink>
+                  <NavLink to="/security/transactions" className={getNavLinkClassName}>Transactions</NavLink>
                 </>
               )}
 
               {user.role === 'admin' && (
                 <>
-                  <Link to="/admin-panel" className="nav-link">Admin Panel</Link>
-                  <Link to="/admin/users" className="nav-link">Users</Link>
-                  <Link to="/admin/pending-approvals" className="nav-link">Pending Approvals</Link>
-                  <Link to="/admin/appeals" className="nav-link">Appeals</Link>
-                  <Link to="/admin/items" className="nav-link">Items</Link>
-                  <Link to="/admin/reports" className="nav-link">Reports</Link>
+                  <NavLink to="/admin-panel" className={getNavLinkClassName}>Admin Panel</NavLink>
+                  <NavLink to="/admin/users" className={getNavLinkClassName}>Users</NavLink>
+                  <NavLink to="/admin/pending-approvals" className={getNavLinkClassName}>Pending Approvals</NavLink>
+                  <NavLink to="/admin/appeals" className={getNavLinkClassName}>Appeals</NavLink>
+                  <NavLink to="/admin/items" className={getNavLinkClassName}>Items</NavLink>
+                  <NavLink to="/admin/reports" className={getNavLinkClassName}>Reports</NavLink>
                 </>
               )}
 

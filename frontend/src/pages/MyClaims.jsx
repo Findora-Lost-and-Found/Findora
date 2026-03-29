@@ -119,8 +119,6 @@ const MyClaims = () => {
 
   return (
     <div className="container">
-      <h1>My Claims</h1>
-
       {error && <p className="claims-error">{error}</p>}
 
       {!error && claims.length === 0 ? (
