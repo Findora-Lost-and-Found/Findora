@@ -1036,6 +1036,69 @@ body:not(.dark-mode) .item-card .category-badge {
   font-weight: 600;
 }
 
+.status-clickable {
+  border: 0;
+  cursor: pointer;
+}
+
+.status-clickable:hover {
+  filter: brightness(1.05);
+}
+
+.status-clickable:focus-visible {
+  outline: 2px solid rgba(15, 23, 42, 0.35);
+  outline-offset: 2px;
+}
+
+.lost-matches-modal-root {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1050;
+}
+
+.lost-matches-modal-panel {
+  width: min(760px, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  border-radius: 12px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-surface);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+  padding: 1rem;
+}
+
+.lost-matches-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.lost-matches-modal-header h3 {
+  margin: 0;
+}
+
+.lost-matches-close-btn {
+  border: 1px solid var(--border-soft);
+  background: var(--bg-muted);
+  color: var(--text-primary);
+  border-radius: 8px;
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+}
+
+.lost-matches-list {
+  margin-top: 1rem;
+}
+
+.lost-matches-empty {
+  margin-top: 1rem;
+}
+
 .filters {
   display: flex;
   gap: 1rem;

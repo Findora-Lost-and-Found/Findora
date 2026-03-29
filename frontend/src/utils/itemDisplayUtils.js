@@ -74,7 +74,11 @@ export const maskCardInText = (text = '') => {
 export const maskSensitiveDescription = (text = '', category = '') => {
   const maskedCvv = maskCvvInText(text);
   const maskedCard = maskCardInText(maskedCvv);
-  return String(category).toUpperCase() === 'NIC' ? maskNicInText(maskedCard) : maskedCard;
+  const withoutIdTypeAndName = maskedCard.replace(
+    /ID\s*Type\s*:[^|]*\|\s*Name\s*:[^|]*\|\s*/gi,
+    ''
+  );
+  return String(category).toUpperCase() === 'NIC' ? maskNicInText(withoutIdTypeAndName) : withoutIdTypeAndName;
 };
 
 export const isModerationRemovedItem = (item = {}) => {

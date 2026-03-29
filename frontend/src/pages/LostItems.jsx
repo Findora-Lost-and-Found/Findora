@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { toast } from 'react-toastify';
 import { itemsAPI } from '../services/api';
 import ItemCard from '../components/ItemCard';
@@ -27,6 +28,7 @@ const LostItems = () => {
     sortBy: FOUND_ITEM_SORT.LATEST
   });
   const [searchInput, setSearchInput] = useState('');
+  const [selectedItemForMatches, setSelectedItemForMatches] = useState(null);
 
   const sortParam = useMemo(() => {
     if (filters.sortBy === FOUND_ITEM_SORT.NAME_ASC) {
@@ -41,6 +43,19 @@ const LostItems = () => {
   useEffect(() => {
     loadItems();
   }, [currentPage, filters.category, filters.search, sortParam]);
+
+  useEffect(() => {
+    if (!selectedItemForMatches) {
+      return undefined;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [selectedItemForMatches]);
 
   const loadItems = async () => {
     try {
@@ -152,6 +167,18 @@ const LostItems = () => {
     }));
   };
 
+  const handleOpenMatchesPopup = (item) => {
+    setSelectedItemForMatches(item);
+  };
+
+  const handleCloseMatchesPopup = () => {
+    setSelectedItemForMatches(null);
+  };
+
+  const selectedMatches = selectedItemForMatches
+    ? (matchesByLostId[selectedItemForMatches.id] || [])
+    : [];
+
   if (loading) {
     return <div className="loading">Loading...</div>;
   }
@@ -196,23 +223,11 @@ const LostItems = () => {
           ) : (
             items.map(item => (
               <div key={item.id}>
-                <ItemCard item={item} />
-
-                {(matchesByLostId[item.id] || []).length > 0 && (
-                  <div className="suggested-matches-block">
-                    <h3>Suggested Matches</h3>
-                    {(matchesByLostId[item.id] || []).map((match) => (
-                      <MatchCard
-                        key={match.matchId}
-                        match={match}
-                        otpValue={otpInputs[match.matchId]}
-                        onOtpChange={handleOtpInput}
-                        onClaimViaOtp={handleClaimViaOtp}
-                        onResendOtp={handleResendOtp}
-                      />
-                    ))}
-                  </div>
-                )}
+                <ItemCard
+                  item={item}
+                  showPostedBy={false}
+                  onStatusClick={handleOpenMatchesPopup}
+                />
               </div>
             ))
           )}
@@ -223,6 +238,43 @@ const LostItems = () => {
           totalPages={pagination.totalPages}
           onPageChange={setCurrentPage}
         />
+
+        {selectedItemForMatches && createPortal(
+          <div className="lost-matches-modal-root" onClick={handleCloseMatchesPopup}>
+            <div
+              className="lost-matches-modal-panel"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="lost-matches-modal-title"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="lost-matches-modal-header">
+                <h3 id="lost-matches-modal-title">Possible Matches</h3>
+                <button type="button" className="lost-matches-close-btn" onClick={handleCloseMatchesPopup}>
+                  Close
+                </button>
+              </div>
+
+              {selectedMatches.length === 0 ? (
+                <p className="lost-matches-empty">No possible matches found for this lost item yet.</p>
+              ) : (
+                <div className="lost-matches-list">
+                  {selectedMatches.map((match) => (
+                    <MatchCard
+                      key={match.matchId}
+                      match={match}
+                      otpValue={otpInputs[match.matchId]}
+                      onOtpChange={handleOtpInput}
+                      onClaimViaOtp={handleClaimViaOtp}
+                      onResendOtp={handleResendOtp}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

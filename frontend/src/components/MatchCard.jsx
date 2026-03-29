@@ -4,8 +4,12 @@ import './MatchCard.css';
 
 const MatchCard = ({ match, otpValue, onOtpChange, onClaimViaOtp, onResendOtp }) => {
   const found = match?.foundItem || {};
-  const score = Number(match?.score || 0).toFixed(2);
+  const numericScore = Number(match?.score || 0);
+  const score = numericScore.toFixed(2);
   const threshold = match?.threshold || 70;
+  const otpEligible = typeof match?.otpEligible === 'boolean'
+    ? match.otpEligible
+    : numericScore >= 75;
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
 
   useEffect(() => {
@@ -46,18 +50,35 @@ const MatchCard = ({ match, otpValue, onOtpChange, onClaimViaOtp, onResendOtp })
 
       <div className="match-card-body">
         <p><strong>Category:</strong> {found.category || 'N/A'}</p>
-        <p><strong>Location:</strong> {found.location || 'Unknown'}</p>
         <p><strong>Status:</strong> {match?.status || 'PENDING'}</p>
       </div>
 
       <div className="match-card-actions">
-        <button type="button" className="btn btn-primary" onClick={() => setIsOtpModalOpen(true)}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => otpEligible && setIsOtpModalOpen(true)}
+          disabled={!otpEligible}
+          title={!otpEligible ? 'OTP claim is enabled only for scores above 75%' : undefined}
+        >
           Claim via Match (enter OTP)
         </button>
-        <button type="button" className="btn btn-secondary" onClick={() => onResendOtp(match.matchId)}>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => otpEligible && onResendOtp(match.matchId)}
+          disabled={!otpEligible}
+          title={!otpEligible ? 'OTP resend is not available for possible-only matches' : undefined}
+        >
           Resend OTP
         </button>
       </div>
+
+      {!otpEligible && (
+        <p style={{ marginTop: '0.6rem', color: '#6c757d', fontSize: '0.9rem' }}>
+          Can't claim. The matching is too low.
+        </p>
+      )}
 
       {isOtpModalOpen && createPortal(
         <div className="match-modal-root" onClick={() => setIsOtpModalOpen(false)}>
