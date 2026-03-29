@@ -7,7 +7,7 @@ import PostModal from '../components/PostModal';
 import FoundItemCard from '../components/FoundItemCard';
 import SecurityDashboard from './SecurityDashboard';
 import { normalizeCategory } from '../utils/categoryUtils';
-import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
+import { FOUND_ITEM_SORT, isModerationRemovedItem, sortFoundItems } from '../utils/itemDisplayUtils';
 import { sampleFoundItems } from '../data/sampleFoundItems';
 import SampleItemImage from '../components/SampleItemImage';
 
@@ -132,7 +132,8 @@ const Dashboard = () => {
               full_name: item.full_name || item.username || 'Unknown User'
             }
           }));
-          const sortedFoundItems = sortFoundItems(apiItems, FOUND_ITEM_SORT.LATEST);
+          const visibleItems = apiItems.filter((item) => !isModerationRemovedItem(item));
+          const sortedFoundItems = sortFoundItems(visibleItems, FOUND_ITEM_SORT.LATEST);
           setFoundItems(sortedFoundItems.length > 0 ? sortedFoundItems.slice(0, 6) : sampleFoundItems);
         } else {
           console.error('Dashboard found items fetch failed:', foundRes.reason?.response?.data || foundRes.reason?.message);
