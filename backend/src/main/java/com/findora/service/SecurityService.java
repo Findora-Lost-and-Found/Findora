@@ -92,7 +92,7 @@ public class SecurityService {
         }
 
         if (item.getStatus() == ItemStatus.HANDOVER_REQUESTED) {
-            throw new IllegalArgumentException("Handover is already waiting for approvel");
+            throw new IllegalArgumentException("Handover is already waiting for approval");
         }
 
         if (item.getStatus() == ItemStatus.HELD_BY_SECURITY

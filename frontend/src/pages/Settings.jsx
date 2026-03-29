@@ -201,6 +201,7 @@ const Settings = () => {
               onClick={() => switchTheme('light')}
               aria-pressed={theme === 'light'}
             >
+              <span className="theme-tile-check" aria-hidden="true">✓</span>
               <span className="theme-tile-preview theme-preview-light" aria-hidden="true">
                 <span className="theme-preview-sun" />
               </span>
@@ -212,6 +213,7 @@ const Settings = () => {
               onClick={() => switchTheme('dark')}
               aria-pressed={theme === 'dark'}
             >
+              <span className="theme-tile-check" aria-hidden="true">✓</span>
               <span className="theme-tile-preview theme-preview-dark" aria-hidden="true">
                 <span className="theme-preview-moon" />
               </span>
