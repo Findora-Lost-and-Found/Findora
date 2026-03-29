@@ -38,6 +38,7 @@ import com.findora.service.AccessControlService;
 
 @WebMvcTest(AdminController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@SuppressWarnings("null")
 class AdminControllerTest {
 
     @Autowired

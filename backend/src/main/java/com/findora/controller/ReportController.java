@@ -36,6 +36,7 @@ import com.findora.repository.UserRepository;
  */
 @RestController
 @RequestMapping("/api/reports")
+@SuppressWarnings("null")
 public class ReportController {
 
     private static final Logger log = LoggerFactory.getLogger(ReportController.class);

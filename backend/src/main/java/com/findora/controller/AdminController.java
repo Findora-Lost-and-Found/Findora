@@ -42,6 +42,7 @@ import com.findora.service.AccessControlService;
 @RestController
 @RequestMapping("/api/admin")
 @PreAuthorize("hasRole('ADMIN')")
+@SuppressWarnings("null")
 public class AdminController {
 
     private final UserRepository userRepository;

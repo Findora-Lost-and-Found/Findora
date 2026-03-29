@@ -57,6 +57,7 @@ import com.findora.service.ItemService;
  */
 @RestController
 @RequestMapping("/api/items")
+@SuppressWarnings("null")
 public class ItemController {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("uuuu-MM-dd").withResolverStyle(ResolverStyle.STRICT);

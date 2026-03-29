@@ -27,7 +27,7 @@ import com.findora.security.JwtTokenProvider;
 import com.findora.service.AccessControlService.AccessState;
 
 @ExtendWith(MockitoExtension.class)
-@SuppressWarnings("unused")
+@SuppressWarnings("null")
 class AuthServiceTest {
 
     @Mock
@@ -51,7 +51,6 @@ class AuthServiceTest {
     private AuthService authService;
 
     @BeforeEach
-    @SuppressWarnings("unused")
     void setUp() {
         lenient().when(accessControlService.refreshAndGetAccessState(any(User.class))).thenReturn(AccessState.ALLOWED);
         authService = new AuthService(

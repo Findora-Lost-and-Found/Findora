@@ -28,6 +28,7 @@ import com.findora.service.AccessControlService.AccessState;
  */
 @Service
 @Transactional
+@SuppressWarnings("null")
 public class AuthService {
 
     private final UserRepository userRepository;
