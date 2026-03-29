@@ -34,6 +34,7 @@ import com.findora.security.JwtTokenProvider;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@SuppressWarnings("null")
 class ItemControllerIntegrationTest {
 
     @Autowired
