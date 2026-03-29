@@ -265,7 +265,7 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
                   }}
                   style={{ background: 'none', border: 'none', padding: 0, fontWeight: 700, cursor: 'pointer' }}
                 >
-                  {hasMoreFoundItems ? 'Show more ↓' : 'Show less ↑'}
+                  {hasMoreFoundItems ? 'Show more ▼' : 'Show less ▲'}
                 </button>
               </div>
             )}
