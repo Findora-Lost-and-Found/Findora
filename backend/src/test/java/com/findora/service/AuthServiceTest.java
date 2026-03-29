@@ -48,7 +48,7 @@ class AuthServiceTest {
     @BeforeEach
     @SuppressWarnings("unused")
     void setUp() {
-        authService = new AuthService(userRepository, passwordEncoder, jwtTokenProvider, emailService, notificationRepository);
+        authService = new AuthService(userRepository, passwordEncoder, jwtTokenProvider, emailService, notificationRepository, false);
     }
 
     @Test
