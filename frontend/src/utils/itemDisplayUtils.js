@@ -76,3 +76,13 @@ export const maskSensitiveDescription = (text = '', category = '') => {
   const maskedCard = maskCardInText(maskedCvv);
   return String(category).toUpperCase() === 'NIC' ? maskNicInText(maskedCard) : maskedCard;
 };
+
+export const isModerationRemovedItem = (item = {}) => {
+  const name = String(item?.name || item?.item_name || '').trim().toLowerCase();
+  const description = String(item?.description || '').trim().toLowerCase();
+
+  const removedTitle = '[removed by moderation]';
+  const removedDescription = 'inappropriate content blocked by moderation.';
+
+  return name === removedTitle || description === removedDescription;
+};

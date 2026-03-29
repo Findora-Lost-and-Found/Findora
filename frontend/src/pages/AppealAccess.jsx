@@ -11,6 +11,9 @@ const AppealAccess = () => {
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [appealCooldownMessage, setAppealCooldownMessage] = useState('');
+
+  const isAppealCooldownActive = /appeal blocked for inappropriate language|submit another appeal after/i.test(appealCooldownMessage);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -29,9 +32,14 @@ const AppealAccess = () => {
       setSubmitting(true);
       await authAPI.submitAccessAppeal({ identifier: identifier.trim(), reason: reason.trim() });
       setSubmitted(true);
+      setAppealCooldownMessage('');
       toast.success('Appeal submitted successfully');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to submit appeal');
+      const message = error.response?.data?.message || 'Failed to submit appeal';
+      if (/appeal blocked for inappropriate language|submit another appeal after/i.test(message)) {
+        setAppealCooldownMessage(message);
+      }
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -44,6 +52,12 @@ const AppealAccess = () => {
         <p className="appeal-access-subtitle">
           Suspended or banned users can submit an appeal for admin review.
         </p>
+
+        {appealCooldownMessage && (
+          <div className="login-appeal-block">
+            <p>{appealCooldownMessage}</p>
+          </div>
+        )}
 
         {submitted ? (
           <div className="appeal-access-success">
@@ -77,9 +91,11 @@ const AppealAccess = () => {
             </div>
 
             <div className="appeal-access-actions">
-              <button type="submit" className="btn-primary" disabled={submitting}>
-                {submitting ? 'Submitting...' : 'Submit Appeal'}
-              </button>
+              {!isAppealCooldownActive && (
+                <button type="submit" className="btn-primary" disabled={submitting}>
+                  {submitting ? 'Submitting...' : 'Submit Appeal'}
+                </button>
+              )}
               <Link to="/login" className="btn-secondary">
                 Cancel
               </Link>

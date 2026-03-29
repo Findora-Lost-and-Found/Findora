@@ -14,6 +14,8 @@ const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  const isAppealCooldownActive = /appeal blocked for inappropriate language|submit another appeal after/i.test(accessBlockedMessage);
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -29,7 +31,7 @@ const Login = () => {
       navigate(getHomeRouteForUser(result.user));
     } else {
       const message = String(result.message || '');
-      const isAccessBlocked = /suspend|banned|ban/i.test(message);
+      const isAccessBlocked = /suspend|banned|ban|appeal blocked|submit another appeal/i.test(message);
       setAccessBlockedMessage(isAccessBlocked ? message : '');
     }
 
@@ -79,12 +81,14 @@ const Login = () => {
         {accessBlockedMessage && (
           <div className="login-appeal-block">
             <p>{accessBlockedMessage}</p>
-            <Link
-              to={`/appeal-access?identifier=${encodeURIComponent(formData.identifier || '')}`}
-              className="btn-secondary login-appeal-link"
-            >
-              Submit Access Appeal
-            </Link>
+            {!isAppealCooldownActive && (
+              <Link
+                to={`/appeal-access?identifier=${encodeURIComponent(formData.identifier || '')}`}
+                className="btn-secondary login-appeal-link"
+              >
+                Submit Access Appeal
+              </Link>
+            )}
           </div>
         )}
       </div>

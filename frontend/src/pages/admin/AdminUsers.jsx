@@ -155,21 +155,23 @@ const AdminUsers = () => {
 
   const handleBan = async (userId, banned) => {
     try {
-      await adminAPI.banUser(userId, banned);
+      await adminAPI.banUser(userId, { banned });
       toast.success(banned ? 'User banned' : 'User unbanned');
       await loadData();
     } catch (error) {
-      toast.error('Failed to update ban status');
+      const message = error?.response?.data?.message || 'Failed to update ban status';
+      toast.error(message);
     }
   };
 
   const handleSuspend = async (userId, suspended) => {
     try {
-      await adminAPI.suspendUser(userId, suspended);
+      await adminAPI.suspendUser(userId, { suspended });
       toast.success(suspended ? 'User suspended' : 'Suspension lifted');
       await loadData();
     } catch (error) {
-      toast.error('Failed to update suspension status');
+      const message = error?.response?.data?.message || 'Failed to update suspension status';
+      toast.error(message);
     }
   };
 
@@ -317,7 +319,7 @@ const AdminUsers = () => {
           </div>
         </div>
 
-        <div className="au-panel">
+        <div className="au-panel" ref={actionMenuRef}>
           {sortedUsers.length === 0 ? (
             <div className="au-empty-state" role="status" aria-live="polite">
               <h3>No users found</h3>
@@ -336,7 +338,7 @@ const AdminUsers = () => {
             </div>
           ) : (
             <>
-              <div className="au-table-wrap" ref={actionMenuRef}>
+              <div className="au-table-wrap">
                 <table className="au-table">
                   <thead>
                     <tr>
@@ -419,7 +421,7 @@ const AdminUsers = () => {
                 </table>
               </div>
 
-              <div className="au-mobile-list" ref={actionMenuRef}>
+              <div className="au-mobile-list">
                 {paginatedUsers.map((user) => {
                   const statusMeta = getStatusMeta(user.status);
                   const menuOpen = menuOpenFor === user.id;

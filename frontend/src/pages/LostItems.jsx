@@ -5,6 +5,7 @@ import ItemCard from '../components/ItemCard';
 import Pagination from '../components/Pagination';
 import MatchCard from '../components/MatchCard';
 import matchesAPI from '../services/matchesAPI';
+import { isModerationRemovedItem } from '../utils/itemDisplayUtils';
 
 const PAGE_SIZE = 4;
 
@@ -43,7 +44,8 @@ const LostItems = () => {
         keyword: filters.search.trim() || undefined
       });
 
-      setItems(response.data?.content || []);
+      const visibleItems = (response.data?.content || []).filter((item) => !isModerationRemovedItem(item));
+      setItems(visibleItems);
       setPagination({
         totalPages: response.data?.totalPages ?? 0,
         totalElements: response.data?.totalElements ?? 0,

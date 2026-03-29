@@ -3,7 +3,7 @@ import axios from 'axios';
 const configuredApiUrl = import.meta.env.VITE_API_URL;
 const normalizedConfiguredApiUrl = configuredApiUrl ? String(configuredApiUrl).trim() : '';
 const API_URL = normalizedConfiguredApiUrl
-  ? normalizedConfiguredApiUrl.replace(/(localhost|127\.0\.0\.1|0\.0\.0\.0):5000/gi, '$1:8080')
+  ? normalizedConfiguredApiUrl.replace(/(localhost|127\.0\.0\.1|0\.0\.0\.0):(5000|8083)/gi, '$1:8080')
   : 'http://localhost:8080/api';
 
 const api = axios.create({
@@ -90,8 +90,14 @@ export const adminAPI = {
   getPendingApprovals: (params) => api.get('/admin/pending-approvals', { params }),
   approveUser: (id) => api.put(`/admin/approve-user/${id}`),
   declineUser: (id) => api.put(`/admin/decline-user/${id}`),
-  banUser: (id, banned) => api.put(`/admin/ban-user/${id}`, { banned }),
-  suspendUser: (id, suspended) => api.put(`/admin/suspend-user/${id}`, { suspended }),
+  banUser: (id, banned) => {
+    const payload = typeof banned === 'object' && banned !== null ? banned : { banned };
+    return api.put(`/admin/ban-user/${id}`, payload);
+  },
+  suspendUser: (id, suspended) => {
+    const payload = typeof suspended === 'object' && suspended !== null ? suspended : { suspended };
+    return api.put(`/admin/suspend-user/${id}`, payload);
+  },
   getReports: (params) => api.get('/admin/reports', { params }),
   handleReport: (id, data) => api.put(`/admin/reports/${id}`, data),
   hideReportedItem: (id) => api.post(`/admin/reports/${id}/hide-item`),
