@@ -68,10 +68,6 @@ const BankCardClaim = ({ item, onSubmit, onCancel }) => {
     });
   };
 
-  const isFormValid =
-    Object.keys(validateClaimDetails(claimDetails)).length === 0
-    && /^\d{16}$/.test(normalizeCardNumber(formData.cardNumber));
-
   return (
     <div className="claim-form">
       {step === 'template' && (
@@ -131,7 +127,7 @@ const BankCardClaim = ({ item, onSubmit, onCancel }) => {
             <button className="btn-secondary" onClick={onCancel}>
               Cancel
             </button>
-            <button className="btn-primary" onClick={handleSubmit} disabled={!isFormValid}>
+            <button className="btn-primary" onClick={handleSubmit}>
               Submit Claim
             </button>
           </div>

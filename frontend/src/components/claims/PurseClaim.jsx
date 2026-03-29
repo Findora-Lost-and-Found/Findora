@@ -52,8 +52,6 @@ const PurseClaim = ({ item, onSubmit, onCancel }) => {
     });
   };
 
-  const isWithoutIdValid = Object.keys(validateClaimDetails(claimDetails)).length === 0;
-
   return (
     <div className="claim-form">
       {step === 'template' && (
@@ -151,7 +149,7 @@ const PurseClaim = ({ item, onSubmit, onCancel }) => {
             <button className="btn-secondary" onClick={() => setStep('select')}>
               Back
             </button>
-            <button className="btn-primary" onClick={handleWithoutIdSubmit} disabled={!isWithoutIdValid}>
+            <button className="btn-primary" onClick={handleWithoutIdSubmit}>
               Submit Claim
             </button>
           </div>

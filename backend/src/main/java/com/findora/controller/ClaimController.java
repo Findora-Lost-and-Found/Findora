@@ -1,5 +1,6 @@
 package com.findora.controller;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
@@ -495,7 +496,27 @@ public class ClaimController {
             claimData.get("toTime"),
             parseTimeOrDefault(claimData.get("fromTime"), foundItem.getTime())
         ));
+        validateClaimDateTimeNotFuture(claimProfile.getDate(), claimProfile.getTime());
         return claimProfile;
+    }
+
+    private void validateClaimDateTimeNotFuture(LocalDate claimDate, LocalTime claimTime) {
+        if (claimDate == null) {
+            return;
+        }
+
+        if (claimDate.isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("Invalid date. Please select today or a past date.");
+        }
+
+        if (claimTime == null) {
+            return;
+        }
+
+        LocalDateTime submittedDateTime = LocalDateTime.of(claimDate, claimTime);
+        if (submittedDateTime.isAfter(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Invalid time. Please select current time or a past time.");
+        }
     }
 
     private java.time.LocalDate parseSingleClaimDate(Map<String, Object> claimData) {

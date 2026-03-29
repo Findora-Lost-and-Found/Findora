@@ -11,6 +11,32 @@ export const createInitialClaimDetails = () => ({
 export const validateClaimDetails = (details) => {
   const errors = {};
 
+  const today = new Date();
+  const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+  const isFutureDate = (dateValue) => {
+    if (!dateValue) return false;
+    const selectedDate = new Date(`${dateValue}T00:00:00`);
+    const currentDay = new Date();
+    currentDay.setHours(0, 0, 0, 0);
+    return selectedDate > currentDay;
+  };
+
+  const isFutureTimeOnDate = (dateValue, timeValue) => {
+    if (!dateValue || !timeValue || dateValue !== todayString) {
+      return false;
+    }
+
+    const match = String(timeValue).match(/^(\d{2}):(\d{2})$/);
+    if (!match) {
+      return false;
+    }
+
+    const selectedTotalMinutes = (Number(match[1]) * 60) + Number(match[2]);
+    const currentTotalMinutes = (today.getHours() * 60) + today.getMinutes();
+    return selectedTotalMinutes > currentTotalMinutes;
+  };
+
   if (!details.primaryLocation?.trim()) {
     errors.primaryLocation = 'Primary location is required';
   }
@@ -24,14 +50,20 @@ export const validateClaimDetails = (details) => {
 
   if (!details.lostDate) {
     errors.lostDate = 'Date is required';
+  } else if (isFutureDate(details.lostDate)) {
+    errors.lostDate = 'Invalid date. Please select today or a past date.';
   }
 
   if (!details.fromTime) {
     errors.fromTime = 'From Time is required';
+  } else if (isFutureTimeOnDate(details.lostDate, details.fromTime)) {
+    errors.fromTime = 'Invalid time. Please select current time or a past time.';
   }
 
   if (!details.toTime) {
     errors.toTime = 'To Time is required';
+  } else if (isFutureTimeOnDate(details.lostDate, details.toTime)) {
+    errors.toTime = 'Invalid time. Please select current time or a past time.';
   }
 
   return errors;
