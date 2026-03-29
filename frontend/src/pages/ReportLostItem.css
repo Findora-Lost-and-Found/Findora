@@ -174,9 +174,9 @@
 }
 
 .report-lost-status.otp {
-  border: 1px solid #bfdbfe;
-  background: #eff6ff;
-  color: #1d4ed8;
+  border: 1px solid #99f6e4;
+  background: #f0fdfa;
+  color: #0f766e;
 }
 
 .report-lost-status p {
@@ -282,9 +282,9 @@ body.dark-mode .report-lost-status.notify {
 }
 
 body.dark-mode .report-lost-status.otp {
-  border-color: #1d4ed8;
-  background: #12243d;
-  color: #93c5fd;
+  border-color: #0f766e;
+  background: rgba(13, 148, 136, 0.2);
+  color: #5eead4;
 }
 
 @media (max-width: 768px) {

@@ -158,9 +158,9 @@
 }
 
 .status-card.handed-over {
-  border: 1px solid #93c5fd;
-  background: #eff6ff;
-  color: #166534;
+  border: 1px solid #99f6e4;
+  background: #f0fdfa;
+  color: #0f766e;
 }
 
 .status-card p {

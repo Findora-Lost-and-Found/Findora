@@ -11,8 +11,8 @@
 
   --brand: #0f766e;
   --brand-hover: #115e59;
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
+  --accent: #0d9488;
+  --accent-hover: #0f766e;
   --success: #15803d;
   --warning: #b45309;
   --danger: #b91c1c;
@@ -337,7 +337,8 @@ body {
 }
 
 .ellipsis-item:hover {
-  background: #f3f4f6;
+  background: #f0fdfa;
+  color: #0f766e;
 }
 
 .ellipsis-item-danger {
@@ -857,7 +858,7 @@ button:disabled {
 .stat-card-link:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
-  border-color: #bfdbfe;
+  border-color: #99f6e4;
 }
 
 .dashboard-card h3, .stat-card h3 {
@@ -895,7 +896,7 @@ button:disabled {
 .quick-link-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
-  border-color: #bfdbfe;
+  border-color: #99f6e4;
 }
 
 .quick-link-card h3 {
@@ -930,8 +931,8 @@ button:disabled {
 }
 
 .alert-info {
-  background: #eff6ff;
-  color: #1e3a8a;
+  background: #f0fdfa;
+  color: #0f766e;
   border-left: 4px solid var(--accent);
 }
 
@@ -1359,7 +1360,7 @@ body.dark-mode .search-form input {
 
 .notification-card.unread {
   border-left: 4px solid var(--accent);
-  background: #eff6ff;
+  background: #f0fdfa;
 }
 
 .notification-type {
@@ -1699,17 +1700,17 @@ body.dark-mode .nav-link {
 }
 
 body.dark-mode .nav-link:hover {
-  color: #93c5fd;
-  background: #1f2937;
+  color: #5eead4;
+  background: rgba(13, 148, 136, 0.2);
 }
 
 body.dark-mode .nav-link-active {
-  color: #93c5fd;
-  background: #1f2937;
+  color: #5eead4;
+  background: rgba(13, 148, 136, 0.2);
 }
 
 body.dark-mode .nav-link-active::after {
-  background: #93c5fd;
+  background: #14b8a6;
 }
 
 body.dark-mode .ellipsis-btn {
@@ -1721,7 +1722,7 @@ body.dark-mode .notification-icon-btn {
 }
 
 body.dark-mode .notification-icon-btn:hover {
-  color: #93c5fd;
+  color: #5eead4;
 }
 
 body.dark-mode .notification-icon-active {
@@ -1765,7 +1766,7 @@ body.dark-mode .notification-icon-btn[data-tooltip]::before {
 }
 
 body.dark-mode .ellipsis-btn:hover {
-  color: #93c5fd;
+  color: #5eead4;
 }
 
 body.dark-mode .ellipsis-dropdown {
@@ -1779,7 +1780,8 @@ body.dark-mode .ellipsis-item {
 }
 
 body.dark-mode .ellipsis-item:hover {
-  background: #1f2937;
+  background: rgba(13, 148, 136, 0.2);
+  color: #5eead4;
 }
 
 body.dark-mode .ellipsis-item-danger {
@@ -1898,8 +1900,8 @@ body.dark-mode .otp-info {
 }
 
 body.dark-mode .otp-info code {
-  background: #1d4ed8;
-  color: #dbeafe;
+  background: #0f766e;
+  color: #ccfbf1;
 }
 
 body.dark-mode .theme-switcher,
@@ -2046,8 +2048,8 @@ body.dark-mode .detail-row span {
 }
 
 body.dark-mode .notification-badge {
-  background: #2563eb;
-  color: #eff6ff;
+  background: #0d9488;
+  color: #ecfeff;
   border-color: #0f172a;
 }
 
@@ -2120,8 +2122,8 @@ tbody tr:hover {
 }
 
 .badge-info {
-  background: #dbeafe;
-  color: #1e40af;
+  background: #ccfbf1;
+  color: #0f766e;
 }
 
 /* Modal */
@@ -2231,10 +2233,10 @@ body.dark-mode .theme-photo-placeholder {
 
 /* OTP Info */
 .otp-info {
-  background: #f0f9ff;
+  background: #f0fdfa;
   padding: 1rem;
   border-radius: var(--radius-sm);
-  border: 1px solid #bfdbfe;
+  border: 1px solid #99f6e4;
   margin-top: 1rem;
 }
 
