@@ -112,8 +112,8 @@
 }
 
 .otp-info {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
   border-radius: 6px;
   padding: 15px;
   margin-top: 15px;
@@ -121,14 +121,14 @@
 }
 
 .otp-info code {
-  background: #dbeafe;
+  background: #ccfbf1;
   padding: 8px 12px;
   border-radius: 4px;
   display: inline-block;
   font-family: 'Courier New', monospace;
   font-size: 1.1rem;
   font-weight: bold;
-  color: #1d4ed8;
+  color: #0f766e;
   letter-spacing: 2px;
 }
 

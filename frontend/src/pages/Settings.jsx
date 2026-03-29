@@ -168,6 +168,11 @@ const Settings = () => {
       return;
     }
 
+    const confirmed = window.confirm('Are you sure you want to permanently delete your account? This action cannot be undone.');
+    if (!confirmed) {
+      return;
+    }
+
     try {
       setDeleteLoading(true);
       const response = await authAPI.confirmDeleteAccount({ otp: deleteOtp.trim() });
@@ -192,17 +197,27 @@ const Settings = () => {
           <div className="theme-switcher-actions">
             <button
               type="button"
-              className={`btn-small ${theme === 'light' ? 'btn-primary' : 'btn-secondary'}`}
+              className={`theme-tile ${theme === 'light' ? 'is-active' : ''}`}
               onClick={() => switchTheme('light')}
+              aria-pressed={theme === 'light'}
             >
-              Light Mode
+              <span className="theme-tile-check" aria-hidden="true">✓</span>
+              <span className="theme-tile-preview theme-preview-light" aria-hidden="true">
+                <span className="theme-preview-sun" />
+              </span>
+              <span className="theme-tile-label">Light Mode</span>
             </button>
             <button
               type="button"
-              className={`btn-small ${theme === 'dark' ? 'btn-primary' : 'btn-secondary'}`}
+              className={`theme-tile ${theme === 'dark' ? 'is-active' : ''}`}
               onClick={() => switchTheme('dark')}
+              aria-pressed={theme === 'dark'}
             >
-              Dark Mode
+              <span className="theme-tile-check" aria-hidden="true">✓</span>
+              <span className="theme-tile-preview theme-preview-dark" aria-hidden="true">
+                <span className="theme-preview-moon" />
+              </span>
+              <span className="theme-tile-label">Dark Mode</span>
             </button>
           </div>
         </div>
@@ -222,7 +237,10 @@ const Settings = () => {
         </div>
 
         <div className="profile-card" style={{ marginTop: '1rem', borderColor: '#fecaca' }}>
-          <h2 style={{ marginBottom: '0.75rem', color: '#b91c1c' }}>Delete Account</h2>
+          <h2 className="danger-zone-heading" style={{ marginBottom: '0.75rem', color: '#b91c1c' }}>
+            <span className="danger-zone-icon" aria-hidden="true">⚠️</span>
+            Delete Account
+          </h2>
           <p style={{ marginBottom: '1rem', color: '#7f1d1d' }}>
             This action requires OTP verification via email and cannot be undone. Your activity history will be retained.
           </p>

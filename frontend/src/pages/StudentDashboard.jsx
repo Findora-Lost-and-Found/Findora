@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { itemsAPI, claimsAPI } from '../services/api';
 import PostModal from '../components/PostModal';
 import FoundItemCard from '../components/FoundItemCard';
+import FilterSelect from '../components/FilterSelect';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
 
@@ -202,14 +203,20 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
               <h2>Recently Found Items</h2>
             </div>
             <div className="filters">
-              <select name="category" value={filters.category} onChange={handleFilterChange}>
-                <option value="">All Categories</option>
-                <option value="NIC">NIC</option>
-                <option value="Student ID">Student ID</option>
-                <option value="Bank Card">Bank Card</option>
-                <option value="Wallet">Wallet</option>
-                <option value="Other">Other</option>
-              </select>
+              <FilterSelect
+                name="category"
+                value={filters.category}
+                onChange={handleFilterChange}
+                ariaLabel="Filter by category"
+                options={[
+                  { value: '', label: 'All Categories' },
+                  { value: 'NIC', label: 'NIC' },
+                  { value: 'Student ID', label: 'Student ID' },
+                  { value: 'Bank Card', label: 'Bank Card' },
+                  { value: 'Wallet', label: 'Wallet' },
+                  { value: 'Other', label: 'Other' }
+                ]}
+              />
 
               <form className="search-form" onSubmit={handleSearchSubmit}>
                 <input
@@ -226,11 +233,17 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
                 </button>
               </form>
 
-              <select name="sortBy" value={filters.sortBy} onChange={handleFilterChange}>
-                <option value={FOUND_ITEM_SORT.LATEST}>Latest</option>
-                <option value={FOUND_ITEM_SORT.NAME_ASC}>Alphabetical A → Z</option>
-                <option value={FOUND_ITEM_SORT.NAME_DESC}>Alphabetical Z → A</option>
-              </select>
+            <FilterSelect
+              name="sortBy"
+              value={filters.sortBy}
+              onChange={handleFilterChange}
+              ariaLabel="Sort items"
+              options={[
+                { value: FOUND_ITEM_SORT.LATEST, label: 'Latest' },
+                { value: FOUND_ITEM_SORT.NAME_ASC, label: 'Alphabetical A → Z' },
+                { value: FOUND_ITEM_SORT.NAME_DESC, label: 'Alphabetical Z → A' }
+              ]}
+            />
             </div>
             <div className="found-items-grid">
               {filteredFoundItems.length === 0 ? (
