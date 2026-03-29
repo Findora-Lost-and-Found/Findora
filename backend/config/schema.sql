@@ -6,7 +6,7 @@ USE findora_db;
 
 -- Users Table
 CREATE TABLE users (
-  id INT PRIMARY KEY AUTO_INCREMENT,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
   username VARCHAR(50) UNIQUE NOT NULL,
   email VARCHAR(100) UNIQUE NOT NULL,
   password VARCHAR(255) NOT NULL,
@@ -37,8 +37,8 @@ CREATE TABLE users (
 
 -- Items Table (Lost and Found)
 CREATE TABLE items (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  user_id INT NOT NULL,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
   type ENUM('lost', 'found') NOT NULL,
   category ENUM('NIC', 'Student ID', 'Bank Card', 'Wallet', 'Other') NOT NULL,
   item_name VARCHAR(100) NOT NULL,
@@ -60,9 +60,9 @@ CREATE TABLE items (
 
 -- Matches Table
 CREATE TABLE matches (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  lost_item_id INT NOT NULL,
-  found_item_id INT NOT NULL,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  lost_item_id BIGINT NOT NULL,
+  found_item_id BIGINT NOT NULL,
   match_score DECIMAL(5,2) NOT NULL,
   match_type ENUM('Item Found', 'Possible Match') NOT NULL,
   is_notified BOOLEAN DEFAULT FALSE,
@@ -76,13 +76,13 @@ CREATE TABLE matches (
 
 -- Claims Table
 CREATE TABLE claims (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  item_id INT NOT NULL,
-  claimer_id INT NOT NULL,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  item_id BIGINT NOT NULL,
+  claimer_id BIGINT NOT NULL,
   otp VARCHAR(6) NOT NULL,
   otp_expiry DATETIME NOT NULL,
   status ENUM('pending', 'approved', 'rejected', 'collected') DEFAULT 'pending',
-  security_officer_id INT,
+  security_officer_id BIGINT,
   notes TEXT,
   claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   collected_at DATETIME,
@@ -96,10 +96,10 @@ CREATE TABLE claims (
 
 -- Security Transactions Table
 CREATE TABLE security_transactions (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  security_officer_id INT NOT NULL,
-  item_id INT NOT NULL,
-  claim_id INT,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  security_officer_id BIGINT NOT NULL,
+  item_id BIGINT NOT NULL,
+  claim_id BIGINT,
   transaction_type ENUM('receive', 'release') NOT NULL,
   status ENUM('requested', 'received') NOT NULL,
   received_from VARCHAR(100),
@@ -116,13 +116,13 @@ CREATE TABLE security_transactions (
 
 -- Notifications Table
 CREATE TABLE notifications (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  user_id INT NOT NULL,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
   type ENUM('match', 'otp', 'approval', 'report', 'claim', 'system') NOT NULL,
   title VARCHAR(200) NOT NULL,
   message TEXT NOT NULL,
   is_read BOOLEAN DEFAULT FALSE,
-  related_id INT,
+  related_id BIGINT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   INDEX idx_user_id (user_id),
@@ -132,9 +132,9 @@ CREATE TABLE notifications (
 
 -- Reports Table (for reporting posts)
 CREATE TABLE post_reports (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  reporter_id INT NOT NULL,
-  item_id INT NOT NULL,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  reporter_id BIGINT NOT NULL,
+  item_id BIGINT NOT NULL,
   reason TEXT NOT NULL,
   status ENUM('pending', 'reviewed', 'resolved') DEFAULT 'pending',
   admin_notes TEXT,
@@ -148,8 +148,8 @@ CREATE TABLE post_reports (
 
 -- Access Appeals Table (for suspended/banned users)
 CREATE TABLE user_access_appeals (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  user_id INT NOT NULL,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
   action_type ENUM('suspension', 'ban') NOT NULL,
   status ENUM('pending', 'approved', 'declined') DEFAULT 'pending',
   appeal_text TEXT NOT NULL,
