@@ -1060,10 +1060,10 @@ body:not(.dark-mode) .item-card .category-badge {
     linear-gradient(135deg, #334155 50%, transparent 50%),
     linear-gradient(to right, #d1d5db, #d1d5db);
   background-position:
-    calc(100% - 16px) calc(50% - 3px),
-    calc(100% - 10px) calc(50% - 3px),
+    calc(100% - 19px) 50%,
+    calc(100% - 13px) 50%,
     calc(100% - 2.2rem) 50%;
-  background-size: 6px 6px, 6px 6px, 1px 62%;
+  background-size: 7px 7px, 7px 7px, 1px 62%;
   background-repeat: no-repeat;
 }
 
