@@ -33,7 +33,7 @@ import com.findora.service.MatchService;
 
 @WebMvcTest(ClaimController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@SuppressWarnings({"null", "unused"})
+@SuppressWarnings("null")
 class ClaimControllerTest {
 
     @Autowired
@@ -56,7 +56,6 @@ class ClaimControllerTest {
 
     @Test
     @WithMockUser(username = "testuser", roles = {"STUDENT"})
-    @SuppressWarnings("unused")
     void createNicClaimWithMatchingNicShouldReturnCreated() throws Exception {
         User user = new User();
         user.setId(10L);

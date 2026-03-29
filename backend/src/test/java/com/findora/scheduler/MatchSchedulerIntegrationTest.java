@@ -101,7 +101,6 @@ class MatchSchedulerIntegrationTest {
     }
 
     @Test
-    @SuppressWarnings("unused")
     void scheduledSweepShouldCreateAndNotifyExactIdMatch() {
         int notifications = matchService.runScheduledMatchingSweep();
 

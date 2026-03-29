@@ -31,7 +31,7 @@ import com.findora.repository.UserRepository;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@SuppressWarnings({"null", "unused"})
+@SuppressWarnings("null")
 class ReportControllerIntegrationTest {
 
     @Autowired
@@ -95,7 +95,6 @@ class ReportControllerIntegrationTest {
 
     @Test
     @WithMockUser(username = "reporter", roles = {"STUDENT"})
-    @SuppressWarnings("unused")
     void createReportShouldPersistReportAndReturnCreatedPayload() throws Exception {
         mockMvc.perform(
             post("/api/reports")
