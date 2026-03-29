@@ -3,8 +3,8 @@ import axios from 'axios';
 const configuredApiUrl = import.meta.env.VITE_API_URL;
 const normalizedConfiguredApiUrl = configuredApiUrl ? String(configuredApiUrl).trim() : '';
 const API_URL = normalizedConfiguredApiUrl
-  ? normalizedConfiguredApiUrl.replace(/(localhost|127\.0\.0\.1|0\.0\.0\.0):5000/gi, '$1:8083')
-  : 'http://localhost:8083/api';
+  ? normalizedConfiguredApiUrl.replace(/(localhost|127\.0\.0\.1|0\.0\.0\.0):5000/gi, '$1:8080')
+  : 'http://localhost:8080/api';
 
 const api = axios.create({
   baseURL: API_URL,

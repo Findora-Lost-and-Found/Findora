@@ -26,16 +26,14 @@ import com.findora.model.Item;
 import com.findora.model.ItemCategory;
 import com.findora.model.ItemType;
 import com.findora.model.User;
-import com.findora.repository.ClaimRepository;
 import com.findora.repository.ItemRepository;
 import com.findora.repository.UserRepository;
-import com.findora.security.JwtAuthenticationFilter;
 import com.findora.service.ClaimCreationService;
 import com.findora.service.MatchService;
 
 @WebMvcTest(ClaimController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@SuppressWarnings("null")
+@SuppressWarnings({"null", "unused"})
 class ClaimControllerTest {
 
     @Autowired
@@ -43,9 +41,6 @@ class ClaimControllerTest {
 
     @Autowired
     private ObjectMapper objectMapper;
-
-    @MockBean
-    private ClaimRepository claimRepository;
 
     @MockBean
     private ItemRepository itemRepository;
@@ -58,9 +53,6 @@ class ClaimControllerTest {
 
     @MockBean
     private MatchService matchService;
-
-    @MockBean
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Test
     @WithMockUser(username = "testuser", roles = {"STUDENT"})

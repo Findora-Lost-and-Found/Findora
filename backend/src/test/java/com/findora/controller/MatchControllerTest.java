@@ -26,7 +26,7 @@ import com.findora.service.MatchService;
 
 @WebMvcTest(MatchController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@SuppressWarnings("null")
+@SuppressWarnings({"null", "unused"})
 class MatchControllerTest {
 
     @Autowired

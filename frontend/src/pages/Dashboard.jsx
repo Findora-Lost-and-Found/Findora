@@ -8,7 +8,6 @@ import FoundItemCard from '../components/FoundItemCard';
 import SecurityDashboard from './SecurityDashboard';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
-import { sampleFoundItems } from '../data/sampleFoundItems';
 import SampleItemImage from '../components/SampleItemImage';
 
 const ADMIN_PREVIEW_LIMIT = 5;
@@ -110,8 +109,7 @@ const Dashboard = () => {
         const [itemsRes, claimsRes, foundRes] = await Promise.allSettled([
           itemsAPI.getMy(),
           claimsAPI.getMy(),
-          // Dashboard keeps a latest preview, while Found Items page shows complete list.
-          itemsAPI.getAll({ type: 'found' })
+          itemsAPI.getMy({ type: 'found', page: 0, size: 6, sort: 'createdAt,desc' })
         ]);
 
         setStats({
@@ -133,10 +131,10 @@ const Dashboard = () => {
             }
           }));
           const sortedFoundItems = sortFoundItems(apiItems, FOUND_ITEM_SORT.LATEST);
-          setFoundItems(sortedFoundItems.length > 0 ? sortedFoundItems.slice(0, 6) : sampleFoundItems);
+          setFoundItems(sortedFoundItems.slice(0, 6));
         } else {
           console.error('Dashboard found items fetch failed:', foundRes.reason?.response?.data || foundRes.reason?.message);
-          setFoundItems(sampleFoundItems);
+          setFoundItems([]);
         }
       } else if (user.role === 'admin') {
         const [foundRes, receivedRes, releasedRes, studentFoundRes] = await Promise.allSettled([

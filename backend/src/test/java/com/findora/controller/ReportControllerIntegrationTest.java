@@ -31,7 +31,7 @@ import com.findora.repository.UserRepository;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@SuppressWarnings("null")
+@SuppressWarnings({"null", "unused"})
 class ReportControllerIntegrationTest {
 
     @Autowired
