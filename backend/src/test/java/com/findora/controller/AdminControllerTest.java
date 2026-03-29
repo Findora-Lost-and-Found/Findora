@@ -34,6 +34,7 @@ import com.findora.repository.ReportRepository;
 import com.findora.repository.SecurityTransactionRepository;
 import com.findora.repository.UserRepository;
 import com.findora.security.JwtAuthenticationFilter;
+import com.findora.service.AccessControlService;
 
 @WebMvcTest(AdminController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -53,6 +54,9 @@ class AdminControllerTest {
 
     @MockBean
     private SecurityTransactionRepository securityTransactionRepository;
+
+    @MockBean
+    private AccessControlService accessControlService;
 
     @MockBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;

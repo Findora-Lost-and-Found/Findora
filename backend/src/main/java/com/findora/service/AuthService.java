@@ -36,6 +36,8 @@ public class AuthService {
     private final EmailService emailService;
     private final NotificationRepository notificationRepository;
     private final AccessControlService accessControlService;
+    @Value("${app.dev.expose-verification-otp:false}")
+    private boolean exposeVerificationOtp;
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private static final Random RANDOM = new Random();
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
