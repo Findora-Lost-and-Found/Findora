@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { NIC_HELPER_TEXT, NIC_VALIDATION_MESSAGE, isValidNic, normalizeNic, sanitizeNicInput } from '../utils/nicUtils';
 import { isValidStudentIdNumber } from '../utils/studentIdUtils';
 import { getCardLast4, maskCardNumber } from '../utils/cardUtils';
+import TimeInputPicker from '../components/TimeInputPicker';
 import './ReportFoundItem.css';
 
 const CATEGORY_OPTIONS = [
@@ -64,6 +65,39 @@ const ReportFoundItem = () => {
     otherPrivateTime: ''
   });
 
+  const now = new Date();
+  const currentDateValue = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const currentTimeValue = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+  const getMaxTimeForDate = (selectedDate) => {
+    if (!selectedDate) {
+      return undefined;
+    }
+    return selectedDate === currentDateValue ? currentTimeValue : undefined;
+  };
+
+  const isFutureDate = (dateValue) => {
+    if (!dateValue) {
+      return false;
+    }
+
+    const selectedDate = new Date(`${dateValue}T00:00:00`);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return selectedDate > today;
+  };
+
+  const isFutureTimeOnDate = (dateValue, timeValue) => {
+    if (!dateValue || !timeValue || dateValue !== currentDateValue) {
+      return false;
+    }
+
+    const [hours, minutes] = String(timeValue).split(':').map(Number);
+    const selectedTotalMinutes = (hours * 60) + minutes;
+    const currentTotalMinutes = (now.getHours() * 60) + now.getMinutes();
+    return selectedTotalMinutes > currentTotalMinutes;
+  };
+
   const handleCategoryChange = (e) => {
     setCategory(e.target.value);
     setSubmitted(false);
@@ -84,6 +118,10 @@ const ReportFoundItem = () => {
 
   const handleFileChange = (e) => {
     setFormData((prev) => ({ ...prev, otherPhoto: e.target.files?.[0] || null }));
+  };
+
+  const handleTimeChange = (name, nextValue) => {
+    setFormData((prev) => ({ ...prev, [name]: nextValue }));
   };
 
   const handlePurseFileChange = (e) => {
@@ -116,7 +154,9 @@ const ReportFoundItem = () => {
       if (!/^\d{16}$/.test(formData.cardNumber)) nextErrors.cardNumber = 'Full 16-digit card number is required.';
       if (!formData.bankPrivateLocation.trim()) nextErrors.bankPrivateLocation = 'Location is required.';
       if (!formData.bankPrivateDate) nextErrors.bankPrivateDate = 'Date is required.';
+      else if (isFutureDate(formData.bankPrivateDate)) nextErrors.bankPrivateDate = 'Invalid date. Please select today or a past date.';
       if (!formData.bankPrivateTime) nextErrors.bankPrivateTime = 'Time is required.';
+      else if (isFutureTimeOnDate(formData.bankPrivateDate, formData.bankPrivateTime)) nextErrors.bankPrivateTime = 'Invalid time. Please select current time or a past time.';
     }
 
     if (category === 'Purse') {
@@ -138,7 +178,9 @@ const ReportFoundItem = () => {
         if (!formData.purseOtherItems.trim()) nextErrors.purseOtherItems = 'Other items inside purse are required.';
         if (!formData.pursePrivateLocation.trim()) nextErrors.pursePrivateLocation = 'Location is required.';
         if (!formData.pursePrivateDate) nextErrors.pursePrivateDate = 'Date is required.';
+        else if (isFutureDate(formData.pursePrivateDate)) nextErrors.pursePrivateDate = 'Invalid date. Please select today or a past date.';
         if (!formData.pursePrivateTime) nextErrors.pursePrivateTime = 'Time is required.';
+        else if (isFutureTimeOnDate(formData.pursePrivateDate, formData.pursePrivateTime)) nextErrors.pursePrivateTime = 'Invalid time. Please select current time or a past time.';
       }
     }
 
@@ -147,7 +189,9 @@ const ReportFoundItem = () => {
       if (!formData.otherPhoto) nextErrors.otherPhoto = 'Photo upload is required.';
       if (!formData.otherPrivateLocation.trim()) nextErrors.otherPrivateLocation = 'Location is required.';
       if (!formData.otherPrivateDate) nextErrors.otherPrivateDate = 'Date is required.';
+      else if (isFutureDate(formData.otherPrivateDate)) nextErrors.otherPrivateDate = 'Invalid date. Please select today or a past date.';
       if (!formData.otherPrivateTime) nextErrors.otherPrivateTime = 'Time is required.';
+      else if (isFutureTimeOnDate(formData.otherPrivateDate, formData.otherPrivateTime)) nextErrors.otherPrivateTime = 'Invalid time. Please select current time or a past time.';
     }
 
     setErrors(nextErrors);
@@ -419,12 +463,16 @@ const ReportFoundItem = () => {
                 <div className="form-row">
                   <div className="form-group">
                     <label className="required">Date</label>
-                    <input type="date" name="bankPrivateDate" value={formData.bankPrivateDate} onChange={handleInputChange} />
+                    <input type="date" name="bankPrivateDate" value={formData.bankPrivateDate} onChange={handleInputChange} max={currentDateValue} />
                     {errors.bankPrivateDate && <p className="error-text">{errors.bankPrivateDate}</p>}
                   </div>
                   <div className="form-group">
                     <label className="required">Time</label>
-                    <input type="time" name="bankPrivateTime" value={formData.bankPrivateTime} onChange={handleInputChange} />
+                    <TimeInputPicker
+                      value={formData.bankPrivateTime}
+                      onChange={(nextValue) => handleTimeChange('bankPrivateTime', nextValue)}
+                      maxTime={getMaxTimeForDate(formData.bankPrivateDate)}
+                    />
                     {errors.bankPrivateTime && <p className="error-text">{errors.bankPrivateTime}</p>}
                   </div>
                 </div>
@@ -527,12 +575,16 @@ const ReportFoundItem = () => {
                   <div className="form-row">
                     <div className="form-group">
                       <label className="required">Date</label>
-                      <input type="date" name="pursePrivateDate" value={formData.pursePrivateDate} onChange={handleInputChange} />
+                      <input type="date" name="pursePrivateDate" value={formData.pursePrivateDate} onChange={handleInputChange} max={currentDateValue} />
                       {errors.pursePrivateDate && <p className="error-text">{errors.pursePrivateDate}</p>}
                     </div>
                     <div className="form-group">
                       <label className="required">Time</label>
-                      <input type="time" name="pursePrivateTime" value={formData.pursePrivateTime} onChange={handleInputChange} />
+                      <TimeInputPicker
+                        value={formData.pursePrivateTime}
+                        onChange={(nextValue) => handleTimeChange('pursePrivateTime', nextValue)}
+                        maxTime={getMaxTimeForDate(formData.pursePrivateDate)}
+                      />
                       {errors.pursePrivateTime && <p className="error-text">{errors.pursePrivateTime}</p>}
                     </div>
                   </div>
@@ -591,12 +643,16 @@ const ReportFoundItem = () => {
                 <div className="form-row">
                   <div className="form-group">
                     <label className="required">Date</label>
-                    <input type="date" name="otherPrivateDate" value={formData.otherPrivateDate} onChange={handleInputChange} />
+                    <input type="date" name="otherPrivateDate" value={formData.otherPrivateDate} onChange={handleInputChange} max={currentDateValue} />
                     {errors.otherPrivateDate && <p className="error-text">{errors.otherPrivateDate}</p>}
                   </div>
                   <div className="form-group">
                     <label className="required">Time</label>
-                    <input type="time" name="otherPrivateTime" value={formData.otherPrivateTime} onChange={handleInputChange} />
+                    <TimeInputPicker
+                      value={formData.otherPrivateTime}
+                      onChange={(nextValue) => handleTimeChange('otherPrivateTime', nextValue)}
+                      maxTime={getMaxTimeForDate(formData.otherPrivateDate)}
+                    />
                     {errors.otherPrivateTime && <p className="error-text">{errors.otherPrivateTime}</p>}
                   </div>
                 </div>

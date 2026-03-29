@@ -1,5 +1,13 @@
+import TimeInputPicker from '../TimeInputPicker';
+
 const ClaimDetailsFields = ({ details, errors, onChange }) => {
   const fieldClassName = (fieldName) => (errors[fieldName] ? 'input-invalid' : '');
+
+  const now = new Date();
+  const currentDateValue = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const currentTimeValue = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const getMaxTimeForDate = (selectedDate) => (selectedDate === currentDateValue ? currentTimeValue : undefined);
+  const emitFieldChange = (name, value) => onChange?.({ target: { name, value } });
 
   return (
     <>
@@ -62,11 +70,14 @@ const ClaimDetailsFields = ({ details, errors, onChange }) => {
             <label htmlFor="fromTime" style={{ fontSize: '0.9rem' }}>From Time</label>
             <input
               id="fromTime"
-              type="time"
+              type="hidden"
               name="fromTime"
               value={details.fromTime}
-              onChange={onChange}
-              className={fieldClassName('fromTime')}
+            />
+            <TimeInputPicker
+              value={details.fromTime}
+              onChange={(value) => emitFieldChange('fromTime', value)}
+              maxTime={getMaxTimeForDate(details.lostDate)}
             />
             {errors.fromTime && <small className="field-error">{errors.fromTime}</small>}
           </div>
@@ -74,11 +85,14 @@ const ClaimDetailsFields = ({ details, errors, onChange }) => {
             <label htmlFor="toTime" style={{ fontSize: '0.9rem' }}>To Time</label>
             <input
               id="toTime"
-              type="time"
+              type="hidden"
               name="toTime"
               value={details.toTime}
-              onChange={onChange}
-              className={fieldClassName('toTime')}
+            />
+            <TimeInputPicker
+              value={details.toTime}
+              onChange={(value) => emitFieldChange('toTime', value)}
+              maxTime={getMaxTimeForDate(details.lostDate)}
             />
             {errors.toTime && <small className="field-error">{errors.toTime}</small>}
           </div>
@@ -93,6 +107,7 @@ const ClaimDetailsFields = ({ details, errors, onChange }) => {
           name="lostDate"
           value={details.lostDate}
           onChange={onChange}
+          max={currentDateValue}
           className={fieldClassName('lostDate')}
         />
         {errors.lostDate && <small className="field-error">{errors.lostDate}</small>}

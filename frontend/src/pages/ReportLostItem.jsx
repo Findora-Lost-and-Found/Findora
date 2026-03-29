@@ -15,6 +15,7 @@ import {
 } from '../utils/cardUtils';
 import { validateLostTimeWithDate } from '../utils/timeUtils';
 import { BANK_OPTIONS } from '../data/bankOptions';
+import TimeInputPicker from '../components/TimeInputPicker';
 import './ReportLostItem.css';
 
 const CATEGORY_OPTIONS = ['NIC', 'Student / Staff ID', 'Bank Card', 'Purse / Wallet', 'Others'];
@@ -78,6 +79,17 @@ const ReportLostItem = () => {
     purseWithIdToTime: ''
   });
 
+  const now = new Date();
+  const currentDateValue = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const currentTimeValue = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+  const getMaxTimeForDate = (selectedDate) => {
+    if (!selectedDate) {
+      return undefined;
+    }
+    return selectedDate === currentDateValue ? currentTimeValue : undefined;
+  };
+
   const navigate = useNavigate();
   const { logout } = useAuth();
 
@@ -117,6 +129,10 @@ const ReportLostItem = () => {
 
   const handleFileChange = (name, file) => {
     setFormData((prev) => ({ ...prev, [name]: file || null }));
+  };
+
+  const handleTimeChange = (name, nextValue) => {
+    setFormData((prev) => ({ ...prev, [name]: nextValue }));
   };
 
   const validate = () => {
@@ -384,7 +400,7 @@ const ReportLostItem = () => {
                 <h4>When did you lose it?</h4>
                 <div className="report-lost-form-group">
                   <label className="required">What date did you lose it?</label>
-                  <input type="date" name="nicDateLost" value={formData.nicDateLost} onChange={handleInputChange} />
+                  <input type="date" name="nicDateLost" value={formData.nicDateLost} onChange={handleInputChange} max={currentDateValue} />
                   {errors.nicDateLost && <p className="report-lost-error">{errors.nicDateLost}</p>}
                 </div>
                 <div className="report-lost-form-group">
@@ -392,12 +408,20 @@ const ReportLostItem = () => {
                   <div className="report-lost-row">
                     <div>
                       <label>From</label>
-                      <input type="time" name="nicFromTime" value={formData.nicFromTime} onChange={handleInputChange} />
+                      <TimeInputPicker
+                        value={formData.nicFromTime}
+                        onChange={(nextValue) => handleTimeChange('nicFromTime', nextValue)}
+                        maxTime={getMaxTimeForDate(formData.nicDateLost)}
+                      />
                       {errors.nicFromTime && <p className="report-lost-error">{errors.nicFromTime}</p>}
                     </div>
                     <div>
                       <label>To</label>
-                      <input type="time" name="nicToTime" value={formData.nicToTime} onChange={handleInputChange} />
+                      <TimeInputPicker
+                        value={formData.nicToTime}
+                        onChange={(nextValue) => handleTimeChange('nicToTime', nextValue)}
+                        maxTime={getMaxTimeForDate(formData.nicDateLost)}
+                      />
                       {errors.nicToTime && <p className="report-lost-error">{errors.nicToTime}</p>}
                     </div>
                   </div>
@@ -439,7 +463,7 @@ const ReportLostItem = () => {
                 <h4>When did you lose it?</h4>
                 <div className="report-lost-form-group">
                   <label className="required">What date did you lose it?</label>
-                  <input type="date" name="idDateLost" value={formData.idDateLost} onChange={handleInputChange} />
+                  <input type="date" name="idDateLost" value={formData.idDateLost} onChange={handleInputChange} max={currentDateValue} />
                   {errors.idDateLost && <p className="report-lost-error">{errors.idDateLost}</p>}
                 </div>
                 <div className="report-lost-form-group">
@@ -447,12 +471,20 @@ const ReportLostItem = () => {
                   <div className="report-lost-row">
                     <div>
                       <label>From</label>
-                      <input type="time" name="idFromTime" value={formData.idFromTime} onChange={handleInputChange} />
+                      <TimeInputPicker
+                        value={formData.idFromTime}
+                        onChange={(nextValue) => handleTimeChange('idFromTime', nextValue)}
+                        maxTime={getMaxTimeForDate(formData.idDateLost)}
+                      />
                       {errors.idFromTime && <p className="report-lost-error">{errors.idFromTime}</p>}
                     </div>
                     <div>
                       <label>To</label>
-                      <input type="time" name="idToTime" value={formData.idToTime} onChange={handleInputChange} />
+                      <TimeInputPicker
+                        value={formData.idToTime}
+                        onChange={(nextValue) => handleTimeChange('idToTime', nextValue)}
+                        maxTime={getMaxTimeForDate(formData.idDateLost)}
+                      />
                       {errors.idToTime && <p className="report-lost-error">{errors.idToTime}</p>}
                     </div>
                   </div>
@@ -509,7 +541,7 @@ const ReportLostItem = () => {
                 </div>
                 <div className="report-lost-form-group">
                   <label className="required">What date did you lose it?</label>
-                  <input type="date" name="bankDateLost" value={formData.bankDateLost} onChange={handleInputChange} />
+                  <input type="date" name="bankDateLost" value={formData.bankDateLost} onChange={handleInputChange} max={currentDateValue} />
                   {errors.bankDateLost && <p className="report-lost-error">{errors.bankDateLost}</p>}
                 </div>
 
@@ -518,12 +550,20 @@ const ReportLostItem = () => {
                   <div className="report-lost-row">
                     <div>
                       <label>From</label>
-                      <input type="time" name="bankFromTime" value={formData.bankFromTime} onChange={handleInputChange} />
+                      <TimeInputPicker
+                        value={formData.bankFromTime}
+                        onChange={(nextValue) => handleTimeChange('bankFromTime', nextValue)}
+                        maxTime={getMaxTimeForDate(formData.bankDateLost)}
+                      />
                       {errors.bankFromTime && <p className="report-lost-error">{errors.bankFromTime}</p>}
                     </div>
                     <div>
                       <label>To</label>
-                      <input type="time" name="bankToTime" value={formData.bankToTime} onChange={handleInputChange} />
+                      <TimeInputPicker
+                        value={formData.bankToTime}
+                        onChange={(nextValue) => handleTimeChange('bankToTime', nextValue)}
+                        maxTime={getMaxTimeForDate(formData.bankDateLost)}
+                      />
                       {errors.bankToTime && <p className="report-lost-error">{errors.bankToTime}</p>}
                     </div>
                   </div>
@@ -604,7 +644,7 @@ const ReportLostItem = () => {
                     </div>
                     <div className="report-lost-form-group">
                       <label className="required">What date did you lose it?</label>
-                      <input type="date" name="purseWithIdDateLost" value={formData.purseWithIdDateLost} onChange={handleInputChange} />
+                      <input type="date" name="purseWithIdDateLost" value={formData.purseWithIdDateLost} onChange={handleInputChange} max={currentDateValue} />
                       {errors.purseWithIdDateLost && <p className="report-lost-error">{errors.purseWithIdDateLost}</p>}
                     </div>
                     <div className="report-lost-form-group">
@@ -612,12 +652,20 @@ const ReportLostItem = () => {
                       <div className="report-lost-row">
                         <div>
                           <label>From</label>
-                          <input type="time" name="purseWithIdFromTime" value={formData.purseWithIdFromTime} onChange={handleInputChange} />
+                          <TimeInputPicker
+                            value={formData.purseWithIdFromTime}
+                            onChange={(nextValue) => handleTimeChange('purseWithIdFromTime', nextValue)}
+                            maxTime={getMaxTimeForDate(formData.purseWithIdDateLost)}
+                          />
                           {errors.purseWithIdFromTime && <p className="report-lost-error">{errors.purseWithIdFromTime}</p>}
                         </div>
                         <div>
                           <label>To</label>
-                          <input type="time" name="purseWithIdToTime" value={formData.purseWithIdToTime} onChange={handleInputChange} />
+                          <TimeInputPicker
+                            value={formData.purseWithIdToTime}
+                            onChange={(nextValue) => handleTimeChange('purseWithIdToTime', nextValue)}
+                            maxTime={getMaxTimeForDate(formData.purseWithIdDateLost)}
+                          />
                           {errors.purseWithIdToTime && <p className="report-lost-error">{errors.purseWithIdToTime}</p>}
                         </div>
                       </div>
@@ -645,7 +693,7 @@ const ReportLostItem = () => {
 
                   <div className="report-lost-form-group">
                     <label className="required">What date did you lose it?</label>
-                    <input type="date" name="purseDateLost" value={formData.purseDateLost} onChange={handleInputChange} />
+                    <input type="date" name="purseDateLost" value={formData.purseDateLost} onChange={handleInputChange} max={currentDateValue} />
                     {errors.purseDateLost && <p className="report-lost-error">{errors.purseDateLost}</p>}
                   </div>
 
@@ -654,12 +702,20 @@ const ReportLostItem = () => {
                     <div className="report-lost-row">
                       <div>
                         <label>From</label>
-                        <input type="time" name="purseFromTime" value={formData.purseFromTime} onChange={handleInputChange} />
+                        <TimeInputPicker
+                          value={formData.purseFromTime}
+                          onChange={(nextValue) => handleTimeChange('purseFromTime', nextValue)}
+                          maxTime={getMaxTimeForDate(formData.purseDateLost)}
+                        />
                         {errors.purseFromTime && <p className="report-lost-error">{errors.purseFromTime}</p>}
                       </div>
                       <div>
                         <label>To</label>
-                        <input type="time" name="purseToTime" value={formData.purseToTime} onChange={handleInputChange} />
+                        <TimeInputPicker
+                          value={formData.purseToTime}
+                          onChange={(nextValue) => handleTimeChange('purseToTime', nextValue)}
+                          maxTime={getMaxTimeForDate(formData.purseDateLost)}
+                        />
                         {errors.purseToTime && <p className="report-lost-error">{errors.purseToTime}</p>}
                       </div>
                     </div>
@@ -726,7 +782,7 @@ const ReportLostItem = () => {
 
               <div className="report-lost-form-group">
                 <label className="required">Date lost</label>
-                <input type="date" name="otherDateLost" value={formData.otherDateLost} onChange={handleInputChange} />
+                <input type="date" name="otherDateLost" value={formData.otherDateLost} onChange={handleInputChange} max={currentDateValue} />
                 {errors.otherDateLost && <p className="report-lost-error">{errors.otherDateLost}</p>}
               </div>
 
@@ -735,12 +791,20 @@ const ReportLostItem = () => {
                 <div className="report-lost-row">
                   <div>
                     <label>From</label>
-                    <input type="time" name="otherFromTime" value={formData.otherFromTime} onChange={handleInputChange} />
+                    <TimeInputPicker
+                      value={formData.otherFromTime}
+                      onChange={(nextValue) => handleTimeChange('otherFromTime', nextValue)}
+                      maxTime={getMaxTimeForDate(formData.otherDateLost)}
+                    />
                     {errors.otherFromTime && <p className="report-lost-error">{errors.otherFromTime}</p>}
                   </div>
                   <div>
                     <label>To</label>
-                    <input type="time" name="otherToTime" value={formData.otherToTime} onChange={handleInputChange} />
+                    <TimeInputPicker
+                      value={formData.otherToTime}
+                      onChange={(nextValue) => handleTimeChange('otherToTime', nextValue)}
+                      maxTime={getMaxTimeForDate(formData.otherDateLost)}
+                    />
                     {errors.otherToTime && <p className="report-lost-error">{errors.otherToTime}</p>}
                   </div>
                 </div>
