@@ -14,7 +14,6 @@ import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -255,6 +254,7 @@ public class SecurityService {
         return claimRepository
             .findByStatusInOrderByClaimedAtDesc(EnumSet.of(Claim.ClaimStatus.PENDING, Claim.ClaimStatus.APPROVED))
             .stream()
+            .filter(this::isEligibleForPendingClaims)
             .map(this::toPendingClaimDto)
             .toList();
     }
@@ -326,6 +326,9 @@ public class SecurityService {
         String location = item != null && item.getLocation() != null ? item.getLocation() : "Unknown location";
         String fullName = claimer != null && claimer.getFullName() != null ? claimer.getFullName() : "Unknown claimer";
         String phone = claimer != null && claimer.getPhone() != null ? claimer.getPhone() : "N/A";
+        ItemStatus itemStatus = item != null ? item.getStatus() : null;
+        boolean receivedBySecurity = itemStatus == ItemStatus.HELD_BY_SECURITY
+            || itemStatus == ItemStatus.HANDED_TO_SECURITY;
 
         return new SecurityPendingClaimDTO(
             claim.getId(),
@@ -336,8 +339,23 @@ public class SecurityService {
             location,
             fullName,
             phone,
-            claim.getClaimedAt()
+            claim.getClaimedAt(),
+            itemStatus != null ? itemStatus.name() : null,
+            receivedBySecurity
         );
+    }
+
+    private boolean isEligibleForPendingClaims(Claim claim) {
+        Item item = claim.getItem();
+        if (item == null && claim.getItemId() != null) {
+            item = itemRepository.findById(claim.getItemId()).orElse(null);
+        }
+
+        if (item == null || item.getType() != ItemType.FOUND || item.getStatus() == null) {
+            return false;
+        }
+
+        return item.getStatus() != ItemStatus.CLAIMED && item.getStatus() != ItemStatus.CLOSED;
     }
 
     private void ensureItemStatusSupportsSecurityStates() {
@@ -384,7 +402,7 @@ public class SecurityService {
             log.info("Applying items.status compatibility patch: {}", alterSql);
             jdbcTemplate.execute(alterSql);
             log.info("Patched items.status enum values for handover compatibility");
-        } catch (DataAccessException | IllegalStateException e) {
+        } catch (DataAccessException e) {
             log.warn("Schema compatibility check skipped (database may be unavailable): {}", e.getMessage());
         }
     }

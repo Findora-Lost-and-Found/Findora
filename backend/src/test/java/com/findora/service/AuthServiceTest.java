@@ -53,6 +53,7 @@ class AuthServiceTest {
     private AuthService authService;
 
     @BeforeEach
+    @SuppressWarnings("unused")
     void setUp() {
         lenient().when(accessControlService.refreshAndGetAccessState(any(User.class))).thenReturn(AccessState.ALLOWED);
         authService = new AuthService(
