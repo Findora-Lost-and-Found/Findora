@@ -361,18 +361,6 @@ public class ItemController {
             .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
     }
 
-    /**
-     * Check if current user has admin role.
-     */
-    private boolean isAdmin() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null) {
-            return false;
-        }
-        return auth.getAuthorities().stream()
-            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("admin"));
-    }
-
     private Map<String, Object> toItemPayload(Item item) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("id", item.getId());
