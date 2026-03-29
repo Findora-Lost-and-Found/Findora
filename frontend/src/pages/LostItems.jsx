@@ -158,73 +158,71 @@ const LostItems = () => {
 
   return (
     <div className="container">
-      <h1>My Lost Items</h1>
+        <div className="filters">
+          <select name="category" value={filters.category} onChange={handleFilterChange}>
+            <option value="">All Categories</option>
+            <option value="NIC">NIC</option>
+            <option value="Student ID">Student ID</option>
+            <option value="Bank Card">Bank Card</option>
+            <option value="Wallet">Wallet</option>
+            <option value="Other">Other</option>
+          </select>
 
-      <div className="filters">
-        <select name="category" value={filters.category} onChange={handleFilterChange}>
-          <option value="">All Categories</option>
-          <option value="NIC">NIC</option>
-          <option value="Student ID">Student ID</option>
-          <option value="Bank Card">Bank Card</option>
-          <option value="Wallet">Wallet</option>
-          <option value="Other">Other</option>
-        </select>
+          <form className="search-form" onSubmit={handleSearchSubmit}>
+            <input
+              type="text"
+              name="search"
+              placeholder="Search items..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+            />
+            <button type="submit" className="search-icon-btn" aria-label="Search lost items">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+                <path d="M10.5 3a7.5 7.5 0 0 1 5.93 12.1l4.24 4.23a1 1 0 1 1-1.41 1.42l-4.24-4.24A7.5 7.5 0 1 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11a5.5 5.5 0 0 0 0-11z" fill="currentColor"/>
+              </svg>
+            </button>
+          </form>
 
-        <form className="search-form" onSubmit={handleSearchSubmit}>
-          <input
-            type="text"
-            name="search"
-            placeholder="Search items..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-          />
-          <button type="submit" className="search-icon-btn" aria-label="Search lost items">
-            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
-              <path d="M10.5 3a7.5 7.5 0 0 1 5.93 12.1l4.24 4.23a1 1 0 1 1-1.41 1.42l-4.24-4.24A7.5 7.5 0 1 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11a5.5 5.5 0 0 0 0-11z" fill="currentColor"/>
-            </svg>
-          </button>
-        </form>
+          <select name="sortBy" value={filters.sortBy} onChange={handleFilterChange}>
+            <option value={FOUND_ITEM_SORT.LATEST}>Latest</option>
+            <option value={FOUND_ITEM_SORT.NAME_ASC}>Alphabetical A {'->'} Z</option>
+            <option value={FOUND_ITEM_SORT.NAME_DESC}>Alphabetical Z {'->'} A</option>
+          </select>
+        </div>
 
-        <select name="sortBy" value={filters.sortBy} onChange={handleFilterChange}>
-          <option value={FOUND_ITEM_SORT.LATEST}>Latest</option>
-          <option value={FOUND_ITEM_SORT.NAME_ASC}>Alphabetical A {'->'} Z</option>
-          <option value={FOUND_ITEM_SORT.NAME_DESC}>Alphabetical Z {'->'} A</option>
-        </select>
-      </div>
+        <div className="items-grid">
+          {items.length === 0 ? (
+            <p>You have not posted any lost items yet.</p>
+          ) : (
+            items.map(item => (
+              <div key={item.id}>
+                <ItemCard item={item} />
 
-      <div className="items-grid">
-        {items.length === 0 ? (
-          <p>You have not posted any lost items yet.</p>
-        ) : (
-          items.map(item => (
-            <div key={item.id}>
-              <ItemCard item={item} />
+                {(matchesByLostId[item.id] || []).length > 0 && (
+                  <div className="suggested-matches-block">
+                    <h3>Suggested Matches</h3>
+                    {(matchesByLostId[item.id] || []).map((match) => (
+                      <MatchCard
+                        key={match.matchId}
+                        match={match}
+                        otpValue={otpInputs[match.matchId]}
+                        onOtpChange={handleOtpInput}
+                        onClaimViaOtp={handleClaimViaOtp}
+                        onResendOtp={handleResendOtp}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
 
-              {(matchesByLostId[item.id] || []).length > 0 && (
-                <div className="suggested-matches-block">
-                  <h3>Suggested Matches</h3>
-                  {(matchesByLostId[item.id] || []).map((match) => (
-                    <MatchCard
-                      key={match.matchId}
-                      match={match}
-                      otpValue={otpInputs[match.matchId]}
-                      onOtpChange={handleOtpInput}
-                      onClaimViaOtp={handleClaimViaOtp}
-                      onResendOtp={handleResendOtp}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          ))
-        )}
-      </div>
-
-      <Pagination
-        currentPage={pagination.pageNumber}
-        totalPages={pagination.totalPages}
-        onPageChange={setCurrentPage}
-      />
+        <Pagination
+          currentPage={pagination.pageNumber}
+          totalPages={pagination.totalPages}
+          onPageChange={setCurrentPage}
+        />
     </div>
   );
 };
