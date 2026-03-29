@@ -168,6 +168,11 @@ const Settings = () => {
       return;
     }
 
+    const confirmed = window.confirm('Are you sure you want to permanently delete your account? This action cannot be undone.');
+    if (!confirmed) {
+      return;
+    }
+
     try {
       setDeleteLoading(true);
       const response = await authAPI.confirmDeleteAccount({ otp: deleteOtp.trim() });
