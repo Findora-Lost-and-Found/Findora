@@ -86,8 +86,7 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
       const [itemsRes, claimsRes, foundRes] = await Promise.allSettled([
         itemsAPI.getMy(),
         claimsAPI.getMy(),
-        // Reuse the same found-items feed for any role that shares the dashboard UI.
-        itemsAPI.getAll({ type: 'found' })
+        itemsAPI.getMy({ type: 'found', page: 0, size: 100, sort: 'createdAt,desc' })
       ]);
 
       setStats({

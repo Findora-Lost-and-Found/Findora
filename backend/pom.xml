@@ -131,6 +131,9 @@
                 <configuration>
                     <release>17</release>
                     <parameters>true</parameters>
+                    <compilerArgs>
+                        <arg>-Xlint</arg>
+                    </compilerArgs>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>

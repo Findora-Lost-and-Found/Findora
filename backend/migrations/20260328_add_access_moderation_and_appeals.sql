@@ -3,8 +3,8 @@ ALTER TABLE users
   ADD COLUMN suspension_until DATETIME NULL AFTER bad_post_attempts;
 
 CREATE TABLE IF NOT EXISTS user_access_appeals (
-  id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  user_id BIGINT NOT NULL,
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  user_id INT NOT NULL,
   action_type ENUM('suspension', 'ban') NOT NULL,
   status ENUM('pending', 'approved', 'declined') NOT NULL DEFAULT 'pending',
   appeal_text TEXT NOT NULL,

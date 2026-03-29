@@ -15,8 +15,6 @@ public class AdminAccountInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        // Bootstrap account initialization disabled due to database connection issues
-        // Users can register through the UI or use /api/auth/register endpoint
-        log.info("AdminAccountInitializer: Skipped (use registration API instead)");
+        log.info("AdminAccountInitializer: Skipped (using existing database users)");
     }
 }

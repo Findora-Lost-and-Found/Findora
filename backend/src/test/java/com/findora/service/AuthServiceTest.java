@@ -10,8 +10,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.lenient;
 import org.mockito.Mock;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -28,7 +28,7 @@ import com.findora.security.JwtTokenProvider;
 import com.findora.service.AccessControlService.AccessState;
 
 @ExtendWith(MockitoExtension.class)
-@SuppressWarnings("null")
+@SuppressWarnings({"null", "unused"})
 class AuthServiceTest {
 
     @Mock
@@ -55,6 +55,7 @@ class AuthServiceTest {
     private AuthService authService;
 
     @BeforeEach
+    @SuppressWarnings("unused")
     void setUp() {
         lenient().when(accessControlService.refreshAndGetAccessState(any(User.class))).thenReturn(AccessState.ALLOWED);
         authService = new AuthService(
@@ -69,6 +70,7 @@ class AuthServiceTest {
     }
 
     @Test
+    @SuppressWarnings("unused")
     void getCurrentUserByUsernameShouldIncludeCreatedAtMapping() {
         User user = new User();
         user.setId(1L);

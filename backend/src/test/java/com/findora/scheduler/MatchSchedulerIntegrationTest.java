@@ -26,6 +26,7 @@ import com.findora.service.MatchService;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@SuppressWarnings({"null", "unused"})
 class MatchSchedulerIntegrationTest {
 
     @Autowired
@@ -100,6 +101,7 @@ class MatchSchedulerIntegrationTest {
     }
 
     @Test
+    @SuppressWarnings("unused")
     void scheduledSweepShouldCreateAndNotifyExactIdMatch() {
         int notifications = matchService.runScheduledMatchingSweep();
 

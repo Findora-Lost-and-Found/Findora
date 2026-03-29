@@ -12,10 +12,9 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import jakarta.annotation.PostConstruct;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -41,6 +40,8 @@ import com.findora.repository.ItemRepository;
 import com.findora.repository.NotificationRepository;
 import com.findora.repository.SecurityTransactionRepository;
 import com.findora.repository.UserRepository;
+
+import jakarta.annotation.PostConstruct;
 
 @Service
 @SuppressWarnings("null")
@@ -383,7 +384,7 @@ public class SecurityService {
             log.info("Applying items.status compatibility patch: {}", alterSql);
             jdbcTemplate.execute(alterSql);
             log.info("Patched items.status enum values for handover compatibility");
-        } catch (Exception e) {
+        } catch (DataAccessException | IllegalStateException e) {
             log.warn("Schema compatibility check skipped (database may be unavailable): {}", e.getMessage());
         }
     }
