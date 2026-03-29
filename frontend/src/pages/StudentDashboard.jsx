@@ -49,6 +49,7 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
   const [loading, setLoading] = useState(true);
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [foundItems, setFoundItems] = useState([]);
+  const [showAllFoundItems, setShowAllFoundItems] = useState(false);
 
   const canUseItemDashboard = !!user && postRoles.includes(user.role);
 
@@ -93,10 +94,12 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
           }
         }));
         const sortedFoundItems = sortFoundItems(apiItems, FOUND_ITEM_SORT.LATEST);
-        setFoundItems(sortedFoundItems.slice(0, 6));
+        setFoundItems(sortedFoundItems);
+        setShowAllFoundItems(false);
       } else {
         console.error('Dashboard found items fetch failed:', foundRes.reason?.response?.data || foundRes.reason?.message);
         setFoundItems([]);
+        setShowAllFoundItems(false);
       }
     } catch (error) {
       console.error('Error loading dashboard:', error);
@@ -109,6 +112,9 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
   if (loading) {
     return <div className="loading">Loading...</div>;
   }
+
+  const visibleFoundItems = showAllFoundItems ? foundItems : foundItems.slice(0, 6);
+  const canExpandFoundItems = foundItems.length > 6;
 
   return (
     <div className="container">
@@ -146,13 +152,22 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
           <div className="found-items-section">
             <div className="section-header">
               <h2>Recently Found Items</h2>
-              <Link to="/found-items" className="link-more">View All →</Link>
+              {canExpandFoundItems && (
+                <button
+                  type="button"
+                  className="link-more"
+                  onClick={() => setShowAllFoundItems((prev) => !prev)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                >
+                  {showAllFoundItems ? 'Show Less →' : 'View All →'}
+                </button>
+              )}
             </div>
             <div className="found-items-grid">
               {foundItems.length === 0 ? (
                 <p>No found items available right now.</p>
               ) : (
-                foundItems.map((item) => (
+                visibleFoundItems.map((item) => (
                   <FoundItemCard
                     key={item.id}
                     item={item}
