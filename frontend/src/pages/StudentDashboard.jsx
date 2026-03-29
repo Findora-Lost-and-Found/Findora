@@ -228,8 +228,8 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
 
               <select name="sortBy" value={filters.sortBy} onChange={handleFilterChange}>
                 <option value={FOUND_ITEM_SORT.LATEST}>Latest</option>
-                <option value={FOUND_ITEM_SORT.NAME_ASC}>Alphabetical A {'->'} Z</option>
-                <option value={FOUND_ITEM_SORT.NAME_DESC}>Alphabetical Z {'->'} A</option>
+                <option value={FOUND_ITEM_SORT.NAME_ASC}>Alphabetical A → Z</option>
+                <option value={FOUND_ITEM_SORT.NAME_DESC}>Alphabetical Z → A</option>
               </select>
             </div>
             <div className="found-items-grid">
