@@ -27,6 +27,7 @@ const ReportFoundItem = () => {
   const [formData, setFormData] = useState({
     nicName: '',
     nicNumber: '',
+    nicLocation1: '',
     idHolderType: '',
     idName: '',
     studentOrStaffId: '',
@@ -184,13 +185,13 @@ const ReportFoundItem = () => {
     if (category === 'NIC') {
       item_name = `NIC - ${formData.nicName || 'Unknown'}`;
       description = `NIC Number: ${normalizeNic(formData.nicNumber)}`;
-      // location defaults to 'Security Office'
+      location = (formData.nicLocation1 || '').trim() || location;
     }
 
     if (category === 'Student / Staff ID') {
       item_name = `Student/Staff ID - ${formData.idName || 'Unknown'}`;
       description = `ID Number: ${formData.studentOrStaffId}`;
-      // location defaults to 'Security Office'
+      location = (formData.idLocation1 || '').trim() || location;
     }
 
     if (category === 'Bank Card') {

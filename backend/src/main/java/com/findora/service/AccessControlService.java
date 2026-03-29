@@ -28,6 +28,7 @@ import com.findora.repository.ReportRepository;
 import com.findora.repository.UserRepository;
 
 @Service
+@SuppressWarnings("null")
 public class AccessControlService {
 
     private static final int MAX_BAD_ATTEMPTS_ALLOWED = 5;

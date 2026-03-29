@@ -1,16 +1,24 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../services/api';
 import { toast } from 'react-toastify';
 import PasswordInput from '../components/PasswordInput';
+import { useAuth } from '../context/AuthContext';
 
 const Settings = () => {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const [theme, setTheme] = useState('light');
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
+  const [deleteOtp, setDeleteOtp] = useState('');
+  const [deleteOtpSent, setDeleteOtpSent] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -103,6 +111,56 @@ const Settings = () => {
     }
   };
 
+  const openDeleteModal = () => {
+    setIsDeleteModalOpen(true);
+    setDeleteOtp('');
+    setDeleteOtpSent(false);
+    setDeleteLoading(false);
+  };
+
+  const closeDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setDeleteOtp('');
+    setDeleteOtpSent(false);
+    setDeleteLoading(false);
+  };
+
+  const handleRequestDeleteOtp = async () => {
+    try {
+      setDeleteLoading(true);
+      const response = await authAPI.requestDeleteAccountOtp();
+      toast.success(response.data?.message || 'OTP sent to your email');
+      setDeleteOtpSent(true);
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to send OTP';
+      toast.error(message);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleConfirmDeleteAccount = async (e) => {
+    e.preventDefault();
+
+    if (!deleteOtp.trim()) {
+      toast.error('OTP is required');
+      return;
+    }
+
+    try {
+      setDeleteLoading(true);
+      const response = await authAPI.confirmDeleteAccount({ otp: deleteOtp.trim() });
+      toast.success(response.data?.message || 'Account deleted successfully');
+      logout();
+      navigate('/signup', { replace: true });
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to delete account';
+      toast.error(message);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   return (
     <div className="container">
       <div className="profile-container">
@@ -139,6 +197,20 @@ const Settings = () => {
             onClick={() => setIsPasswordModalOpen(true)}
           >
             Change Password
+          </button>
+        </div>
+
+        <div className="profile-card" style={{ marginTop: '1rem', borderColor: '#fecaca' }}>
+          <h2 style={{ marginBottom: '0.75rem', color: '#b91c1c' }}>Delete Account</h2>
+          <p style={{ marginBottom: '1rem', color: '#7f1d1d' }}>
+            This action requires OTP verification via email and cannot be undone. Your activity history will be retained.
+          </p>
+          <button
+            type="button"
+            className="btn-danger"
+            onClick={openDeleteModal}
+          >
+            Delete Account
           </button>
         </div>
 
@@ -199,6 +271,56 @@ const Settings = () => {
                   </button>
                   <button type="submit" className="btn-primary" disabled={loading}>
                     {loading ? 'Updating Password...' : 'Submit'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {isDeleteModalOpen && (
+          <div className="profile-password-overlay" onClick={closeDeleteModal}>
+            <div className="profile-password-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="profile-password-header">
+                <h3>Delete Account</h3>
+                <button type="button" className="profile-password-close" onClick={closeDeleteModal}>✕</button>
+              </div>
+
+              <p style={{ color: '#6B7280', marginBottom: '0.75rem' }}>
+                Step 1: Send OTP to your registered email.
+              </p>
+
+              <div className="form-actions" style={{ marginTop: 0, marginBottom: '1rem', justifyContent: 'flex-start' }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={handleRequestDeleteOtp}
+                  disabled={deleteLoading}
+                >
+                  {deleteLoading ? 'Sending OTP...' : (deleteOtpSent ? 'Resend OTP' : 'Send OTP')}
+                </button>
+              </div>
+
+              <form onSubmit={handleConfirmDeleteAccount} noValidate>
+                <div className="form-group">
+                  <label htmlFor="deleteOtp">Step 2: Enter OTP</label>
+                  <input
+                    id="deleteOtp"
+                    name="deleteOtp"
+                    value={deleteOtp}
+                    onChange={(e) => setDeleteOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="Enter 6-digit OTP"
+                    maxLength={6}
+                    inputMode="numeric"
+                  />
+                </div>
+
+                <div className="form-actions" style={{ marginTop: '0.5rem', justifyContent: 'flex-end' }}>
+                  <button type="button" className="btn-secondary" onClick={closeDeleteModal} disabled={deleteLoading}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn-danger" disabled={deleteLoading || !deleteOtpSent}>
+                    {deleteLoading ? 'Deleting...' : 'Confirm Delete'}
                   </button>
                 </div>
               </form>
