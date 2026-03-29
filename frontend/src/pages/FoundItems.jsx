@@ -198,7 +198,7 @@ const FoundItems = () => {
 
   return (
     <div className="container">
-      <h1>Found Items</h1>
+      <h1>My Found Items</h1>
 
       <div className="filters">
         <select name="category" value={filters.category} onChange={handleFilterChange}>
