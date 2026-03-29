@@ -1447,6 +1447,17 @@ body.dark-mode .search-form input {
   box-shadow: var(--shadow-sm);
 }
 
+.danger-zone-heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.danger-zone-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
 .profile-details {
   margin-top: 1.5rem;
 }

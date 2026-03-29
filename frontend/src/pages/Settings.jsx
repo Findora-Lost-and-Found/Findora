@@ -230,7 +230,10 @@ const Settings = () => {
         </div>
 
         <div className="profile-card" style={{ marginTop: '1rem', borderColor: '#fecaca' }}>
-          <h2 style={{ marginBottom: '0.75rem', color: '#b91c1c' }}>Delete Account</h2>
+          <h2 className="danger-zone-heading" style={{ marginBottom: '0.75rem', color: '#b91c1c' }}>
+            <span className="danger-zone-icon" aria-hidden="true">⚠️</span>
+            Delete Account
+          </h2>
           <p style={{ marginBottom: '1rem', color: '#7f1d1d' }}>
             This action requires OTP verification via email and cannot be undone. Your activity history will be retained.
           </p>
