@@ -8,10 +8,11 @@ import FoundItemCard from '../components/FoundItemCard';
 import SecurityDashboard from './SecurityDashboard';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT, isModerationRemovedItem, sortFoundItems } from '../utils/itemDisplayUtils';
-import { sampleFoundItems } from '../data/sampleFoundItems';
 import SampleItemImage from '../components/SampleItemImage';
 
 const ADMIN_PREVIEW_LIMIT = 5;
+const INITIAL_FOUND_VISIBLE = 6;
+const FOUND_LOAD_STEP = 3;
 const configuredApiUrl = import.meta.env.VITE_API_URL;
 const API_ORIGIN = (configuredApiUrl?.includes('localhost:5000')
   ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')
@@ -90,6 +91,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [foundItems, setFoundItems] = useState([]);
+  const [visibleFoundCount, setVisibleFoundCount] = useState(INITIAL_FOUND_VISIBLE);
   const [adminSections, setAdminSections] = useState({ found: [], received: [], released: [] });
   const [handoverLoadingById, setHandoverLoadingById] = useState({});
 
@@ -134,10 +136,12 @@ const Dashboard = () => {
           }));
           const visibleItems = apiItems.filter((item) => !isModerationRemovedItem(item));
           const sortedFoundItems = sortFoundItems(visibleItems, FOUND_ITEM_SORT.LATEST);
-          setFoundItems(sortedFoundItems.length > 0 ? sortedFoundItems.slice(0, 6) : sampleFoundItems);
+          setFoundItems(sortedFoundItems);
+          setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
         } else {
           console.error('Dashboard found items fetch failed:', foundRes.reason?.response?.data || foundRes.reason?.message);
-          setFoundItems(sampleFoundItems);
+          setFoundItems([]);
+          setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
         }
       } else if (user.role === 'admin') {
         const [foundRes, receivedRes, releasedRes, studentFoundRes] = await Promise.allSettled([
@@ -218,6 +222,10 @@ const Dashboard = () => {
     return <SecurityDashboard />;
   }
 
+  const visibleFoundItems = foundItems.slice(0, visibleFoundCount);
+  const hasMoreFoundItems = visibleFoundCount < foundItems.length;
+  const canToggleFoundItems = foundItems.length > INITIAL_FOUND_VISIBLE;
+
   return (
     <div className="container">
       <div className="dashboard">
@@ -252,13 +260,12 @@ const Dashboard = () => {
           <div className="found-items-section">
             <div className="section-header">
               <h2>Recently Found Items</h2>
-              <Link to="/found-items" className="link-more">View All -&gt;</Link>
             </div>
             <div className="found-items-grid">
               {foundItems.length === 0 ? (
                 <p>No found items available right now.</p>
               ) : (
-                foundItems.map((item) => (
+                visibleFoundItems.map((item) => (
                   <FoundItemCard
                     key={item.id}
                     item={item}
@@ -275,6 +282,24 @@ const Dashboard = () => {
                 ))
               )}
             </div>
+            {canToggleFoundItems && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                <button
+                  type="button"
+                  className="link-more"
+                  onClick={() => {
+                    if (hasMoreFoundItems) {
+                      setVisibleFoundCount((prev) => Math.min(prev + FOUND_LOAD_STEP, foundItems.length));
+                    } else {
+                      setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
+                    }
+                  }}
+                  style={{ background: 'none', border: 'none', padding: 0, fontWeight: 700, cursor: 'pointer' }}
+                >
+                  {hasMoreFoundItems ? 'Show more ↓' : 'Show less ↑'}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -283,7 +308,7 @@ const Dashboard = () => {
             <div className="section" style={{ marginTop: '2rem' }}>
               <div className="section-header" style={{ borderBottom: 'none', marginBottom: '0.25rem' }}>
                 <h2>Found</h2>
-                <Link to="/admin/items/found" className="link-more">View All -&gt;</Link>
+                <Link to="/admin/items/found" className="link-more">Show more ↓</Link>
               </div>
               <div className="table-container">
                 <table>
@@ -341,7 +366,7 @@ const Dashboard = () => {
             <div className="section" style={{ marginTop: '2rem' }}>
               <div className="section-header" style={{ borderBottom: 'none', marginBottom: '0.25rem' }}>
                 <h2>Receive</h2>
-                <Link to="/admin/items/receive" className="link-more">View All -&gt;</Link>
+                <Link to="/admin/items/receive" className="link-more">Show more ↓</Link>
               </div>
               <div className="table-container">
                 <table>
@@ -401,7 +426,7 @@ const Dashboard = () => {
             <div className="section" style={{ marginTop: '2rem' }}>
               <div className="section-header" style={{ borderBottom: 'none', marginBottom: '0.25rem' }}>
                 <h2>Release</h2>
-                <Link to="/admin/items/release" className="link-more">View All -&gt;</Link>
+                <Link to="/admin/items/release" className="link-more">Show more ↓</Link>
               </div>
               <div className="table-container">
                 <table>

@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { itemsAPI, claimsAPI } from '../services/api';
 import PostModal from '../components/PostModal';
 import FoundItemCard from '../components/FoundItemCard';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
-import { sampleFoundItems } from '../data/sampleFoundItems';
 
 const DEFAULT_POST_ROLES = ['student', 'staff', 'security'];
+const INITIAL_FOUND_VISIBLE = 6;
+const FOUND_LOAD_STEP = 3;
 const configuredApiUrl = import.meta.env.VITE_API_URL;
 const API_ORIGIN = (configuredApiUrl?.includes('localhost:5000')
   ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')
@@ -56,6 +57,7 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
   const [loading, setLoading] = useState(true);
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [foundItems, setFoundItems] = useState([]);
+  const [visibleFoundCount, setVisibleFoundCount] = useState(INITIAL_FOUND_VISIBLE);
 
   const canUseItemDashboard = !!user && postRoles.includes(user.role);
 
@@ -100,14 +102,17 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
           }
         }));
         const sortedFoundItems = sortFoundItems(apiItems, FOUND_ITEM_SORT.LATEST);
-        setFoundItems(sortedFoundItems.length > 0 ? sortedFoundItems.slice(0, 6) : sampleFoundItems);
+        setFoundItems(sortedFoundItems);
+        setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
       } else {
         console.error('Dashboard found items fetch failed:', foundRes.reason?.response?.data || foundRes.reason?.message);
-        setFoundItems(sampleFoundItems);
+        setFoundItems([]);
+        setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
       }
     } catch (error) {
       console.error('Error loading dashboard:', error);
       setFoundItems([]);
+      setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
     } finally {
       setLoading(false);
     }
@@ -116,6 +121,10 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
   if (loading) {
     return <div className="loading">Loading...</div>;
   }
+
+  const visibleFoundItems = foundItems.slice(0, visibleFoundCount);
+  const hasMoreFoundItems = visibleFoundCount < foundItems.length;
+  const canToggleFoundItems = foundItems.length > INITIAL_FOUND_VISIBLE;
 
   return (
     <div className="container">
@@ -149,27 +158,48 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
         {/* Inject role-specific controls without duplicating the shared dashboard layout. */}
         {extraPanel}
 
-        {canUseItemDashboard && foundItems.length > 0 && (
+        {canUseItemDashboard && (
           <div className="found-items-section">
             <div className="section-header">
               <h2>Recently Found Items</h2>
-              <Link to="/found-items" className="link-more">View All →</Link>
             </div>
             <div className="found-items-grid">
-              {foundItems.map((item) => (
-                <FoundItemCard
-                  key={item.id}
-                  item={item}
-                  onClaim={() => {
-                    claimsAPI.create(item.id).then(() => {
-                      navigate('/my-claims');
-                    }).catch((err) => {
-                      console.error('Claim error:', err);
-                    });
-                  }}
-                />
-              ))}
+              {foundItems.length === 0 ? (
+                <p>No found items available right now.</p>
+              ) : (
+                visibleFoundItems.map((item) => (
+                  <FoundItemCard
+                    key={item.id}
+                    item={item}
+                    onClaim={() => {
+                      claimsAPI.create(item.id).then(() => {
+                        navigate('/my-claims');
+                      }).catch((err) => {
+                        console.error('Claim error:', err);
+                      });
+                    }}
+                  />
+                ))
+              )}
             </div>
+            {canToggleFoundItems && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                <button
+                  type="button"
+                  className="link-more"
+                  onClick={() => {
+                    if (hasMoreFoundItems) {
+                      setVisibleFoundCount((prev) => Math.min(prev + FOUND_LOAD_STEP, foundItems.length));
+                    } else {
+                      setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
+                    }
+                  }}
+                  style={{ background: 'none', border: 'none', padding: 0, fontWeight: 700, cursor: 'pointer' }}
+                >
+                  {hasMoreFoundItems ? 'Show more ↓' : 'Show less ↑'}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
