@@ -48,6 +48,7 @@ import com.findora.model.ItemType;
 import com.findora.repository.ItemRepository;
 import com.findora.repository.UserRepository;
 import com.findora.service.ItemService;
+import com.findora.service.MatchService;
 
 /**
  * ItemController - REST endpoints for items (lost/found).
@@ -66,16 +67,18 @@ public class ItemController {
     private final ItemService itemService;
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
+    private final MatchService matchService;
     private static final Logger log = LoggerFactory.getLogger(ItemController.class);
     private static final Pattern CARD_NUMBER_PATTERN = Pattern.compile("^\\d{16}$");
 
     @Value("${app.upload.dir:uploads}")
     private String uploadDir;
 
-    public ItemController(ItemService itemService, ItemRepository itemRepository, UserRepository userRepository) {
+    public ItemController(ItemService itemService, ItemRepository itemRepository, UserRepository userRepository, MatchService matchService) {
         this.itemService = itemService;
         this.itemRepository = itemRepository;
         this.userRepository = userRepository;
+        this.matchService = matchService;
     }
 
     /**
@@ -231,6 +234,15 @@ public class ItemController {
 
             if (savedDto.isPresent()) {
                 log.info("Item created with ID: {}, image_url: {}", saved.getId(), savedDto.get().getImageUrl());
+            }
+
+            try {
+                int immediateNotifications = matchService.runImmediateIdBasedMatching(saved.getId());
+                if (immediateNotifications > 0) {
+                    log.info("Immediate ID-based matching sent notifications={} for itemId={}", immediateNotifications, saved.getId());
+                }
+            } catch (Exception immediateMatchError) {
+                log.warn("Immediate ID-based matching failed for itemId={}: {}", saved.getId(), immediateMatchError.getMessage());
             }
 
             return ResponseEntity.status(HttpStatus.CREATED)

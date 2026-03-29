@@ -164,7 +164,7 @@ const SecurityReceiveItems = () => {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                           <span>{item.finderName || item.full_name || 'Unknown Finder'}</span>
                           <small style={{ color: '#64748b' }}>
-                            Student ID: {item.student_id || item.studentId || 'Not available'}
+                            ID: {item.student_id || item.studentId || 'Not available'}
                           </small>
                         </div>
                       </td>

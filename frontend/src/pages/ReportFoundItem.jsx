@@ -25,6 +25,9 @@ const ReportFoundItem = () => {
   const [formData, setFormData] = useState({
     nicName: '',
     nicNumber: '',
+    nicLocation1: '',
+    nicLocation2: '',
+    nicLocation3: '',
     idHolderType: '',
     idName: '',
     studentOrStaffId: '',
@@ -182,7 +185,7 @@ const ReportFoundItem = () => {
     if (category === 'NIC') {
       item_name = `NIC - ${formData.nicName || 'Unknown'}`;
       description = `NIC Number: ${normalizeNic(formData.nicNumber)}`;
-      location = formData.nicLocation1.trim() || location;
+      location = (formData.nicLocation1 || '').trim() || location;
     }
 
     if (category === 'Student / Staff ID') {

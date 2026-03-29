@@ -260,7 +260,7 @@ const SecurityPendingClaims = () => {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                         <span>{claimantName}</span>
                         <small style={{ color: '#64748b' }}>
-                          Student ID: {studentId || 'Not available'}
+                          ID: {studentId || 'Not available'}
                         </small>
                       </div>
                     </td>
