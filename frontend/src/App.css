@@ -1490,6 +1490,88 @@ body.dark-mode .search-form input {
   gap: 0.5rem;
 }
 
+.theme-tile {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #0f172a;
+  min-width: 132px;
+  min-height: 64px;
+  padding: 0.55rem 0.7rem;
+  display: flex;
+  align-items: center;
+  gap: 0.62rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.theme-tile:hover {
+  border-color: #94a3b8;
+  transform: translateY(-1px);
+}
+
+.theme-tile:focus-visible {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.16);
+}
+
+.theme-tile.is-active {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.14);
+}
+
+.theme-tile-preview {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.theme-preview-light {
+  background: linear-gradient(145deg, #fef9c3 0%, #fef3c7 100%);
+}
+
+.theme-preview-sun {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #f59e0b;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.2);
+}
+
+.theme-preview-dark {
+  background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
+}
+
+.theme-preview-moon {
+  width: 17px;
+  height: 17px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  position: relative;
+}
+
+.theme-preview-moon::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 6px;
+  width: 17px;
+  height: 17px;
+  border-radius: 999px;
+  background: #0f172a;
+}
+
+.theme-tile-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .profile-password-overlay {
   position: fixed;
   top: 0;
@@ -1774,6 +1856,29 @@ body.dark-mode .report-page,
 body.dark-mode .profile-password-modal {
   background: #111827;
   border-color: #374151;
+}
+
+body.dark-mode .theme-tile {
+  background: #1f2937;
+  color: #f3f4f6;
+  border-color: #4b5563;
+}
+
+body.dark-mode .theme-tile:hover {
+  border-color: #64748b;
+}
+
+body.dark-mode .theme-tile.is-active {
+  border-color: #5eead4;
+  box-shadow: 0 0 0 2px rgba(94, 234, 212, 0.2);
+}
+
+body.dark-mode .theme-preview-light {
+  background: linear-gradient(145deg, #f59e0b 0%, #d97706 100%);
+}
+
+body.dark-mode .theme-preview-dark {
+  background: linear-gradient(145deg, #334155 0%, #111827 100%);
 }
 
 body.dark-mode .auth-card h2,
