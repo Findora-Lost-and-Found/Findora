@@ -7,7 +7,8 @@ import PostModal from '../components/PostModal';
 import FoundItemCard from '../components/FoundItemCard';
 import SecurityDashboard from './SecurityDashboard';
 import { normalizeCategory } from '../utils/categoryUtils';
-import { FOUND_ITEM_SORT, isModerationRemovedItem, sortFoundItems } from '../utils/itemDisplayUtils';
+import { FOUND_ITEM_SORT, getModeratedItemTitle, isModerationRemovedItem, sortFoundItems } from '../utils/itemDisplayUtils';
+import { sampleFoundItems } from '../data/sampleFoundItems';
 import SampleItemImage from '../components/SampleItemImage';
 
 const ADMIN_PREVIEW_LIMIT = 5;
@@ -64,6 +65,8 @@ const formatDateTime = (value) => {
 };
 
 const normalizeAdminDashboardItem = (item, section) => {
+  const rawItemName = readFirst(item, ['name', 'item_name', 'itemName'], 'Unnamed Item');
+  const moderatedItemName = getModeratedItemTitle(rawItemName);
   const dateTime = section === 'released'
     ? readFirst(item, ['released_at', 'releasedAt', 'date_released', 'dateReleased', 'created_at', 'createdAt'])
     : section === 'received'
@@ -72,8 +75,8 @@ const normalizeAdminDashboardItem = (item, section) => {
 
   return {
     id: item.id,
-    itemName: readFirst(item, ['name', 'item_name', 'itemName'], 'Unnamed Item'),
-    category: normalizeCategory(readFirst(item, ['category']), readFirst(item, ['name', 'item_name', 'itemName'])),
+    itemName: moderatedItemName,
+    category: normalizeCategory(readFirst(item, ['category']), moderatedItemName),
     itemImage: toImageUrl(readFirst(item, ['image_url', 'imageUrl', 'image'])),
     founder: readFirst(item, ['founder_username', 'founderUsername', 'found_by_username', 'posted_by_username', 'username'], 'Unknown'),
     security: readFirst(item, ['security_username', 'securityUsername', 'received_by_username', 'released_by_username'], 'Unknown'),
@@ -148,7 +151,7 @@ const Dashboard = () => {
           setFoundItems([]);
           setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
         }
-      } else if (user.role === 'admin') {
+      } else if (user.role === 'admin' || user.role === 'super_admin') {
         const [foundRes, receivedRes, releasedRes, studentFoundRes] = await Promise.allSettled([
           adminAPI.getItems({ status: 'found', page: 0, size: ADMIN_PREVIEW_LIMIT, sort: 'createdAt,desc' }),
           adminAPI.getItems({ status: 'received', page: 0, size: ADMIN_PREVIEW_LIMIT, sort: 'createdAt,desc' }),
@@ -287,7 +290,7 @@ const Dashboard = () => {
           </div>
         )}
 
-        {(user?.role === 'security' || user?.role === 'admin') && !user?.is_approved && (
+        {(user?.role === 'security' || user?.role === 'admin' || user?.role === 'super_admin') && !user?.is_approved && (
           <div className="alert alert-info">
             Your account is pending admin approval.
           </div>
@@ -372,7 +375,7 @@ const Dashboard = () => {
           </div>
         )}
 
-        {user?.role === 'admin' && (
+        {(user?.role === 'admin' || user?.role === 'super_admin') && (
           <>
             <div className="section" style={{ marginTop: '2rem' }}>
               <div className="section-header" style={{ borderBottom: 'none', marginBottom: '0.25rem' }}>

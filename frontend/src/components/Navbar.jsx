@@ -110,12 +110,21 @@ const Navbar = () => {
 
               {user.role === 'admin' && (
                 <>
-                  <NavLink to="/admin-panel" className={getNavLinkClassName}>Admin Panel</NavLink>
-                  <NavLink to="/admin/users" className={getNavLinkClassName}>Users</NavLink>
-                  <NavLink to="/admin/pending-approvals" className={getNavLinkClassName}>Pending Approvals</NavLink>
-                  <NavLink to="/admin/appeals" className={getNavLinkClassName}>Appeals</NavLink>
-                  <NavLink to="/admin/items" className={getNavLinkClassName}>Items</NavLink>
-                  <NavLink to="/admin/reports" className={getNavLinkClassName}>Reports</NavLink>
+                  <Link to="/admin-panel" className="nav-link">Admin Panel</Link>
+                  <Link to="/admin/users" className="nav-link">Users</Link>
+                  <Link to="/admin/pending-approvals" className="nav-link">Pending Approvals</Link>
+                  <Link to="/admin/appeals" className="nav-link">Appeals</Link>
+                  <Link to="/admin/items" className="nav-link">Items</Link>
+                  <Link to="/admin/reports" className="nav-link">Reports</Link>
+                </>
+              )}
+
+              {user.role === 'super_admin' && (
+                <>
+                  <Link to="/admin-panel" className="nav-link">Super Admin Panel</Link>
+                  <Link to="/admin/users" className="nav-link">Admins</Link>
+                  <Link to="/admin/pending-approvals" className="nav-link">Pending Approvals</Link>
+                  <Link to="/admin/appeals" className="nav-link">Appeals</Link>
                 </>
               )}
 

@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(100) UNIQUE NOT NULL,
   password VARCHAR(255) NOT NULL,
   full_name VARCHAR(100) NOT NULL,
-  role ENUM('student', 'staff', 'security', 'admin') NOT NULL,
+  role ENUM('student', 'staff', 'security', 'admin', 'super_admin') NOT NULL,
   phone VARCHAR(20),
   pending_phone VARCHAR(20),
   is_verified BOOLEAN DEFAULT FALSE,
@@ -37,7 +37,8 @@ CREATE TABLE IF NOT EXISTS users (
 INSERT IGNORE INTO users (username, email, password, full_name, role, is_verified, is_approved) 
 VALUES 
   ('isaiyalan', 'isaiyalan.24@cse.mrt.ac.lk', '$2a$10$KW/1AYWm4K0rJ3gkC3QNL.1MfDlKlZDGX2r7DEhNQGV3ioOoVm2X.', 'Isaiyalan', 'student', 1, 1),
-  ('admin', 'admin@findora.com', '$2a$10$rZ4JqL9WGxYnXH3kqVqVvOQNUZJxKD7GKqFNO3NfGOvHgZ8FfKFVW', 'Admin User', 'admin', 1, 1);
+  ('admin', 'admin@findora.com', '$2a$10$rZ4JqL9WGxYnXH3kqVqVvOQNUZJxKD7GKqFNO3NfGOvHgZ8FfKFVW', 'Admin User', 'admin', 1, 1),
+  ('superadmin', 'superadmin@findora.com', '$2a$10$eQ8b86bEXs8DEXX1s/o0f.Tb2c9S0BiY7P6Y4lP6fC8cO5E5ebXQW', 'Super Admin', 'super_admin', 1, 1);
 
 SELECT 'Database initialized successfully!' AS message;
 SELECT COUNT(*) as total_users FROM users;

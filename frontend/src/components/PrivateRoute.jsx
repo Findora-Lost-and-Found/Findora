@@ -23,7 +23,7 @@ const PrivateRoute = ({ children, roles, allowPendingApproval = false }) => {
   }
 
   const isApproved = Boolean(user.is_approved ?? user.isApproved);
-  const requiresAdminApproval = (role === 'security' || role === 'admin')
+  const requiresAdminApproval = (role === 'security' || role === 'admin' || role === 'super_admin')
     && !isApproved
     && (role !== 'security' || isVerified);
 

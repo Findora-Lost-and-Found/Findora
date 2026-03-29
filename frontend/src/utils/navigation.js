@@ -4,6 +4,8 @@ export const getHomeRouteForRole = (role) => {
       return '/dashboard';
     case 'admin':
       return '/admin/dashboard';
+    case 'super_admin':
+      return '/dashboard';
     case 'student':
     case 'staff':
     default:
