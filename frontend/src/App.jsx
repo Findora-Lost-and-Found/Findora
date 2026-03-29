@@ -14,11 +14,13 @@ const Signup = lazy(() => import('./pages/Signup'));
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const AppealAccess = lazy(() => import('./pages/AppealAccess'));
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const PendingApproval = lazy(() => import('./pages/PendingApproval'));
 const SecurityDashboard = lazy(() => import('./pages/SecurityDashboard'));
 const Profile = lazy(() => import('./pages/Profile'));
+const Settings = lazy(() => import('./pages/Settings'));
 const Notifications = lazy(() => import('./pages/Notifications'));
 
 const ReportLostItem = lazy(() => import('./pages/ReportLostItem'));
@@ -33,6 +35,7 @@ const AdminReports = lazy(() => import('./pages/admin/AdminReports'));
 const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'));
 const AdminPendingApprovals = lazy(() => import('./pages/admin/AdminPendingApprovals'));
 const AdminItemsByStatus = lazy(() => import('./pages/admin/AdminItemsByStatus'));
+const AdminAppeals = lazy(() => import('./pages/admin/AdminAppeals'));
 
 const SecurityPendingClaims = lazy(() => import('./pages/security/SecurityPendingClaims'));
 const SecurityReceiveItems = lazy(() => import('./pages/security/SecurityReceiveItems'));
@@ -56,6 +59,7 @@ function App() {
               <Route path="/signup" element={<Signup />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/appeal-access" element={<AppealAccess />} />
               <Route path="/" element={<Navigate to="/login" />} />
 
               {/* Auth Routes */}
@@ -65,6 +69,7 @@ function App() {
               {/* Protected Routes */}
               <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
               <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+              <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
               <Route path="/notifications" element={<PrivateRoute><Notifications /></PrivateRoute>} />
 
               {/* Item Routes */}
@@ -88,6 +93,7 @@ function App() {
               <Route path="/admin/reports" element={<PrivateRoute roles={['admin']}><AdminReports /></PrivateRoute>} />
               <Route path="/admin/users" element={<PrivateRoute roles={['admin']}><AdminUsers /></PrivateRoute>} />
               <Route path="/admin/pending-approvals" element={<PrivateRoute roles={['admin']}><AdminPendingApprovals /></PrivateRoute>} />
+              <Route path="/admin/appeals" element={<PrivateRoute roles={['admin']}><AdminAppeals /></PrivateRoute>} />
               <Route path="/admin/items" element={<PrivateRoute roles={['admin']}><Navigate to="/admin/items/found" replace /></PrivateRoute>} />
               <Route path="/admin/items/:section" element={<PrivateRoute roles={['admin']}><AdminItemsByStatus /></PrivateRoute>} />
             </Routes>

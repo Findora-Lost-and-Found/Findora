@@ -1,7 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { itemsAPI, claimsAPI, securityAPI } from '../services/api';
+import { itemsAPI, claimsAPI, securityAPI, adminAPI } from '../services/api';
 import { toast } from 'react-toastify';
 import PostModal from '../components/PostModal';
 import FoundItemCard from '../components/FoundItemCard';
@@ -9,12 +9,14 @@ import SecurityDashboard from './SecurityDashboard';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
 import { sampleFoundItems } from '../data/sampleFoundItems';
+import SampleItemImage from '../components/SampleItemImage';
 
 const ADMIN_PREVIEW_LIMIT = 5;
 const configuredApiUrl = import.meta.env.VITE_API_URL;
 const API_ORIGIN = (configuredApiUrl?.includes('localhost:5000')
   ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')
   : configuredApiUrl || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
+const DASHBOARD_IMAGE_FALLBACK = 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%2280%22 viewBox=%220 0 120 80%22%3E%3Crect width=%22120%22 height=%2280%22 fill=%22%23E5E7EB%22/%3E%3Ctext x=%2260%22 y=%2244%22 text-anchor=%22middle%22 fill=%22%236B7280%22 font-size=%2212%22 font-family=%22Arial%22%3ENo image%3C/text%3E%3C/svg%3E';
 
 const readFirst = (obj, keys, fallback = '') => {
   for (const key of keys) {
@@ -27,11 +29,22 @@ const readFirst = (obj, keys, fallback = '') => {
 };
 
 const toImageUrl = (rawImage) => {
-  if (!rawImage) return 'https://via.placeholder.com/120x80?text=No+Image';
+  if (!rawImage) return DASHBOARD_IMAGE_FALLBACK;
   const normalized = String(rawImage).trim().replace(/\\/g, '/');
+  if (!normalized || normalized === 'null' || normalized === 'undefined') {
+    return DASHBOARD_IMAGE_FALLBACK;
+  }
+
   if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
     return normalized;
   }
+
+  // Guard against accidentally treating plain labels as file paths.
+  const looksLikePath = normalized.includes('/') || normalized.includes('.') || normalized.startsWith('uploads');
+  if (!looksLikePath) {
+    return DASHBOARD_IMAGE_FALLBACK;
+  }
+
   const normalizedPath = normalized.replace(/\/+/g, '/').replace(/^\/+/, '');
   return `${API_ORIGIN}/${normalizedPath}`;
 };
@@ -59,12 +72,14 @@ const normalizeAdminDashboardItem = (item, section) => {
   return {
     id: item.id,
     itemName: readFirst(item, ['name', 'item_name', 'itemName'], 'Unnamed Item'),
-    itemImage: toImageUrl(readFirst(item, ['image', 'image_url', 'imageUrl'])),
+    category: normalizeCategory(readFirst(item, ['category']), readFirst(item, ['name', 'item_name', 'itemName'])),
+    itemImage: toImageUrl(readFirst(item, ['image_url', 'imageUrl', 'image'])),
     founder: readFirst(item, ['founder_username', 'founderUsername', 'found_by_username', 'posted_by_username', 'username'], 'Unknown'),
     security: readFirst(item, ['security_username', 'securityUsername', 'received_by_username', 'released_by_username'], 'Unknown'),
     receiver: readFirst(item, ['receiver_username', 'receiverUsername', 'claimer_username', 'owner_username'], 'Unknown'),
     dateTime,
-    timestamp: toTimestamp(dateTime)
+    timestamp: toTimestamp(dateTime),
+    rawItem: item
   };
 };
 
@@ -110,7 +125,7 @@ const Dashboard = () => {
             ...item,
             name: item.name || item.item_name,
             date_found: item.date_found || item.date || item.created_at,
-            image: toImageUrl(readFirst(item, ['image', 'image_url', 'imageUrl'])),
+            image: toImageUrl(readFirst(item, ['image_url', 'imageUrl', 'image'])),
             category: normalizeCategory(item.category, item.name || item.item_name),
             posted_by: item.posted_by || {
               id: item.userId || item.user_id,
@@ -124,10 +139,11 @@ const Dashboard = () => {
           setFoundItems(sampleFoundItems);
         }
       } else if (user.role === 'admin') {
-        const [foundRes, receivedRes, releasedRes] = await Promise.allSettled([
-          itemsAPI.getAll({ type: 'found', status: 'active', page: 0, size: ADMIN_PREVIEW_LIMIT, sort: 'createdAt,desc' }),
-          itemsAPI.getAll({ type: 'found', status: 'claimed', page: 0, size: ADMIN_PREVIEW_LIMIT, sort: 'createdAt,desc' }),
-          itemsAPI.getAll({ type: 'found', status: 'closed', page: 0, size: ADMIN_PREVIEW_LIMIT, sort: 'createdAt,desc' })
+        const [foundRes, receivedRes, releasedRes, studentFoundRes] = await Promise.allSettled([
+          adminAPI.getItems({ status: 'found', page: 0, size: ADMIN_PREVIEW_LIMIT, sort: 'createdAt,desc' }),
+          adminAPI.getItems({ status: 'received', page: 0, size: ADMIN_PREVIEW_LIMIT, sort: 'createdAt,desc' }),
+          adminAPI.getItems({ status: 'released', page: 0, size: ADMIN_PREVIEW_LIMIT, sort: 'createdAt,desc' }),
+          itemsAPI.getAll({ type: 'found', status: 'active', page: 0, size: 300, sort: 'createdAt,desc' })
         ]);
 
         const extractItems = (result) => {
@@ -135,9 +151,25 @@ const Dashboard = () => {
           return result.value.data.items || result.value.data.content || [];
         };
 
+        const studentFoundImageById = new Map(
+          extractItems(studentFoundRes).map((item) => [
+            Number(item.id),
+            readFirst(item, ['image_url', 'imageUrl', 'image'])
+          ])
+        );
+
+        const mergeStudentImage = (item) => {
+          const id = Number(item?.id);
+          const studentRawImage = studentFoundImageById.get(id);
+          return studentRawImage
+            ? { ...item, image_url: studentRawImage, imageUrl: studentRawImage }
+            : item;
+        };
+
         // Found/Receive/Release sections are sourced from backend statuses: active/claimed/closed.
         setAdminSections({
           found: extractItems(foundRes)
+            .map(mergeStudentImage)
             .map((item) => normalizeAdminDashboardItem(item, 'found'))
             .sort((a, b) => b.timestamp - a.timestamp)
             .slice(0, ADMIN_PREVIEW_LIMIT),
@@ -273,7 +305,28 @@ const Dashboard = () => {
                           <td>{item.founder}</td>
                           <td>{item.itemName}</td>
                           <td>
-                            <img src={item.itemImage} alt={item.itemName} style={{ width: '88px', height: '56px', objectFit: 'cover', borderRadius: '6px' }} />
+                            {item.itemImage && item.itemImage !== DASHBOARD_IMAGE_FALLBACK ? (
+                              <img
+                                src={item.itemImage}
+                                alt={item.itemName}
+                                style={{ width: '88px', height: '56px', objectFit: 'cover', borderRadius: '6px' }}
+                                onError={(event) => {
+                                  event.currentTarget.src = DASHBOARD_IMAGE_FALLBACK;
+                                }}
+                              />
+                            ) : (
+                              <div style={{ width: '88px', height: '56px', borderRadius: '6px', overflow: 'hidden' }}>
+                                <SampleItemImage
+                                  category={item.category}
+                                  item={{
+                                    ...item.rawItem,
+                                    item_name: item.itemName,
+                                    name: item.itemName,
+                                    category: item.category
+                                  }}
+                                />
+                              </div>
+                            )}
                           </td>
                           <td>{formatDateTime(item.dateTime)}</td>
                         </tr>
@@ -312,7 +365,28 @@ const Dashboard = () => {
                           <td>{item.founder}</td>
                           <td>{item.itemName}</td>
                           <td>
-                            <img src={item.itemImage} alt={item.itemName} style={{ width: '88px', height: '56px', objectFit: 'cover', borderRadius: '6px' }} />
+                            {item.itemImage && item.itemImage !== DASHBOARD_IMAGE_FALLBACK ? (
+                              <img
+                                src={item.itemImage}
+                                alt={item.itemName}
+                                style={{ width: '88px', height: '56px', objectFit: 'cover', borderRadius: '6px' }}
+                                onError={(event) => {
+                                  event.currentTarget.src = DASHBOARD_IMAGE_FALLBACK;
+                                }}
+                              />
+                            ) : (
+                              <div style={{ width: '88px', height: '56px', borderRadius: '6px', overflow: 'hidden' }}>
+                                <SampleItemImage
+                                  category={item.category}
+                                  item={{
+                                    ...item.rawItem,
+                                    item_name: item.itemName,
+                                    name: item.itemName,
+                                    category: item.category
+                                  }}
+                                />
+                              </div>
+                            )}
                           </td>
                           <td>{formatDateTime(item.dateTime)}</td>
                         </tr>
@@ -351,7 +425,28 @@ const Dashboard = () => {
                           <td>{item.receiver}</td>
                           <td>{item.itemName}</td>
                           <td>
-                            <img src={item.itemImage} alt={item.itemName} style={{ width: '88px', height: '56px', objectFit: 'cover', borderRadius: '6px' }} />
+                            {item.itemImage && item.itemImage !== DASHBOARD_IMAGE_FALLBACK ? (
+                              <img
+                                src={item.itemImage}
+                                alt={item.itemName}
+                                style={{ width: '88px', height: '56px', objectFit: 'cover', borderRadius: '6px' }}
+                                onError={(event) => {
+                                  event.currentTarget.src = DASHBOARD_IMAGE_FALLBACK;
+                                }}
+                              />
+                            ) : (
+                              <div style={{ width: '88px', height: '56px', borderRadius: '6px', overflow: 'hidden' }}>
+                                <SampleItemImage
+                                  category={item.category}
+                                  item={{
+                                    ...item.rawItem,
+                                    item_name: item.itemName,
+                                    name: item.itemName,
+                                    category: item.category
+                                  }}
+                                />
+                              </div>
+                            )}
                           </td>
                           <td>{formatDateTime(item.dateTime)}</td>
                         </tr>

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { claimsAPI } from '../services/api';
 import { toast } from 'react-toastify';
+import SampleItemImage from '../components/SampleItemImage';
+import { normalizeCategory } from '../utils/categoryUtils';
 import './MyClaims.css';
 
 const MyClaims = () => {
@@ -9,6 +11,7 @@ const MyClaims = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [otpLoadingById, setOtpLoadingById] = useState({});
+  const [imageLoadFailedById, setImageLoadFailedById] = useState({});
   const [searchParams] = useSearchParams();
   const focusClaimId = searchParams.get('claimId');
   const API_BASE_URL = (import.meta.env.VITE_API_URL?.replace('/api', '')) || 'http://localhost:8080';
@@ -59,6 +62,11 @@ const MyClaims = () => {
   };
 
   const getStatusLabel = (status) => String(status || 'pending').toUpperCase();
+
+  const getNormalizedCategory = (claim) => {
+    const rawCategory = String(claim?.category || '').replace(/_/g, ' ');
+    return normalizeCategory(rawCategory, claim?.item_name || '');
+  };
 
   const hasOtp = (claim) => Boolean(String(claim?.otp || '').trim());
 
@@ -125,12 +133,30 @@ const MyClaims = () => {
               id={`claim-${claim.id}`}
               className={`claim-card ${focusClaimId === String(claim.id) ? 'claim-card-focus' : ''}`}
             >
-              {claim.image_url && (
-                <img src={getImageSrc(claim.image_url)} alt={claim.item_name} />
-              )}
+              <div className="claim-image">
+                {claim.image_url && !imageLoadFailedById[claim.id] ? (
+                  <img
+                    src={getImageSrc(claim.image_url)}
+                    alt={claim.item_name}
+                    onError={() => {
+                      setImageLoadFailedById((prev) => ({ ...prev, [claim.id]: true }));
+                    }}
+                  />
+                ) : (
+                  <SampleItemImage
+                    category={getNormalizedCategory(claim)}
+                    item={{
+                      item_name: claim.item_name,
+                      name: claim.item_name,
+                      category: claim.category,
+                      description: claim.description
+                    }}
+                  />
+                )}
+              </div>
               <div className="claim-details">
                 <h3>{claim.item_name || 'Unknown Item'}</h3>
-                <p><strong>Category:</strong> {claim.category || 'N/A'}</p>
+                <p><strong>Category:</strong> {getNormalizedCategory(claim) || 'N/A'}</p>
                 <p><strong>Status:</strong> <span className={`status-badge ${(claim.status || 'pending').toLowerCase()}`}>{getStatusLabel(claim.status)}</span></p>
                 <p><strong>Claimed on:</strong> {formatDateTime(claim.claimed_at)}</p>
                 

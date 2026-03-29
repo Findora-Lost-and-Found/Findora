@@ -57,6 +57,7 @@ import com.findora.service.ItemService;
  */
 @RestController
 @RequestMapping("/api/items")
+@SuppressWarnings("null")
 public class ItemController {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("uuuu-MM-dd").withResolverStyle(ResolverStyle.STRICT);
@@ -71,7 +72,10 @@ public class ItemController {
     @Value("${app.upload.dir:uploads}")
     private String uploadDir;
 
-    public ItemController(ItemService itemService, ItemRepository itemRepository, UserRepository userRepository) {
+    public ItemController(
+            ItemService itemService,
+            ItemRepository itemRepository,
+            UserRepository userRepository) {
         this.itemService = itemService;
         this.itemRepository = itemRepository;
         this.userRepository = userRepository;
@@ -103,13 +107,13 @@ public class ItemController {
      */
     @GetMapping
     public ResponseEntity<?> getAllItems(
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(defaultValue = "createdAt,desc") String sort,
-            @RequestParam(required = false) String category,
-            @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) String type,
-            @RequestParam(required = false) String status) {
+            @RequestParam(name = "page", defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "10") Integer size,
+            @RequestParam(name = "sort", defaultValue = "createdAt,desc") String sort,
+            @RequestParam(name = "category", required = false) String category,
+            @RequestParam(name = "keyword", required = false) String keyword,
+            @RequestParam(name = "type", required = false) String type,
+            @RequestParam(name = "status", required = false) String status) {
 
         try {
             log.debug("GET /api/items: page={}, size={}, category={}, keyword={}", page, size, category, keyword);
@@ -137,7 +141,7 @@ public class ItemController {
      * GET /api/items/:id - Get single item by ID.
      */
     @GetMapping("/{id}")
-    public ResponseEntity<?> getItem(@PathVariable Long id) {
+    public ResponseEntity<?> getItem(@PathVariable("id") Long id) {
         try {
             Optional<ItemDTO> item = itemService.getItemById(id);
 
@@ -160,12 +164,12 @@ public class ItemController {
      */
     @GetMapping("/my/items")
     public ResponseEntity<?> getMyItems(
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(required = false) String type,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) String category,
-            @RequestParam(required = false) String keyword) {
+            @RequestParam(name = "page", defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "10") Integer size,
+            @RequestParam(name = "type", required = false) String type,
+            @RequestParam(name = "status", required = false) String status,
+            @RequestParam(name = "category", required = false) String category,
+            @RequestParam(name = "keyword", required = false) String keyword) {
 
         try {
             Long userId = getCurrentUserId();
@@ -301,7 +305,7 @@ public class ItemController {
     @PutMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> updateItemStatus(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @RequestBody Map<String, String> statusUpdate) {
         try {
             Item item = itemRepository.findById(id)
@@ -338,32 +342,8 @@ public class ItemController {
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteItem(@PathVariable Long id) {
-        try {
-            Long userId = getCurrentUserId();
-            if (userId == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("success", false, "message", "User not authenticated"));
-            }
-
-            Item item = itemRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Item not found"));
-
-            // Check authorization: only item owner or admin can delete
-            if (!userId.equals(item.getUserId()) && !isAdmin()) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("success", false, "message", "You do not have permission to delete this item"));
-            }
-
-            itemRepository.delete(item);
-            return ResponseEntity.ok(Map.of("success", true, "message", "Item deleted successfully"));
-
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(Map.of("success", false, "message", e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("success", false, "message", "Error deleting item"));
-        }
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
+            .body(Map.of("message", "TODO: Implement item deletion"));
     }
 
     /**
@@ -426,3 +406,4 @@ public class ItemController {
         return body;
     }
 }
+

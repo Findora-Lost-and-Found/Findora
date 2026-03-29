@@ -34,6 +34,7 @@ import com.findora.service.SecurityService;
  */
 @RestController
 @RequestMapping("/api/security")
+@SuppressWarnings("null")
 public class SecurityController {
 
     private static final Logger log = LoggerFactory.getLogger(SecurityController.class);
@@ -180,8 +181,8 @@ public class SecurityController {
     @GetMapping("/transactions")
     @PreAuthorize("hasAnyRole('SECURITY', 'ADMIN')")
     public ResponseEntity<?> getTransactions(
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
+            @RequestParam(name = "page", defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "10") Integer size) {
         try {
             Long userId = getCurrentUserId();
             User currentUser = userRepository.findById(userId)
@@ -219,11 +220,11 @@ public class SecurityController {
     @GetMapping("/found-items")
     @PreAuthorize("hasAnyRole('SECURITY', 'ADMIN')")
     public ResponseEntity<?> getFoundItemsForSecurity(
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(defaultValue = "createdAt,desc") String sort,
-            @RequestParam(required = false) String category,
-            @RequestParam(required = false) String keyword) {
+            @RequestParam(name = "page", defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "10") Integer size,
+            @RequestParam(name = "sort", defaultValue = "createdAt,desc") String sort,
+            @RequestParam(name = "category", required = false) String category,
+            @RequestParam(name = "keyword", required = false) String keyword) {
         try {
             PaginatedResponse<ItemDTO> response = itemService.getPaginatedItems(
                 page,

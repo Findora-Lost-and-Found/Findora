@@ -1,6 +1,7 @@
 package com.findora.service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -43,6 +44,7 @@ import com.findora.repository.UserRepository;
 import jakarta.annotation.PostConstruct;
 
 @Service
+@SuppressWarnings("null")
 public class SecurityService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
@@ -142,7 +144,7 @@ public class SecurityService {
             throw new IllegalArgumentException("Invalid OTP");
         }
 
-        if (claim.getOtpExpiry() != null && LocalDateTime.now().isAfter(claim.getOtpExpiry())) {
+        if (claim.getOtpExpiry() != null && LocalDateTime.now(ZoneOffset.UTC).isAfter(claim.getOtpExpiry())) {
             throw new IllegalArgumentException("OTP has expired");
         }
 
@@ -155,20 +157,24 @@ public class SecurityService {
 
         claim.setStatus(Claim.ClaimStatus.COLLECTED);
         claim.setSecurityOfficerId(securityOfficerId);
-        claim.setCollectedAt(LocalDateTime.now());
+        claim.setCollectedAt(LocalDateTime.now(ZoneOffset.UTC));
         claimRepository.save(claim);
 
         item.setStatus(ItemStatus.CLAIMED);
         itemRepository.save(item);
 
-        SecurityTransaction releaseTx = new SecurityTransaction();
-        releaseTx.setSecurityOfficerId(securityOfficerId);
-        releaseTx.setItemId(item.getId());
-        releaseTx.setClaimId(claim.getId());
-        releaseTx.setTransactionType(SecurityTransaction.TransactionType.RELEASE);
-        releaseTx.setStatus(SecurityTransaction.TransactionStatus.RECEIVED);
-        releaseTx.setReleasedTo(resolveClaimerName(claim));
-        securityTransactionRepository.save(releaseTx);
+        if (supportsSecurityTransactionWorkflowColumns()) {
+            SecurityTransaction releaseTx = new SecurityTransaction();
+            releaseTx.setSecurityOfficerId(securityOfficerId);
+            releaseTx.setItemId(item.getId());
+            releaseTx.setClaimId(claim.getId());
+            releaseTx.setTransactionType(SecurityTransaction.TransactionType.RELEASE);
+            releaseTx.setStatus(SecurityTransaction.TransactionStatus.RECEIVED);
+            releaseTx.setReleasedTo(resolveClaimerName(claim));
+            securityTransactionRepository.save(releaseTx);
+        } else {
+            log.warn("Skipping release security transaction write due to legacy schema (missing status/transaction_type columns)");
+        }
 
         Notification notification = new Notification();
         notification.setUserId(claim.getClaimerId());
@@ -199,7 +205,10 @@ public class SecurityService {
         Item item = itemRepository.findById(itemId)
             .orElseThrow(() -> new IllegalArgumentException("Item not found"));
 
-        try {
+        // Ensure legacy schemas support security workflow statuses before updating item state.
+        ensureItemStatusSupportsSecurityStates();
+
+        if (supportsSecurityTransactionWorkflowColumns()) {
             SecurityTransaction tx = securityTransactionRepository.findFirstByItemIdOrderByCreatedAtDesc(itemId)
                 .orElseThrow(() -> new IllegalArgumentException("No handover request found for item"));
 
@@ -210,20 +219,35 @@ public class SecurityService {
             tx.setStatus(SecurityTransaction.TransactionStatus.RECEIVED);
             tx.setSecurityOfficerId(securityOfficerId);
             securityTransactionRepository.save(tx);
-        } catch (RuntimeException e) {
-            log.warn("Skipping security transaction update due to schema mismatch: {}", e.getMessage());
+        } else {
+            log.warn("Skipping security transaction update due to legacy schema (missing status/transaction_type columns)");
         }
 
         item.setStatus(ItemStatus.HELD_BY_SECURITY);
-        itemRepository.save(item);
+        try {
+            itemRepository.saveAndFlush(item);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Detected outdated items.status enum during receive-item. Retrying after compatibility patch.");
+            ensureItemStatusSupportsSecurityStates();
+            itemRepository.saveAndFlush(item);
+        }
 
-        Notification notification = new Notification();
-        notification.setUserId(item.getUserId());
-        notification.setType(Notification.NotificationType.SYSTEM);
-        notification.setTitle("Handover Completed");
-        notification.setMessage("You successfully handed over the item to Security");
-        notification.setRelatedId(itemId);
-        notificationRepository.save(notification);
+        try {
+            if (item.getUserId() != null) {
+                Notification notification = new Notification();
+                notification.setUserId(item.getUserId());
+                notification.setType(Notification.NotificationType.SYSTEM);
+                notification.setTitle("Handover Completed");
+                notification.setMessage("You successfully handed over the item to Security");
+                notification.setRelatedId(itemId);
+                notification.setIsRead(false);
+                notificationRepository.save(notification);
+            } else {
+                log.warn("Skipping handover notification for item {} because finder userId is null", itemId);
+            }
+        } catch (RuntimeException e) {
+            log.warn("Skipping handover notification due to persistence issue for item {}: {}", itemId, e.getMessage());
+        }
     }
 
     @Transactional(readOnly = true)
@@ -363,6 +387,18 @@ public class SecurityService {
         } catch (DataAccessException | IllegalStateException e) {
             log.warn("Schema compatibility check skipped (database may be unavailable): {}", e.getMessage());
         }
+    }
+
+    private boolean supportsSecurityTransactionWorkflowColumns() {
+        Integer presentColumns = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                + "WHERE TABLE_SCHEMA = DATABASE() "
+                + "AND TABLE_NAME = 'security_transactions' "
+                + "AND COLUMN_NAME IN ('status', 'transaction_type')",
+            Integer.class
+        );
+
+        return presentColumns != null && presentColumns >= 2;
     }
 
     private Integer safeLongToInteger(long value) {

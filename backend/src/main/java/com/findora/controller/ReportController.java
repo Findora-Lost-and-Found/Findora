@@ -36,6 +36,7 @@ import com.findora.repository.UserRepository;
  */
 @RestController
 @RequestMapping("/api/reports")
+@SuppressWarnings("null")
 public class ReportController {
 
     private static final Logger log = LoggerFactory.getLogger(ReportController.class);
@@ -101,8 +102,8 @@ public class ReportController {
     @GetMapping("/my")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getMyReports(
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
+            @RequestParam(name = "page", defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "10") Integer size) {
         Long currentUserId = getCurrentUserId();
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Report> reportsPage = reportRepository.findByReporterId(currentUserId, pageable);
