@@ -50,7 +50,7 @@ public class DatabaseInitializer {
                       email VARCHAR(100) UNIQUE NOT NULL,
                       password VARCHAR(255) NOT NULL,
                       full_name VARCHAR(100) NOT NULL,
-                      role ENUM('student', 'staff', 'security', 'admin') NOT NULL,
+                      role ENUM('student', 'staff', 'security', 'admin', 'super_admin') NOT NULL,
                       phone VARCHAR(20),
                       pending_phone VARCHAR(20),
                       is_verified BOOLEAN DEFAULT FALSE,
@@ -77,6 +77,12 @@ public class DatabaseInitializer {
                     )
                     """);
             }
+
+                // Keep enum in sync for existing databases created before SUPER_ADMIN support.
+                stmt.executeUpdate("""
+                  ALTER TABLE users
+                  MODIFY COLUMN role ENUM('student', 'staff', 'security', 'admin', 'super_admin') NOT NULL
+                  """);
 
             // Ensure user_access_appeals table exists
             checkTableSQL = "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='findora_db' AND TABLE_NAME='user_access_appeals'";

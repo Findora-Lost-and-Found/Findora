@@ -20,6 +20,7 @@ public interface SecurityTransactionRepository extends JpaRepository<SecurityTra
     Page<SecurityTransaction> findBySecurityOfficerId(Long officerId, Pageable pageable);
     Page<SecurityTransaction> findByTransactionType(SecurityTransaction.TransactionType type, Pageable pageable);
     Optional<SecurityTransaction> findFirstByItemIdOrderByCreatedAtDesc(Long itemId);
+    Optional<SecurityTransaction> findFirstByItemIdAndTransactionTypeOrderByCreatedAtDesc(Long itemId, SecurityTransaction.TransactionType transactionType);
 
     @Query("SELECT st FROM SecurityTransaction st WHERE st.status = :status ORDER BY st.createdAt DESC")
     List<SecurityTransaction> findByStatusOrderByCreatedAtDesc(@Param("status") SecurityTransaction.TransactionStatus status);

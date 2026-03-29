@@ -40,7 +40,7 @@ const Profile = () => {
                   {user.is_verified ? '✓ Verified' : '✗ Not Verified'}
                 </span>
               </div>
-              {(user.role === 'security' || user.role === 'admin') && (
+              {(user.role === 'security' || user.role === 'admin' || user.role === 'super_admin') && (
                 <div className="detail-row">
                   <strong>Account Status:</strong>
                   <span className={user.is_approved ? 'approved' : 'pending'}>

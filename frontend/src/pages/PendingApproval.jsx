@@ -6,7 +6,7 @@ const PendingApproval = () => {
       <div className="auth-card">
         <h2>Approval Pending</h2>
         <p>
-          Your registration request has been submitted. Please wait for admin approval before accessing
+          Your registration request has been submitted. Please wait for approval before accessing
           security or admin features.
         </p>
         <div className="auth-links" style={{ marginTop: '1rem' }}>

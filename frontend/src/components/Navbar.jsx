@@ -115,6 +115,15 @@ const Navbar = () => {
                 </>
               )}
 
+              {user.role === 'super_admin' && (
+                <>
+                  <Link to="/admin-panel" className="nav-link">Super Admin Panel</Link>
+                  <Link to="/admin/users" className="nav-link">Admins</Link>
+                  <Link to="/admin/pending-approvals" className="nav-link">Pending Approvals</Link>
+                  <Link to="/admin/appeals" className="nav-link">Appeals</Link>
+                </>
+              )}
+
               <Link to="/notifications" className="nav-link notification-icon-btn" aria-label="Notifications">
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                   <path d="M12 3a6 6 0 0 0-6 6v3.6l-1.6 2.6a1 1 0 0 0 .85 1.53h13.5a1 1 0 0 0 .85-1.53L18 12.6V9a6 6 0 0 0-6-6zm0 18a3 3 0 0 0 2.82-2H9.18A3 3 0 0 0 12 21z" />

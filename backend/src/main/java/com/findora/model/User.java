@@ -20,7 +20,7 @@ import jakarta.persistence.Table;
 
 /**
  * User entity - maps to users table.
- * Supports roles: STUDENT, STAFF, SECURITY, ADMIN
+ * Supports roles: STUDENT, STAFF, SECURITY, ADMIN, SUPER_ADMIN
  */
 @Entity
 @Table(name = "users", indexes = {
@@ -107,7 +107,7 @@ public class User {
     private List<Notification> notifications;
 
     public enum UserRole {
-        STUDENT, STAFF, SECURITY, ADMIN
+        STUDENT, STAFF, SECURITY, ADMIN, SUPER_ADMIN
     }
 
     public User() {

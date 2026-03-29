@@ -1,10 +1,12 @@
 package com.findora.controller;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +16,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,9 +30,11 @@ import org.springframework.web.bind.annotation.RestController;
 import com.findora.model.Item;
 import com.findora.model.ItemStatus;
 import com.findora.model.ItemType;
+import com.findora.model.Claim;
 import com.findora.model.Report;
 import com.findora.model.SecurityTransaction;
 import com.findora.model.User;
+import com.findora.repository.ClaimRepository;
 import com.findora.repository.ItemRepository;
 import com.findora.repository.ReportRepository;
 import com.findora.repository.SecurityTransactionRepository;
@@ -37,16 +43,17 @@ import com.findora.service.AccessControlService;
 
 /**
  * AdminController - Administrative endpoints.
- * All endpoints require ADMIN role.
+ * Endpoints require ADMIN or SUPER_ADMIN role.
  */
 @RestController
 @RequestMapping("/api/admin")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
 @SuppressWarnings("null")
 public class AdminController {
 
     private final UserRepository userRepository;
     private final ItemRepository itemRepository;
+    private final ClaimRepository claimRepository;
     private final ReportRepository reportRepository;
     private final SecurityTransactionRepository securityTransactionRepository;
     private final AccessControlService accessControlService;
@@ -55,11 +62,13 @@ public class AdminController {
     public AdminController(
             UserRepository userRepository,
             ItemRepository itemRepository,
+            ClaimRepository claimRepository,
             ReportRepository reportRepository,
             SecurityTransactionRepository securityTransactionRepository,
             AccessControlService accessControlService) {
         this.userRepository = userRepository;
         this.itemRepository = itemRepository;
+        this.claimRepository = claimRepository;
         this.reportRepository = reportRepository;
         this.securityTransactionRepository = securityTransactionRepository;
         this.accessControlService = accessControlService;
@@ -69,10 +78,14 @@ public class AdminController {
     public ResponseEntity<?> getUsers(
             @RequestParam(name = "page", defaultValue = "0") Integer page,
             @RequestParam(name = "size", defaultValue = "50") Integer size) {
+        User currentUser = getCurrentUser();
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "createdAt"));
 
         List<Map<String, Object>> users = userRepository.findAll(pageable)
             .stream()
+            .filter(user -> currentUser.getRole() == User.UserRole.SUPER_ADMIN
+                ? (user.getRole() == User.UserRole.ADMIN && Boolean.TRUE.equals(user.getIsApproved()))
+                : (user.getRole() != User.UserRole.ADMIN && user.getRole() != User.UserRole.SUPER_ADMIN))
             .map(this::toUserPayload)
             .toList();
 
@@ -86,13 +99,18 @@ public class AdminController {
     public ResponseEntity<?> getPendingApprovals(
             @RequestParam(name = "page", defaultValue = "0") Integer page,
             @RequestParam(name = "size", defaultValue = "100") Integer size) {
+        User currentUser = getCurrentUser();
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "createdAt"));
 
         List<Map<String, Object>> approvals = userRepository.findAll(pageable)
             .stream()
             .filter(user -> !Boolean.TRUE.equals(user.getIsApproved())
                 && !Boolean.TRUE.equals(user.getIsSuspended())
-                && user.getRole() != User.UserRole.STUDENT)
+                && user.getRole() != User.UserRole.STUDENT
+                && user.getRole() != User.UserRole.SUPER_ADMIN)
+            .filter(user -> currentUser.getRole() == User.UserRole.SUPER_ADMIN
+                ? user.getRole() == User.UserRole.ADMIN
+                : user.getRole() != User.UserRole.ADMIN)
             .map(this::toUserPayload)
             .toList();
 
@@ -104,12 +122,28 @@ public class AdminController {
 
     @PutMapping("/approve-user/{id}")
     public ResponseEntity<?> approveUser(@PathVariable("id") Long id) {
+        User currentUser = getCurrentUser();
         User user = userRepository.findById(id)
             .orElse(null);
 
         if (user == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(Map.of("success", false, "message", "User not found"));
+        }
+
+        if (user.getRole() == User.UserRole.SUPER_ADMIN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("success", false, "message", "Super admin accounts cannot be approved via this endpoint"));
+        }
+
+        if (currentUser.getRole() == User.UserRole.SUPER_ADMIN && user.getRole() != User.UserRole.ADMIN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("success", false, "message", "Super admin can only approve admin signup requests"));
+        }
+
+        if (currentUser.getRole() == User.UserRole.ADMIN && user.getRole() == User.UserRole.ADMIN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("success", false, "message", "Admin signup requests can only be approved by super admin"));
         }
 
         user.setIsApproved(true);
@@ -123,12 +157,28 @@ public class AdminController {
 
     @PutMapping("/decline-user/{id}")
     public ResponseEntity<?> declineUser(@PathVariable("id") Long id) {
+        User currentUser = getCurrentUser();
         User user = userRepository.findById(id)
             .orElse(null);
 
         if (user == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(Map.of("success", false, "message", "User not found"));
+        }
+
+        if (user.getRole() == User.UserRole.SUPER_ADMIN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("success", false, "message", "Super admin accounts cannot be declined via this endpoint"));
+        }
+
+        if (currentUser.getRole() == User.UserRole.SUPER_ADMIN && user.getRole() != User.UserRole.ADMIN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("success", false, "message", "Super admin can only decline admin signup requests"));
+        }
+
+        if (currentUser.getRole() == User.UserRole.ADMIN && user.getRole() == User.UserRole.ADMIN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("success", false, "message", "Admin signup requests can only be declined by super admin"));
         }
 
         // Suspension acts as the persisted decline marker without introducing a schema change.
@@ -143,12 +193,23 @@ public class AdminController {
 
     @PutMapping("/ban-user/{id}")
     public ResponseEntity<?> banUser(@PathVariable("id") Long id, @RequestBody(required = false) Map<String, Object> body) {
+        User currentUser = getCurrentUser();
         User user = userRepository.findById(id)
             .orElse(null);
 
         if (user == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(Map.of("success", false, "message", "User not found"));
+        }
+
+        if (user.getRole() == User.UserRole.SUPER_ADMIN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("success", false, "message", "Super admin accounts cannot be modified via this endpoint"));
+        }
+
+        if (currentUser.getRole() == User.UserRole.SUPER_ADMIN && user.getRole() != User.UserRole.ADMIN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("success", false, "message", "Super admin can only ban or unban admin accounts"));
         }
 
         boolean banned = parseBoolean(body != null ? body.get("banned") : null, true);
@@ -164,12 +225,23 @@ public class AdminController {
 
     @PutMapping("/suspend-user/{id}")
     public ResponseEntity<?> suspendUser(@PathVariable("id") Long id, @RequestBody(required = false) Map<String, Object> body) {
+        User currentUser = getCurrentUser();
         User user = userRepository.findById(id)
             .orElse(null);
 
         if (user == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(Map.of("success", false, "message", "User not found"));
+        }
+
+        if (user.getRole() == User.UserRole.SUPER_ADMIN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("success", false, "message", "Super admin accounts cannot be modified via this endpoint"));
+        }
+
+        if (currentUser.getRole() == User.UserRole.SUPER_ADMIN && user.getRole() != User.UserRole.ADMIN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("success", false, "message", "Super admin can only suspend or unsuspend admin accounts"));
         }
 
         boolean suspended = parseBoolean(body != null ? body.get("suspended") : null, true);
@@ -191,6 +263,12 @@ public class AdminController {
             @RequestParam(name = "status", required = false) String status,
             @RequestParam(name = "page", defaultValue = "0") Integer page,
             @RequestParam(name = "size", defaultValue = "20") Integer size) {
+        User currentUser = getCurrentUser();
+        if (currentUser.getRole() == User.UserRole.SUPER_ADMIN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("success", false, "message", "Super admin can only review admin signup approvals"));
+        }
+
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "createdAt"));
 
         List<Report> reportRows = status == null || status.isBlank()
@@ -210,6 +288,12 @@ public class AdminController {
 
     @PutMapping("/reports/{id}")
     public ResponseEntity<?> updateReport(@PathVariable("id") Long id, @RequestBody Map<String, String> updateData) {
+        User currentUser = getCurrentUser();
+        if (currentUser.getRole() == User.UserRole.SUPER_ADMIN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("success", false, "message", "Super admin can only review admin signup approvals"));
+        }
+
         try {
             Report report = reportRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Report not found"));
@@ -239,6 +323,12 @@ public class AdminController {
 
     @PostMapping("/reports/{id}/hide-item")
     public ResponseEntity<?> hideReportedItem(@PathVariable("id") Long id) {
+        User currentUser = getCurrentUser();
+        if (currentUser.getRole() == User.UserRole.SUPER_ADMIN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("success", false, "message", "Super admin can only review admin signup approvals"));
+        }
+
         try {
             Report report = reportRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Report not found"));
@@ -271,17 +361,24 @@ public class AdminController {
             @RequestParam(name = "status", defaultValue = "found") String status,
             @RequestParam(name = "page", defaultValue = "0") Integer page,
             @RequestParam(name = "size", defaultValue = "100") Integer size) {
+        getCurrentUser();
+
         String normalizedStatus = status == null ? "found" : status.trim().toLowerCase(Locale.ROOT);
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "createdAt"));
 
         List<Map<String, Object>> items = switch (normalizedStatus) {
-            case "released", "release" -> itemRepository.findPaginatedItems(null, null, null, ItemStatus.CLOSED, pageable)
+            case "released", "release" -> itemRepository.findPaginatedItems(null, null, null, ItemStatus.CLAIMED, pageable)
                 .stream()
                 .map(item -> toAdminItemPayload(item, "released"))
+                .filter(payload -> payload.get("security_username") != null
+                    || payload.get("receiver_username") != null
+                    || payload.get("date_released") != null)
                 .toList();
             case "received", "receive" -> itemRepository.findPaginatedItems(null, null, null, ItemStatus.CLAIMED, pageable)
                 .stream()
                 .map(item -> toAdminItemPayload(item, "received"))
+                .filter(payload -> payload.get("security_username") != null
+                    || payload.get("date_received") != null)
                 .toList();
             case "found" -> itemRepository.findPaginatedItems(null, null, ItemType.FOUND, null, pageable)
                 .stream()
@@ -305,6 +402,8 @@ public class AdminController {
 
     @GetMapping("/stats")
     public ResponseEntity<?> getAdminStats() {
+        getCurrentUser();
+
         long totalUsers = userRepository.count();
         long pendingApprovals = userRepository.countByIsApprovedFalseAndRoleNot(User.UserRole.STUDENT);
 
@@ -394,6 +493,12 @@ public class AdminController {
 
     @PutMapping("/appeals/{id}/approve")
     public ResponseEntity<?> approveAppeal(@PathVariable("id") Long id, @RequestBody(required = false) Map<String, Object> body) {
+        User currentUser = getCurrentUser();
+        if (currentUser.getRole() == User.UserRole.SUPER_ADMIN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("success", false, "message", "Super admin can only review admin signup approvals"));
+        }
+
         try {
             String notes = body == null ? null : String.valueOf(body.getOrDefault("admin_notes", ""));
             Map<String, Object> result = accessControlService.reviewAppeal(id, true, notes);
@@ -409,6 +514,12 @@ public class AdminController {
 
     @PutMapping("/appeals/{id}/decline")
     public ResponseEntity<?> declineAppeal(@PathVariable("id") Long id, @RequestBody(required = false) Map<String, Object> body) {
+        User currentUser = getCurrentUser();
+        if (currentUser.getRole() == User.UserRole.SUPER_ADMIN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("success", false, "message", "Super admin can only review admin signup approvals"));
+        }
+
         try {
             String notes = body == null ? null : String.valueOf(body.getOrDefault("admin_notes", ""));
             Map<String, Object> result = accessControlService.reviewAppeal(id, false, notes);
@@ -440,18 +551,100 @@ public class AdminController {
     }
 
     private Map<String, Object> toAdminItemPayload(Item item, String status) {
+        SecurityTransaction latestReceive = securityTransactionRepository
+            .findFirstByItemIdAndTransactionTypeOrderByCreatedAtDesc(item.getId(), SecurityTransaction.TransactionType.RECEIVE)
+            .orElse(null);
+
+        SecurityTransaction latestRelease = securityTransactionRepository
+            .findFirstByItemIdAndTransactionTypeOrderByCreatedAtDesc(item.getId(), SecurityTransaction.TransactionType.RELEASE)
+            .orElse(null);
+
+        Claim bestClaim = findBestClaimForItem(item.getId()).orElse(null);
+        Claim linkedReleaseClaim = null;
+        if (latestRelease != null && latestRelease.getClaimId() != null) {
+            linkedReleaseClaim = claimRepository.findById(latestRelease.getClaimId()).orElse(null);
+        }
+
+        String securityUsername = null;
+        if (latestRelease != null && latestRelease.getSecurityOfficerId() != null) {
+            securityUsername = resolveUsernameById(latestRelease.getSecurityOfficerId());
+        }
+        if (securityUsername == null && latestReceive != null && latestReceive.getSecurityOfficerId() != null) {
+            securityUsername = resolveUsernameById(latestReceive.getSecurityOfficerId());
+        }
+        if (securityUsername == null && linkedReleaseClaim != null && linkedReleaseClaim.getSecurityOfficerId() != null) {
+            securityUsername = resolveUsernameById(linkedReleaseClaim.getSecurityOfficerId());
+        }
+        if (securityUsername == null && bestClaim != null && bestClaim.getSecurityOfficerId() != null) {
+            securityUsername = resolveUsernameById(bestClaim.getSecurityOfficerId());
+        }
+
+        String receiverUsername = null;
+        if (linkedReleaseClaim != null && linkedReleaseClaim.getClaimerId() != null) {
+            receiverUsername = resolveUsernameById(linkedReleaseClaim.getClaimerId());
+        }
+        if (receiverUsername == null && bestClaim != null && bestClaim.getClaimerId() != null) {
+            receiverUsername = resolveUsernameById(bestClaim.getClaimerId());
+        }
+        if (receiverUsername == null && latestRelease != null && latestRelease.getReleasedTo() != null) {
+            receiverUsername = resolveUsernameByIdentity(latestRelease.getReleasedTo());
+        }
+
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("id", item.getId());
         payload.put("status", status);
         payload.put("item_name", item.getItemName());
         payload.put("image_url", item.getImageUrl());
         payload.put("founder_username", item.getUser() == null ? null : item.getUser().getUsername());
-        payload.put("security_username", null);
-        payload.put("receiver_username", null);
+        payload.put("security_username", securityUsername);
+        payload.put("receiver_username", receiverUsername);
         payload.put("date_found", item.getCreatedAt() == null ? null : item.getCreatedAt().toString());
-        payload.put("date_received", item.getUpdatedAt() == null ? null : item.getUpdatedAt().toString());
-        payload.put("date_released", item.getUpdatedAt() == null ? null : item.getUpdatedAt().toString());
+        payload.put("date_received", latestReceive == null || latestReceive.getCreatedAt() == null
+            ? (item.getUpdatedAt() == null ? null : item.getUpdatedAt().toString())
+            : latestReceive.getCreatedAt().toString());
+        payload.put("date_released", latestRelease == null || latestRelease.getCreatedAt() == null
+            ? (bestClaim == null || bestClaim.getCollectedAt() == null ? null : bestClaim.getCollectedAt().toString())
+            : latestRelease.getCreatedAt().toString());
         return payload;
+    }
+
+    private Optional<Claim> findBestClaimForItem(Long itemId) {
+        return claimRepository.findByItemId(itemId).stream()
+            .sorted(Comparator
+                .comparing((Claim claim) -> claim.getCollectedAt() != null)
+                .thenComparing(claim -> claim.getCollectedAt() == null ? LocalDateTime.MIN : claim.getCollectedAt())
+                .thenComparing(claim -> claim.getClaimedAt() == null ? LocalDateTime.MIN : claim.getClaimedAt())
+                .reversed())
+            .findFirst();
+    }
+
+    private String resolveUsernameById(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        return userRepository.findById(userId)
+            .map(User::getUsername)
+            .orElse(null);
+    }
+
+    private String resolveUsernameByIdentity(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        String normalized = value.trim();
+        String asUsername = userRepository.findByUsername(normalized)
+            .map(User::getUsername)
+            .orElse(null);
+        if (asUsername != null) {
+            return asUsername;
+        }
+
+        return userRepository.findAll().stream()
+            .filter(user -> user.getFullName() != null && normalized.equalsIgnoreCase(user.getFullName().trim()))
+            .map(User::getUsername)
+            .findFirst()
+            .orElse(null);
     }
 
     private Map<String, Object> toReportPayload(Report report) {
@@ -489,5 +682,14 @@ public class AdminController {
             return false;
         }
         return defaultValue;
+    }
+
+    private User getCurrentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new IllegalStateException("User not authenticated");
+        }
+        return userRepository.findByUsername(auth.getName())
+            .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
     }
 }

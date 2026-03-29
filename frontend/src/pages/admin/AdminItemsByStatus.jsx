@@ -4,6 +4,7 @@ import { adminAPI } from '../../services/api';
 import MobileWarning from '../../components/MobileWarning';
 import SampleItemImage from '../../components/SampleItemImage';
 import { normalizeCategory } from '../../utils/categoryUtils';
+import { getModeratedItemTitle } from '../../utils/itemDisplayUtils';
 
 const configuredApiUrl = import.meta.env.VITE_API_URL;
 const API_ORIGIN = (configuredApiUrl?.includes('localhost:5000')
@@ -71,7 +72,7 @@ const formatDateTime = (value) => {
 };
 
 const normalizeItem = (item, status) => {
-  const itemName = readFirst(item, ['name', 'item_name', 'itemName'], 'Unnamed Item');
+  const itemName = getModeratedItemTitle(readFirst(item, ['name', 'item_name', 'itemName'], 'Unnamed Item'));
   const normalizedCategory = normalizeCategory(readFirst(item, ['category']), itemName);
 
   const dateTime = status === 'released'
