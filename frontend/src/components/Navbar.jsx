@@ -1,4 +1,4 @@
-import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect, useRef } from 'react';
 import { notificationsAPI } from '../services/api';
@@ -6,7 +6,6 @@ import { notificationsAPI } from '../services/api';
 const Navbar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const moreMenuRef = useRef(null);
@@ -70,8 +69,6 @@ const Navbar = () => {
     isActive ? 'nav-link nav-link-active' : 'nav-link'
   );
 
-  const isNotificationsRoute = location.pathname.startsWith('/notifications');
-
   return (
     <nav className="navbar">
       <div className="nav-container">
@@ -124,9 +121,8 @@ const Navbar = () => {
 
               <NavLink
                 to="/notifications"
-                className={`nav-link notification-icon-btn${isNotificationsRoute ? ' notification-icon-active' : ''}`}
+                className={({ isActive }) => (isActive ? 'nav-link notification-icon-btn notification-icon-active' : 'nav-link notification-icon-btn')}
                 aria-label="Notifications"
-                aria-current={isNotificationsRoute ? 'page' : undefined}
               >
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                   <path d="M12 3a6 6 0 0 0-6 6v3.6l-1.6 2.6a1 1 0 0 0 .85 1.53h13.5a1 1 0 0 0 .85-1.53L18 12.6V9a6 6 0 0 0-6-6zm0 18a3 3 0 0 0 2.82-2H9.18A3 3 0 0 0 12 21z" />

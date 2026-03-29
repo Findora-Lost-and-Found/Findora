@@ -186,25 +186,13 @@ body {
 .notification-icon-active {
   color: #0f172a;
   background: #ffffff;
-  border: 2px solid #111827 !important;
-  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.22) !important;
+  border: 2px solid #111827;
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.22);
 }
 
-.notification-icon-btn[aria-current='page'] {
-  color: #0f172a;
-  background: #ffffff;
-  border: 2px solid #111827 !important;
-  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.22) !important;
-}
-
-.notification-icon-btn[aria-current='page'] svg {
+.notification-icon-active svg {
   transform-origin: 50% 12%;
   animation: bell-wobble 1.2s ease-in-out infinite;
-}
-
-.notification-icon-active:hover {
-  color: #0f172a;
-  background: #ffffff;
 }
 
 .notification-icon-btn:focus-visible {
@@ -1350,15 +1338,8 @@ body.dark-mode .notification-icon-btn:hover {
 body.dark-mode .notification-icon-active {
   color: #f8fafc;
   background: #0f172a;
-  border-color: #f8fafc !important;
-  box-shadow: 0 0 0 3px rgba(248, 250, 252, 0.3) !important;
-}
-
-body.dark-mode .notification-icon-btn[aria-current='page'] {
-  color: #f8fafc;
-  background: #0f172a;
-  border-color: #f8fafc !important;
-  box-shadow: 0 0 0 3px rgba(248, 250, 252, 0.3) !important;
+  border-color: #f8fafc;
+  box-shadow: 0 0 0 3px rgba(248, 250, 252, 0.3);
 }
 
 @keyframes bell-wobble {
@@ -1378,11 +1359,6 @@ body.dark-mode .notification-icon-btn[aria-current='page'] {
   80% {
     transform: rotate(5deg);
   }
-}
-
-body.dark-mode .notification-icon-active:hover {
-  color: #f8fafc;
-  background: #0f172a;
 }
 
 body.dark-mode .notification-icon-badge {
