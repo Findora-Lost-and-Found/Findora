@@ -11,9 +11,13 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.findora.model.AccessAppeal;
 import com.findora.model.User;
+import com.findora.repository.AccessAppealRepository;
 import com.findora.repository.UserRepository;
 
 /**
@@ -22,6 +26,7 @@ import com.findora.repository.UserRepository;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@SuppressWarnings("null")
 class AuthControllerIntegrationTest {
 
     @Autowired
@@ -31,14 +36,17 @@ class AuthControllerIntegrationTest {
     private UserRepository userRepository;
 
     @Autowired
+    private AccessAppealRepository accessAppealRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
     private ObjectMapper objectMapper;
 
     @BeforeEach
-    @SuppressWarnings("unused")
     public void setUp() {
+        accessAppealRepository.deleteAll();
         userRepository.deleteAll();
 
         // Create a test user
@@ -51,6 +59,107 @@ class AuthControllerIntegrationTest {
         user.setIsVerified(true);
         user.setIsApproved(true);
         userRepository.save(user);
+    }
+
+    @Test
+    void testAppealWithBadLanguageIsBlockedFor24Hours() throws Exception {
+        User suspendedUser = userRepository.findByUsername("testuser").orElseThrow();
+        suspendedUser.setIsSuspended(true);
+        userRepository.save(suspendedUser);
+
+        String appealJson = objectMapper.writeValueAsString(
+            new java.util.HashMap<String, String>() {{
+                put("identifier", "testuser");
+                put("reason", "fuck you, remove my suspension");
+            }}
+        );
+
+        mockMvc.perform(
+            post("/api/auth/appeal-access")
+                .contentType("application/json")
+                .content(appealJson)
+        )
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Appeal blocked for inappropriate language")));
+
+        assertEquals(1, accessAppealRepository.count());
+        AccessAppeal savedAppeal = accessAppealRepository.findAll().get(0);
+        assertEquals(AccessAppeal.AppealStatus.DECLINED, savedAppeal.getStatus());
+        assertEquals("AUTO_DECLINED_BAD_LANGUAGE_24H", savedAppeal.getAdminNotes());
+    }
+
+    @Test
+    void testAppealCooldownBlocksSecondSubmissionWithin24Hours() throws Exception {
+        User suspendedUser = userRepository.findByUsername("testuser").orElseThrow();
+        suspendedUser.setIsSuspended(true);
+        userRepository.save(suspendedUser);
+
+        String firstAppealJson = objectMapper.writeValueAsString(
+            new java.util.HashMap<String, String>() {{
+                put("identifier", "testuser");
+                put("reason", "fuck you, remove my suspension");
+            }}
+        );
+
+        mockMvc.perform(
+            post("/api/auth/appeal-access")
+                .contentType("application/json")
+                .content(firstAppealJson)
+        )
+            .andExpect(status().isBadRequest());
+
+        String secondAppealJson = objectMapper.writeValueAsString(
+            new java.util.HashMap<String, String>() {{
+                put("identifier", "testuser");
+                put("reason", "Please review my account, I will follow rules");
+            }}
+        );
+
+        mockMvc.perform(
+            post("/api/auth/appeal-access")
+                .contentType("application/json")
+                .content(secondAppealJson)
+        )
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("You can submit another appeal after")));
+
+        assertEquals(1, accessAppealRepository.count());
+        AccessAppeal savedAppeal = accessAppealRepository.findAll().get(0);
+        assertTrue(savedAppeal.getAppealText().toLowerCase().contains("fuck"));
+    }
+
+    @Test
+    void testLoginShowsAppealCooldownMessageAfterBadLanguageAppeal() throws Exception {
+        User suspendedUser = userRepository.findByUsername("testuser").orElseThrow();
+        suspendedUser.setIsSuspended(true);
+        userRepository.save(suspendedUser);
+
+        AccessAppeal cooldownAppeal = new AccessAppeal();
+        cooldownAppeal.setUserId(suspendedUser.getId());
+        cooldownAppeal.setActionType(AccessAppeal.AppealActionType.SUSPENSION);
+        cooldownAppeal.setStatus(AccessAppeal.AppealStatus.DECLINED);
+        cooldownAppeal.setAppealText("fuck you");
+        cooldownAppeal.setAdminNotes("AUTO_DECLINED_BAD_LANGUAGE_24H");
+        cooldownAppeal.setReviewedAt(java.time.LocalDateTime.now());
+        accessAppealRepository.save(cooldownAppeal);
+
+        String loginJson = objectMapper.writeValueAsString(
+            new java.util.HashMap<String, String>() {{
+                put("identifier", "testuser");
+                put("password", "TestPass@123");
+            }}
+        );
+
+        mockMvc.perform(
+            post("/api/auth/login")
+                .contentType("application/json")
+                .content(loginJson)
+        )
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Appeal blocked for inappropriate language")));
     }
 
     /**

@@ -30,10 +30,11 @@ import com.findora.service.ItemService;
 import com.findora.service.SecurityService;
 
 /**
- * SecurityController - Security officer endpoints (TODO: Full implementation).
+ * SecurityController - Security officer endpoints.
  */
 @RestController
 @RequestMapping("/api/security")
+@SuppressWarnings("null")
 public class SecurityController {
 
     private static final Logger log = LoggerFactory.getLogger(SecurityController.class);
@@ -112,10 +113,13 @@ public class SecurityController {
                 "message", "Handover request submitted successfully"
             ));
         } catch (IllegalArgumentException e) {
+            log.warn("Handover request validation failed: {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
         } catch (Exception e) {
+            log.error("Error processing handover request for itemId: {}", 
+                request != null ? request.getItemId() : "null", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("success", false, "message", "Server error"));
+                .body(Map.of("success", false, "message", "Server error: " + e.getMessage()));
         }
     }
 
@@ -177,8 +181,8 @@ public class SecurityController {
     @GetMapping("/transactions")
     @PreAuthorize("hasAnyRole('SECURITY', 'ADMIN')")
     public ResponseEntity<?> getTransactions(
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
+            @RequestParam(name = "page", defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "10") Integer size) {
         try {
             Long userId = getCurrentUserId();
             User currentUser = userRepository.findById(userId)
@@ -206,7 +210,7 @@ public class SecurityController {
     @GetMapping("/stats")
     public ResponseEntity<?> getSecurityStats() {
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-            .body(Map.of("message", "TODO: Implement security stats"));
+            .body(Map.of("message", "Security stats are not implemented yet"));
     }
 
     /**
@@ -216,11 +220,11 @@ public class SecurityController {
     @GetMapping("/found-items")
     @PreAuthorize("hasAnyRole('SECURITY', 'ADMIN')")
     public ResponseEntity<?> getFoundItemsForSecurity(
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(defaultValue = "createdAt,desc") String sort,
-            @RequestParam(required = false) String category,
-            @RequestParam(required = false) String keyword) {
+            @RequestParam(name = "page", defaultValue = "0") Integer page,
+            @RequestParam(name = "size", defaultValue = "10") Integer size,
+            @RequestParam(name = "sort", defaultValue = "createdAt,desc") String sort,
+            @RequestParam(name = "category", required = false) String category,
+            @RequestParam(name = "keyword", required = false) String keyword) {
         try {
             PaginatedResponse<ItemDTO> response = itemService.getPaginatedItems(
                 page,

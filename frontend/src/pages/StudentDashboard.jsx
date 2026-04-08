@@ -1,14 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { itemsAPI, claimsAPI } from '../services/api';
 import PostModal from '../components/PostModal';
 import FoundItemCard from '../components/FoundItemCard';
+import FilterSelect from '../components/FilterSelect';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
 
 const DEFAULT_POST_ROLES = ['student', 'staff', 'security'];
-const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
+const INITIAL_FOUND_VISIBLE = 6;
+const FOUND_LOAD_STEP = 3;
+const configuredApiUrl = import.meta.env.VITE_API_URL;
+const API_ORIGIN = (configuredApiUrl?.includes('localhost:5000')
+  ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')
+  : configuredApiUrl || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
+const STUDENT_DASHBOARD_IMAGE_FALLBACK = 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22200%22 viewBox=%220 0 300 200%22%3E%3Crect width=%22300%22 height=%22200%22 fill=%22%23E5E7EB%22/%3E%3Ctext x=%22150%22 y=%22106%22 text-anchor=%22middle%22 fill=%22%236B7280%22 font-size=%2216%22 font-family=%22Arial%22%3EItem image%3C/text%3E%3C/svg%3E';
 
 const readFirst = (obj, keys, fallback = '') => {
   for (const key of keys) {
@@ -22,20 +29,26 @@ const readFirst = (obj, keys, fallback = '') => {
 
 const toImageUrl = (rawImage) => {
   if (!rawImage) {
-    return 'https://via.placeholder.com/300x200?text=Item+Image';
+    return STUDENT_DASHBOARD_IMAGE_FALLBACK;
   }
 
   const normalized = String(rawImage).trim().replace(/\\/g, '/');
 
   if (!normalized || normalized === 'null' || normalized === 'undefined') {
-    return 'https://via.placeholder.com/300x200?text=Item+Image';
+    return STUDENT_DASHBOARD_IMAGE_FALLBACK;
   }
 
   if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
     return normalized;
   }
 
-  return `${API_ORIGIN}${normalized.startsWith('/') ? normalized : `/${normalized}`}`;
+  const looksLikePath = normalized.includes('/') || normalized.includes('.') || normalized.startsWith('uploads');
+  if (!looksLikePath) {
+    return STUDENT_DASHBOARD_IMAGE_FALLBACK;
+  }
+
+  const normalizedPath = normalized.replace(/\/+/g, '/').replace(/^\/+/, '');
+  return `${API_ORIGIN}/${normalizedPath}`;
 };
 
 const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES }) => {
@@ -45,6 +58,13 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
   const [loading, setLoading] = useState(true);
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [foundItems, setFoundItems] = useState([]);
+  const [filters, setFilters] = useState({
+    category: '',
+    search: '',
+    sortBy: FOUND_ITEM_SORT.LATEST
+  });
+  const [searchInput, setSearchInput] = useState('');
+  const [visibleFoundCount, setVisibleFoundCount] = useState(INITIAL_FOUND_VISIBLE);
 
   const canUseItemDashboard = !!user && postRoles.includes(user.role);
 
@@ -67,8 +87,7 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
       const [itemsRes, claimsRes, foundRes] = await Promise.allSettled([
         itemsAPI.getMy(),
         claimsAPI.getMy(),
-        // Reuse the same found-items feed for any role that shares the dashboard UI.
-        itemsAPI.getAll({ type: 'found' })
+        itemsAPI.getMy({ type: 'found', page: 0, size: 100, sort: 'createdAt,desc' })
       ]);
 
       setStats({
@@ -81,7 +100,7 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
           ...item,
           name: item.name || item.item_name,
           date_found: item.date_found || item.date || item.created_at,
-          image: toImageUrl(readFirst(item, ['image', 'imageUrl', 'image_url'])),
+          image: toImageUrl(readFirst(item, ['image_url', 'imageUrl', 'image'])),
           category: normalizeCategory(item.category, item.name || item.item_name),
           posted_by: item.posted_by || {
             id: item.userId || item.user_id,
@@ -89,17 +108,57 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
           }
         }));
         const sortedFoundItems = sortFoundItems(apiItems, FOUND_ITEM_SORT.LATEST);
-        setFoundItems(sortedFoundItems.slice(0, 6));
+        setFoundItems(sortedFoundItems);
+        setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
       } else {
         console.error('Dashboard found items fetch failed:', foundRes.reason?.response?.data || foundRes.reason?.message);
         setFoundItems([]);
+        setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
       }
     } catch (error) {
       console.error('Error loading dashboard:', error);
       setFoundItems([]);
+      setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
     } finally {
       setLoading(false);
     }
+  };
+
+  const filteredFoundItems = useMemo(() => {
+    const searchTerm = filters.search.trim().toLowerCase();
+
+    const filtered = foundItems.filter((item) => {
+      const category = normalizeCategory(item.category, item.name || item.item_name);
+      const categoryMatches = !filters.category || category === filters.category;
+
+      if (!searchTerm) {
+        return categoryMatches;
+      }
+
+      const haystack = [item.name, item.description, item.location]
+        .map((value) => String(value || '').toLowerCase())
+        .join(' ');
+
+      return categoryMatches && haystack.includes(searchTerm);
+    });
+
+    return sortFoundItems(filtered, filters.sortBy);
+  }, [foundItems, filters.category, filters.search, filters.sortBy]);
+
+  const visibleFoundItems = filteredFoundItems.slice(0, visibleFoundCount);
+  const hasMoreFoundItems = visibleFoundCount < filteredFoundItems.length;
+  const canToggleFoundItems = filteredFoundItems.length > INITIAL_FOUND_VISIBLE;
+
+  const handleFilterChange = (event) => {
+    const { name, value } = event.target;
+    setFilters((prev) => ({ ...prev, [name]: value }));
+    setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
+  };
+
+  const handleSearchSubmit = (event) => {
+    event.preventDefault();
+    setFilters((prev) => ({ ...prev, search: searchInput.trim() }));
+    setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
   };
 
   if (loading) {
@@ -112,7 +171,6 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
         <div className="dashboard-top">
           <div>
             <h1>Welcome, {user?.full_name}!</h1>
-            <p className="role-badge">Role: {user?.role}</p>
           </div>
           {canUseItemDashboard && (
             <button
@@ -139,27 +197,91 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
         {/* Inject role-specific controls without duplicating the shared dashboard layout. */}
         {extraPanel}
 
-        {canUseItemDashboard && foundItems.length > 0 && (
+        {canUseItemDashboard && (
           <div className="found-items-section">
             <div className="section-header">
               <h2>Recently Found Items</h2>
-              <Link to="/found-items" className="link-more">View All →</Link>
+            </div>
+            <div className="filters">
+              <FilterSelect
+                name="category"
+                value={filters.category}
+                onChange={handleFilterChange}
+                ariaLabel="Filter by category"
+                options={[
+                  { value: '', label: 'All Categories' },
+                  { value: 'NIC', label: 'NIC' },
+                  { value: 'Student ID', label: 'Student ID' },
+                  { value: 'Bank Card', label: 'Bank Card' },
+                  { value: 'Wallet', label: 'Wallet' },
+                  { value: 'Other', label: 'Other' }
+                ]}
+              />
+
+              <form className="search-form" onSubmit={handleSearchSubmit}>
+                <input
+                  type="text"
+                  name="search"
+                  placeholder="Search items..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                />
+                <button type="submit" className="search-icon-btn" aria-label="Search dashboard found items">
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+                    <path d="M10.5 3a7.5 7.5 0 0 1 5.93 12.1l4.24 4.23a1 1 0 1 1-1.41 1.42l-4.24-4.24A7.5 7.5 0 1 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11a5.5 5.5 0 0 0 0-11z" fill="currentColor"/>
+                  </svg>
+                </button>
+              </form>
+
+            <FilterSelect
+              name="sortBy"
+              value={filters.sortBy}
+              onChange={handleFilterChange}
+              ariaLabel="Sort items"
+              options={[
+                { value: FOUND_ITEM_SORT.LATEST, label: 'Latest' },
+                { value: FOUND_ITEM_SORT.NAME_ASC, label: 'Alphabetical A → Z' },
+                { value: FOUND_ITEM_SORT.NAME_DESC, label: 'Alphabetical Z → A' }
+              ]}
+            />
             </div>
             <div className="found-items-grid">
-              {foundItems.map((item) => (
-                <FoundItemCard
-                  key={item.id}
-                  item={item}
-                  onClaim={() => {
-                    claimsAPI.create(item.id).then(() => {
-                      navigate('/my-claims');
-                    }).catch((err) => {
-                      console.error('Claim error:', err);
-                    });
-                  }}
-                />
-              ))}
+              {filteredFoundItems.length === 0 ? (
+                <p>No found items available right now.</p>
+              ) : (
+                visibleFoundItems.map((item) => (
+                  <FoundItemCard
+                    key={item.id}
+                    item={item}
+                    onClaim={() => {
+                      claimsAPI.create(item.id).then(() => {
+                        navigate('/my-claims');
+                      }).catch((err) => {
+                        console.error('Claim error:', err);
+                      });
+                    }}
+                  />
+                ))
+              )}
             </div>
+            {canToggleFoundItems && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                <button
+                  type="button"
+                  className="link-more"
+                  onClick={() => {
+                    if (hasMoreFoundItems) {
+                      setVisibleFoundCount((prev) => Math.min(prev + FOUND_LOAD_STEP, foundItems.length));
+                    } else {
+                      setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
+                    }
+                  }}
+                  style={{ background: 'none', border: 'none', padding: 0, fontWeight: 700, cursor: 'pointer' }}
+                >
+                  {hasMoreFoundItems ? 'Show more ▼' : 'Show less ▲'}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -20,7 +20,14 @@ export const AuthProvider = ({ children }) => {
   const getApiErrorMessage = (error, fallbackMessage) => {
     const apiError = error.response?.data;
     const validationMessage = apiError?.errors?.[0]?.msg;
-    return validationMessage || apiError?.message || fallbackMessage;
+    const genericError = apiError?.error;
+
+    // Axios network/CORS failures usually have no response payload.
+    if (!error.response) {
+      return 'Unable to reach server. Please make sure backend is running on port 8080.';
+    }
+
+    return validationMessage || apiError?.message || genericError || error.message || fallbackMessage;
   };
 
   useEffect(() => {
@@ -47,14 +54,21 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await authAPI.register(data);
       const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      setToken(token);
-      setUser(user);
+      if (token) {
+        localStorage.setItem('token', token);
+        setToken(token);
+        setUser(user);
+      } else {
+        localStorage.removeItem('token');
+        setToken(null);
+        setUser(null);
+      }
       toast.success(response.data.message);
       const role = String(user?.role || '').toLowerCase();
       const isVerified = Boolean(user?.is_verified ?? user?.isVerified);
-      const requiresVerification = (role === 'student' || role === 'staff') && !isVerified;
-      return { success: true, user, requiresVerification };
+      const requiresVerification = Boolean(token) && (role === 'student' || role === 'staff' || role === 'security') && !isVerified;
+      const pendingApproval = !token && (role === 'security' || role === 'admin' || role === 'super_admin');
+      return { success: true, user, requiresVerification, pendingApproval };
     } catch (error) {
       const message = getApiErrorMessage(error, 'Registration failed');
       toast.error(message);
@@ -72,6 +86,10 @@ export const AuthProvider = ({ children }) => {
       toast.success('Login successful');
       return { success: true, user };
     } catch (error) {
+      // Prevent cross-account confusion: never keep an old session after a failed login attempt.
+      localStorage.removeItem('token');
+      setToken(null);
+      setUser(null);
       const message = getApiErrorMessage(error, 'Login failed');
       toast.error(message);
       return { success: false, message };

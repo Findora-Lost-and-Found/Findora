@@ -1,6 +1,9 @@
 package com.findora.controller;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeParseException;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -13,6 +16,7 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -46,12 +50,20 @@ import com.findora.service.MatchService;
  */
 @RestController
 @RequestMapping("/api/claims")
+@SuppressWarnings("null")
 public class ClaimController {
 
     private static final Logger log = LoggerFactory.getLogger(ClaimController.class);
-    private static final double STRONG_THRESHOLD_PERCENT = 80.0;
-    private static final double POSSIBLE_THRESHOLD_PERCENT = 60.0;
     private static final Pattern NIC_PATTERN = Pattern.compile("^(?:\\d{9}[VvXx]|\\d{12})$");
+
+    @Value("${app.matching.threshold.found:0.75}")
+    private double strongThreshold;
+
+    @Value("${app.matching.threshold.possible:0.60}")
+    private double possibleThreshold;
+
+    @Value("${app.matching.threshold.instant-otp:90.0}")
+    private double instantOtpThreshold;
 
     private static final Collection<Claim.ClaimStatus> OPEN_STATUSES = List.of(
         Claim.ClaimStatus.PENDING,
@@ -116,6 +128,10 @@ public class ClaimController {
                 throw new IllegalArgumentException("Only found items can be claimed");
             }
 
+            if (stringValue(item.getDescription()).isBlank()) {
+                throw new IllegalArgumentException("Found item description is required for matching");
+            }
+
             if (item.getUserId() != null && item.getUserId().equals(currentUserId)) {
                 throw new IllegalArgumentException("You cannot claim your own item");
             }
@@ -127,10 +143,18 @@ public class ClaimController {
                 });
 
             boolean immediateIdMatch = validateCategorySpecificCredentials(claimData, item);
-            Item claimProfile = buildClaimProfile(claimData, item);
-            double score = immediateIdMatch ? 100.0 : matchService.computeScore(claimProfile, item);
+            double score;
+            if (immediateIdMatch) {
+                score = 100.0;
+            } else {
+                Item claimProfile = buildClaimProfile(claimData, item);
+                score = matchService.computeScore(claimProfile, item);
+            }
 
-            if (score < POSSIBLE_THRESHOLD_PERCENT) {
+            double possibleThresholdPercent = possibleThreshold * 100.0;
+            double strongThresholdPercent = strongThreshold * 100.0;
+
+            if (score < possibleThresholdPercent) {
                 throw new IllegalArgumentException("Claim details do not match this item closely enough");
             }
 
@@ -138,7 +162,9 @@ public class ClaimController {
             String claimMode;
             if (immediateIdMatch) {
                 claimMode = "immediate";
-            } else if (score >= STRONG_THRESHOLD_PERCENT) {
+            } else if (score >= instantOtpThreshold) {
+                claimMode = "high_confidence_immediate";
+            } else if (score >= strongThresholdPercent) {
                 LocalDateTime availableAt = Optional.ofNullable(item.getCreatedAt()).orElse(now).plusDays(1);
                 if (availableAt.isAfter(now)) {
                     throw new IllegalArgumentException(
@@ -147,7 +173,7 @@ public class ClaimController {
                 claimMode = "after_waiting_period";
             } else {
                 throw new IllegalArgumentException(
-                    "Possible match detected (60-79%). OTP is not issued at this stage.");
+                    "Possible match detected (60-74%). OTP is not issued at this stage.");
             }
 
             Claim claim = claimCreationService.createClaimForItem(itemId, currentUserId);
@@ -156,8 +182,8 @@ public class ClaimController {
             claimPayload.put("id", claim.getId());
             claimPayload.put("item_id", claim.getItemId());
             claimPayload.put("claimer_id", claim.getClaimerId());
-            claimPayload.put("otp", claim.getOtp());
-            claimPayload.put("otp_expiry", claim.getOtpExpiry() != null ? claim.getOtpExpiry().toString() : null);
+            claimPayload.put("otp", null);
+                claimPayload.put("otp_expiry", toUtcIsoString(claim.getOtpExpiry()));
             claimPayload.put("status", claim.getStatus().name().toLowerCase());
             claimPayload.put("claimed_at", claim.getClaimedAt());
             claimPayload.put("claim_mode", claimMode);
@@ -168,8 +194,7 @@ public class ClaimController {
 
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                 "success", true,
-                "message", "Claim submitted successfully. OTP sent.",
-                "otp", claim.getOtp(),
+                "message", "Claim submitted successfully. Generate OTP from My Claims when needed.",
                 "claim", claimPayload
             ));
         } catch (IllegalArgumentException e) {
@@ -186,12 +211,41 @@ public class ClaimController {
         }
     }
 
+    @PostMapping("/{id}/otp")
+    @PreAuthorize("hasAnyRole('STUDENT', 'STAFF')")
+    @Transactional
+    public ResponseEntity<?> generateOtp(@PathVariable("id") Long id) {
+        try {
+            Long currentUserId = getCurrentUserId();
+            Claim claim = claimCreationService.generateOtpForClaim(id, currentUserId);
+
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "OTP generated successfully",
+                "claim", Map.of(
+                    "id", claim.getId(),
+                    "otp", claim.getOtp(),
+                        "otp_expiry", toUtcIsoString(claim.getOtpExpiry())
+                )
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", e.getMessage()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "success", false,
+                "message", "Server error"
+            ));
+        }
+    }
+
     @GetMapping("/my")
     @PreAuthorize("hasAnyRole('STUDENT', 'STAFF', 'SECURITY', 'ADMIN')")
-    @Transactional(readOnly = true)
     public ResponseEntity<?> getMyClaims(
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
+            @RequestParam(value = "page", defaultValue = "0") Integer page,
+            @RequestParam(value = "size", defaultValue = "10") Integer size) {
         try {
             Long currentUserId = getCurrentUserId();
             Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "claimedAt"));
@@ -205,7 +259,7 @@ public class ClaimController {
                     row.put("item_id", claim.getItemId());
                     row.put("status", claim.getStatus() != null ? claim.getStatus().name().toLowerCase() : "pending");
                     row.put("otp", claim.getOtp());
-                    row.put("otp_expiry", claim.getOtpExpiry() != null ? claim.getOtpExpiry().toString() : null);
+                        row.put("otp_expiry", toUtcIsoString(claim.getOtpExpiry()));
                     row.put("claimed_at", claim.getClaimedAt() != null ? claim.getClaimedAt().toString() : null);
                     row.put("collected_at", claim.getCollectedAt() != null ? claim.getCollectedAt().toString() : null);
 
@@ -242,7 +296,7 @@ public class ClaimController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getClaimById(@PathVariable Long id) {
+    public ResponseEntity<?> getClaimById(@PathVariable("id") Long id) {
         return claimRepository.findById(id)
             .<ResponseEntity<?>>map(claim -> ResponseEntity.ok(Map.of(
                 "success", true,
@@ -252,7 +306,7 @@ public class ClaimController {
                     "claimer_id", claim.getClaimerId(),
                     "status", claim.getStatus() != null ? claim.getStatus().name().toLowerCase() : null,
                     "otp", claim.getOtp(),
-                    "otp_expiry", claim.getOtpExpiry(),
+                        "otp_expiry", toUtcIsoString(claim.getOtpExpiry()),
                     "claimed_at", claim.getClaimedAt(),
                     "collected_at", claim.getCollectedAt()
                 )
@@ -263,8 +317,8 @@ public class ClaimController {
 
     @GetMapping("/pending")
     public ResponseEntity<?> getPendingClaims(
-            @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
+            @RequestParam(value = "page", defaultValue = "0") Integer page,
+            @RequestParam(value = "size", defaultValue = "10") Integer size) {
         List<Claim> claims = claimRepository.findByStatusInOrderByClaimedAtDesc(OPEN_STATUSES);
 
         List<Map<String, Object>> rows = claims.stream().map(claim -> {
@@ -303,12 +357,20 @@ public class ClaimController {
             return false;
         }
 
-        return switch (category) {
-            case NIC -> validateNic(claimData, item);
-            case STUDENT_ID, BANK_CARD -> validateIdNumber(claimData, item);
-            case WALLET -> validateWalletIdentity(claimData, item);
-            default -> false;
-        };
+        if (category == ItemCategory.NIC) {
+            return validateNic(claimData, item);
+        }
+        if (category == ItemCategory.STUDENT_ID) {
+            return validateIdNumber(claimData, item);
+        }
+        if (category == ItemCategory.BANK_CARD) {
+            return validateBankCardIdentity(claimData, item);
+        }
+        if (category == ItemCategory.WALLET) {
+            return validateWalletIdentity(claimData, item);
+        }
+
+        return false;
     }
 
     private boolean validateNic(Map<String, Object> claimData, Item item) {
@@ -341,6 +403,36 @@ public class ClaimController {
         return true;
     }
 
+    private boolean validateBankCardIdentity(Map<String, Object> claimData, Item item) {
+        String rawCardNumber = stringValue(claimData.get("cardNumber"));
+        if (rawCardNumber.isBlank()) {
+            throw new IllegalArgumentException("cardNumber is required for Bank Card claims");
+        }
+
+        String normalizedCardNumber = rawCardNumber.replaceAll("\\s+", "");
+        if (!normalizedCardNumber.matches("^\\d{16}$")) {
+            throw new IllegalArgumentException("Card number must be exactly 16 digits");
+        }
+
+        String privateCardNumber = extractPrivateCardNumber(item.getDescription());
+        if (privateCardNumber.isBlank()) {
+            // Backward compatibility for older bank-card posts created before full card capture.
+            return false;
+        }
+
+        if (privateCardNumber.equals(normalizedCardNumber)) {
+            return true;
+        }
+
+        int distance = levenshteinDistance(privateCardNumber, normalizedCardNumber);
+        if (distance <= 2) {
+            // Near matches should continue into score-based path with a high similarity score.
+            return false;
+        }
+
+        throw new IllegalArgumentException("Entered card number does not match this item");
+    }
+
     private boolean validateWalletIdentity(Map<String, Object> claimData, Item item) {
         String claimType = stringValue(claimData.get("claimType")).toLowerCase(Locale.ROOT);
         if (!"with-id".equals(claimType)) {
@@ -363,39 +455,94 @@ public class ClaimController {
         Item claimProfile = new Item();
         claimProfile.setType(ItemType.LOST);
         claimProfile.setCategory(foundItem.getCategory());
-        claimProfile.setItemName(stringValue(claimData.get("itemName")));
+        String claimItemName = stringValue(claimData.get("itemName"));
+        if (claimItemName.isBlank()) {
+            claimItemName = stringValue(foundItem.getItemName());
+        }
+        claimProfile.setItemName(claimItemName);
 
-        String description = String.join(" ",
+        String explicitDescription = stringValue(claimData.get("description"));
+        String description = explicitDescription.isBlank()
+            ? String.join(" ",
             stringValue(claimData.get("claimType")),
+            stringValue(claimData.get("cardNumber")),
             stringValue(claimData.get("idNumber")),
             stringValue(claimData.get("nicNumber")),
             stringValue(claimData.get("items1")),
             stringValue(claimData.get("items2")),
             stringValue(claimData.get("items3")),
-            stringValue(claimData.get("additionalDetails"))
-        ).trim();
+            stringValue(claimData.get("fromTime")),
+            stringValue(claimData.get("toTime"))
+        ).trim()
+            : explicitDescription;
+
+        if (description.isBlank()) {
+            throw new IllegalArgumentException("Claim description is required for matching");
+        }
+
         claimProfile.setDescription(description);
 
-        String location = String.join(" ",
+        String location = String.join(" | ",
             stringValue(claimData.get("location1")),
             stringValue(claimData.get("location2")),
             stringValue(claimData.get("location3"))
-        ).trim();
+        ).replaceAll("(\\s*\\|\\s*)+", " | ")
+            .replaceAll("^(\\s*\\|\\s*)|(\\s*\\|\\s*)$", "")
+            .trim();
         claimProfile.setLocation(location);
 
-        claimProfile.setDate(parseDateOrDefault(claimData.get("foundFromDate"), foundItem.getDate()));
+        claimProfile.setDate(parseSingleClaimDate(claimData));
+        claimProfile.setTime(parseTimeOrDefault(
+            claimData.get("toTime"),
+            parseTimeOrDefault(claimData.get("fromTime"), foundItem.getTime())
+        ));
+        validateClaimDateTimeNotFuture(claimProfile.getDate(), claimProfile.getTime());
         return claimProfile;
     }
 
-    private java.time.LocalDate parseDateOrDefault(Object dateRaw, java.time.LocalDate fallback) {
-        if (dateRaw == null) {
-            return fallback;
+    private void validateClaimDateTimeNotFuture(LocalDate claimDate, LocalTime claimTime) {
+        if (claimDate == null) {
+            return;
+        }
+
+        if (claimDate.isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("Invalid date. Please select today or a past date.");
+        }
+
+        if (claimTime == null) {
+            return;
+        }
+
+        LocalDateTime submittedDateTime = LocalDateTime.of(claimDate, claimTime);
+        if (submittedDateTime.isAfter(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Invalid time. Please select current time or a past time.");
+        }
+    }
+
+    private java.time.LocalDate parseSingleClaimDate(Map<String, Object> claimData) {
+        String primaryDate = firstNonBlank(
+            stringValue(claimData.get("date")),
+            stringValue(claimData.get("lostDate")),
+            stringValue(claimData.get("foundFromDate")),
+            stringValue(claimData.get("fromDate"))
+        );
+        String rangeEndDate = firstNonBlank(
+            stringValue(claimData.get("foundToDate")),
+            stringValue(claimData.get("toDate"))
+        );
+
+        if (!rangeEndDate.isBlank() && !primaryDate.isBlank() && !rangeEndDate.equals(primaryDate)) {
+            throw new IllegalArgumentException("Please provide a single date for claim matching (date range is not supported)");
+        }
+
+        if (primaryDate.isBlank()) {
+            throw new IllegalArgumentException("A single date is required for claim matching");
         }
 
         try {
-            return java.time.LocalDate.parse(String.valueOf(dateRaw));
+            return java.time.LocalDate.parse(primaryDate);
         } catch (DateTimeParseException e) {
-            return fallback;
+            throw new IllegalArgumentException("Invalid claim date format. Use YYYY-MM-DD");
         }
     }
 
@@ -403,8 +550,62 @@ public class ClaimController {
         return value == null ? "" : value.replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
     }
 
+    private LocalTime parseTimeOrDefault(Object timeRaw, LocalTime fallback) {
+        if (timeRaw == null) {
+            return fallback;
+        }
+
+        try {
+            return LocalTime.parse(String.valueOf(timeRaw));
+        } catch (DateTimeParseException e) {
+            return fallback;
+        }
+    }
+
     private String normalizeGeneralId(String value) {
         return value == null ? "" : value.replaceAll("[\\s-]+", "").toUpperCase(Locale.ROOT);
+    }
+
+    private String extractPrivateCardNumber(String description) {
+        if (description == null || description.isBlank()) {
+            return "";
+        }
+
+        java.util.regex.Matcher matcher = java.util.regex.Pattern
+            .compile("__PRIVATE_CARD__=(\\d{16})")
+            .matcher(description);
+
+        if (!matcher.find()) {
+            return "";
+        }
+
+        return matcher.group(1);
+    }
+
+    private int levenshteinDistance(String left, String right) {
+        int[] previous = new int[right.length() + 1];
+        int[] current = new int[right.length() + 1];
+
+        for (int j = 0; j <= right.length(); j++) {
+            previous[j] = j;
+        }
+
+        for (int i = 1; i <= left.length(); i++) {
+            current[0] = i;
+            for (int j = 1; j <= right.length(); j++) {
+                int cost = left.charAt(i - 1) == right.charAt(j - 1) ? 0 : 1;
+                current[j] = Math.min(
+                    Math.min(current[j - 1] + 1, previous[j] + 1),
+                    previous[j - 1] + cost
+                );
+            }
+
+            int[] temp = previous;
+            previous = current;
+            current = temp;
+        }
+
+        return previous[right.length()];
     }
 
     private boolean itemContainsNormalizedValue(Item item, String normalizedValue) {
@@ -415,5 +616,18 @@ public class ClaimController {
 
     private String stringValue(Object value) {
         return value == null ? "" : String.valueOf(value).trim();
+    }
+
+    private String firstNonBlank(String... candidates) {
+        for (String value : candidates) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return "";
+    }
+
+    private String toUtcIsoString(LocalDateTime value) {
+        return value == null ? null : value.atOffset(ZoneOffset.UTC).toString();
     }
 }

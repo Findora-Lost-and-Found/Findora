@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { claimsAPI } from '../services/api';
 import './ClaimModal.css';
@@ -11,6 +12,7 @@ import OtherItemClaim from './claims/OtherItemClaim';
 import OTPDisplay from './OTPDisplay';
 
 const ClaimModal = ({ isOpen, onClose, item }) => {
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState('select'); // select, form, otp
   const [generatedOTP, setGeneratedOTP] = useState('');
   const [claimData, setClaimData] = useState(null);
@@ -19,11 +21,19 @@ const ClaimModal = ({ isOpen, onClose, item }) => {
   useEffect(() => {
     if (!isOpen) return undefined;
 
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const { body, documentElement } = document;
+    const originalOverflow = body.style.overflow;
+    const originalPaddingRight = body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - documentElement.clientWidth;
+
+    body.style.overflow = 'hidden';
+    if (scrollbarWidth > 0) {
+      body.style.paddingRight = `${scrollbarWidth}px`;
+    }
 
     return () => {
-      document.body.style.overflow = originalOverflow;
+      body.style.overflow = originalOverflow;
+      body.style.paddingRight = originalPaddingRight;
     };
   }, [isOpen]);
 
@@ -41,15 +51,19 @@ const ClaimModal = ({ isOpen, onClose, item }) => {
     setSubmitting(true);
     try {
       const response = await claimsAPI.create(itemId, Object.keys(claimMeta).length > 0 ? claimMeta : undefined);
+      const createdClaimId = response.data?.claim?.id;
       const apiOtp = response.data?.otp || response.data?.claim?.otp;
-
-      if (!apiOtp) {
-        throw new Error('OTP not returned by server');
-      }
-
       setClaimData(userData);
-      setGeneratedOTP(String(apiOtp));
-      setCurrentStep('otp');
+
+      // Backward-compatible path: some claim modes may still issue OTP immediately.
+      if (apiOtp) {
+        setGeneratedOTP(String(apiOtp));
+        setCurrentStep('otp');
+      } else {
+        toast.success(response.data?.message || 'Claim submitted successfully. Generate OTP from My Claims.');
+        onClose();
+        navigate(createdClaimId ? `/my-claims?claimId=${createdClaimId}` : '/my-claims');
+      }
     } catch (error) {
       const message = error.response?.data?.message || 'Failed to submit claim';
       toast.error(message);
@@ -109,12 +123,10 @@ const ClaimModal = ({ isOpen, onClose, item }) => {
   };
 
   const modalContent = (
-    <>
-      <div className="claim-modal-backdrop" onClick={onClose}></div>
-
-      <div className="claim-modal" role="dialog" aria-modal="true" aria-label="Claim item form">
+    <div className="claim-modal-root" onClick={onClose}>
+      <div className="claim-modal" role="dialog" aria-modal="true" aria-labelledby="claim-modal-title" onClick={(event) => event.stopPropagation()}>
         <div className="modal-header">
-          <h2>Claim Item</h2>
+          <h2 id="claim-modal-title">Claim Item</h2>
           <button className="claim-modal-close" onClick={onClose}>✕</button>
         </div>
 
@@ -144,7 +156,7 @@ const ClaimModal = ({ isOpen, onClose, item }) => {
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 
   return createPortal(modalContent, document.body);

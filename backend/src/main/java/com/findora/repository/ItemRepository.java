@@ -56,13 +56,19 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
 
     @Query("SELECT i FROM Item i WHERE i.userId = :userId AND " +
            "(:type IS NULL OR i.type = :type) AND " +
-           "(:status IS NULL OR i.status = :status)")
+           "(:status IS NULL OR i.status = :status) AND " +
+           "(:category IS NULL OR i.category = :category) AND " +
+           "(:keyword IS NULL OR LOWER(i.itemName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(i.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     Page<Item> findUserItemsFiltered(@Param("userId") Long userId,
                                      @Param("type") ItemType type,
                                      @Param("status") ItemStatus status,
+                                     @Param("category") ItemCategory category,
+                                     @Param("keyword") String keyword,
                                      Pageable pageable);
 
     Optional<Item> findByIdAndUserId(Long id, Long userId);
+
+       boolean existsByUserIdAndTypeAndStatusNot(Long userId, ItemType type, ItemStatus status);
 
     long countByType(ItemType type);
 

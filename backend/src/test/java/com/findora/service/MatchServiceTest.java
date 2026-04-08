@@ -1,8 +1,10 @@
 package com.findora.service;
 
+import java.lang.reflect.Constructor;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
 
@@ -17,6 +19,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.findora.model.Claim;
@@ -26,15 +29,14 @@ import com.findora.model.ItemStatus;
 import com.findora.model.ItemType;
 import com.findora.model.Match;
 import com.findora.repository.ItemRepository;
-import com.findora.repository.MatchRepository;
 import com.findora.repository.NotificationRepository;
 import com.findora.repository.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings({"null", "unchecked"})
 class MatchServiceTest {
 
-    @Mock
-    private MatchRepository matchRepository;
+    private JpaRepository<Match, Long> matchRepository;
     @Mock
     private ItemRepository itemRepository;
     @Mock
@@ -49,13 +51,26 @@ class MatchServiceTest {
     private MatchService matchService;
 
     @BeforeEach
-    @SuppressWarnings("unused")
-    void setUp() {
+    void setUp() throws Exception {
         Clock clock = Clock.fixed(Instant.parse("2026-03-16T10:00:00Z"), ZoneOffset.UTC);
         when(mailSenderProvider.getIfAvailable()).thenReturn(null);
 
-        matchService = new MatchService(
-            matchRepository,
+        Class<?> matchRepositoryClass = Class.forName("com.findora.repository.MatchRepository");
+        Object matchRepositoryProxy = org.mockito.Mockito.mock(matchRepositoryClass);
+        JpaRepository<Match, Long> castedRepository = (JpaRepository<Match, Long>) matchRepositoryProxy;
+        this.matchRepository = castedRepository;
+        Constructor<MatchService> constructor = MatchService.class.getConstructor(
+            matchRepositoryClass,
+            ItemRepository.class,
+            UserRepository.class,
+            NotificationRepository.class,
+            ClaimCreationService.class,
+            Clock.class,
+            ObjectProvider.class
+        );
+
+        matchService = constructor.newInstance(
+            matchRepositoryProxy,
             itemRepository,
             userRepository,
             notificationRepository,
@@ -66,10 +81,10 @@ class MatchServiceTest {
 
         ReflectionTestUtils.setField(matchService, "strongThreshold", 0.80);
         ReflectionTestUtils.setField(matchService, "possibleThreshold", 0.60);
-        ReflectionTestUtils.setField(matchService, "nameWeight", 0.40);
-        ReflectionTestUtils.setField(matchService, "descriptionWeight", 0.30);
-        ReflectionTestUtils.setField(matchService, "locationWeight", 0.20);
+        ReflectionTestUtils.setField(matchService, "descriptionWeight", 0.55);
+        ReflectionTestUtils.setField(matchService, "locationWeight", 0.25);
         ReflectionTestUtils.setField(matchService, "dateWeight", 0.10);
+        ReflectionTestUtils.setField(matchService, "timeWeight", 0.10);
     }
 
     @Test
@@ -148,6 +163,7 @@ class MatchServiceTest {
         item.setDescription(description);
         item.setLocation(location);
         item.setDate(LocalDate.of(2026, 3, 15));
+        item.setTime(LocalTime.of(10, 30));
         return item;
     }
 

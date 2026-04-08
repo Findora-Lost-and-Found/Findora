@@ -1,14 +1,19 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { useAuth } from '../context/AuthContext';
 import { itemsAPI, securityAPI } from '../services/api';
 import FoundItemCard from '../components/FoundItemCard';
+import FilterSelect from '../components/FilterSelect';
 import Pagination from '../components/Pagination';
 import { normalizeCategory } from '../utils/categoryUtils';
-import { FOUND_ITEM_SORT } from '../utils/itemDisplayUtils';
+import { FOUND_ITEM_SORT, isModerationRemovedItem, sortFoundItems } from '../utils/itemDisplayUtils';
 
 const PAGE_SIZE = 4;
-const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
+const configuredApiUrl = import.meta.env.VITE_API_URL;
+const API_ORIGIN = (configuredApiUrl?.includes('localhost:5000')
+  ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')
+  : configuredApiUrl || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
 
 const readFirst = (obj, keys, fallback = '') => {
   for (const key of keys) {
@@ -35,10 +40,12 @@ const toImageUrl = (rawImage) => {
     return normalized;
   }
 
-  return `${API_ORIGIN}${normalized.startsWith('/') ? normalized : `/${normalized}`}`;
+  const normalizedPath = normalized.replace(/\/+/g, '/').replace(/^\/+/, '');
+  return `${API_ORIGIN}/${normalizedPath}`;
 };
 
 const FoundItems = () => {
+  const { user } = useAuth();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const [allItems, setAllItems] = useState([]);
@@ -56,6 +63,8 @@ const FoundItems = () => {
     search: '',
     sortBy: FOUND_ITEM_SORT.LATEST
   });
+  const [searchInput, setSearchInput] = useState('');
+  const hasAppliedFocusScroll = useRef(false);
 
   const normalizeItem = (item) => ({
     id: item.id,
@@ -63,7 +72,7 @@ const FoundItems = () => {
     description: item.description || '',
     location: item.location || 'Unknown location',
     date_found: item.date_found || item.date || item.created_at,
-    image: toImageUrl(readFirst(item, ['image', 'imageUrl', 'image_url'])),
+    image: toImageUrl(readFirst(item, ['image', 'image_url', 'imageUrl'])),
     category: normalizeCategory(item.category, item.name || item.item_name),
     type: item.type || 'found',
     status: item.status || 'active',
@@ -93,20 +102,28 @@ const FoundItems = () => {
     try {
       setLoading(true);
 
-      const response = await itemsAPI.getAll({
+      const response = await itemsAPI.getMy({
         type: 'found',
         page: currentPage,
         size: PAGE_SIZE,
-        sort: sortParam,
         category: filters.category || undefined,
-        keyword: filters.search || undefined
+        keyword: filters.search.trim() || undefined
       });
 
       const apiItems = response.data?.content || [];
       console.log('FoundItems fetched from API:', apiItems);
       const normalizedItems = apiItems.map(normalizeItem);
-      setAllItems(normalizedItems);
+      const ownerOnlyItems = normalizedItems.filter((item) => {
+        const ownerId = item?.posted_by?.id;
+        if (!user?.id || ownerId === undefined || ownerId === null) {
+          return true;
+        }
+        return String(ownerId) === String(user.id);
+      });
+      const visibleItems = ownerOnlyItems.filter((item) => !isModerationRemovedItem(item));
+      const sortedItems = sortFoundItems(visibleItems, filters.sortBy);
 
+      setAllItems(sortedItems);
       setPagination({
         totalPages: response.data?.totalPages ?? 0,
         totalElements: response.data?.totalElements ?? 0,
@@ -149,16 +166,28 @@ const FoundItems = () => {
     setCurrentPage(0);
   };
 
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    const nextSearch = searchInput.trim();
+
+    setCurrentPage(0);
+    setFilters((prev) => ({
+      ...prev,
+      search: nextSearch
+    }));
+  };
+
   useEffect(() => {
     const focusItemId = searchParams.get('focusItem');
-    if (!focusItemId) return;
+    if (!focusItemId || hasAppliedFocusScroll.current) return;
 
     const targetId = `found-item-${focusItemId}`;
-    // Delay to ensure the card exists in DOM after list rendering.
+    // Run only once per page mount to avoid repeated smooth-scroll jitter.
     const timer = setTimeout(() => {
       const targetCard = document.getElementById(targetId);
       if (targetCard) {
         targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        hasAppliedFocusScroll.current = true;
       }
     }, 100);
 
@@ -171,36 +200,53 @@ const FoundItems = () => {
 
   return (
     <div className="container">
-      <h1>Found Items</h1>
-
       <div className="filters">
-        <select name="category" value={filters.category} onChange={handleFilterChange}>
-          <option value="">All Categories</option>
-          <option value="NIC">NIC</option>
-          <option value="Student ID">Student ID</option>
-          <option value="Bank Card">Bank Card</option>
-          <option value="Wallet">Wallet</option>
-          <option value="Other">Other</option>
-        </select>
-
-        <input
-          type="text"
-          name="search"
-          placeholder="Search items..."
-          value={filters.search}
+        <FilterSelect
+          name="category"
+          value={filters.category}
           onChange={handleFilterChange}
+          ariaLabel="Filter by category"
+          options={[
+            { value: '', label: 'All Categories' },
+            { value: 'NIC', label: 'NIC' },
+            { value: 'Student ID', label: 'Student ID' },
+            { value: 'Bank Card', label: 'Bank Card' },
+            { value: 'Wallet', label: 'Wallet' },
+            { value: 'Other', label: 'Other' }
+          ]}
         />
 
-        <select name="sortBy" value={filters.sortBy} onChange={handleFilterChange}>
-          <option value={FOUND_ITEM_SORT.LATEST}>Latest</option>
-          <option value={FOUND_ITEM_SORT.NAME_ASC}>Alphabetical A {'->'} Z</option>
-          <option value={FOUND_ITEM_SORT.NAME_DESC}>Alphabetical Z {'->'} A</option>
-        </select>
+        <form className="search-form" onSubmit={handleSearchSubmit}>
+          <input
+            type="text"
+            name="search"
+            placeholder="Search items..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+          />
+          <button type="submit" className="search-icon-btn" aria-label="Search found items">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+              <path d="M10.5 3a7.5 7.5 0 0 1 5.93 12.1l4.24 4.23a1 1 0 1 1-1.41 1.42l-4.24-4.24A7.5 7.5 0 1 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11a5.5 5.5 0 0 0 0-11z" fill="currentColor"/>
+            </svg>
+          </button>
+        </form>
+
+        <FilterSelect
+          name="sortBy"
+          value={filters.sortBy}
+          onChange={handleFilterChange}
+          ariaLabel="Sort items"
+          options={[
+            { value: FOUND_ITEM_SORT.LATEST, label: 'Latest' },
+            { value: FOUND_ITEM_SORT.NAME_ASC, label: 'Alphabetical A → Z' },
+            { value: FOUND_ITEM_SORT.NAME_DESC, label: 'Alphabetical Z → A' }
+          ]}
+        />
       </div>
 
       <div className="items-grid">
         {displayedItems.length === 0 ? (
-          <p>No found items available.</p>
+          <p>You have not posted any found items yet.</p>
         ) : (
           displayedItems.map((item) => (
             <FoundItemCard

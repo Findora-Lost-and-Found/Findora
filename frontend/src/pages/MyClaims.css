@@ -1,12 +1,12 @@
-.container {
+.container.my-claims-page {
   max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
+  margin: 16px auto 0 !important;
+  padding: 12px 20px 20px !important;
 }
 
-.container h1 {
+.my-claims-page h1 {
   font-size: 2.5rem;
-  color: #333;
+  color: #111827;
   margin-bottom: 30px;
   text-align: center;
 }
@@ -18,26 +18,37 @@
 }
 
 .claim-card {
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(17, 24, 39, 0.08);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   display: flex;
   flex-direction: column;
 }
 
-.claim-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+.claim-card-focus {
+  border-color: #2f7d32;
+  box-shadow: 0 0 0 3px rgba(47, 125, 50, 0.15);
 }
 
-.claim-card img {
+.claim-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.1);
+}
+
+.claim-image {
   width: 100%;
   height: 200px;
-  object-fit: cover;
   background: #f5f5f5;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.claim-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .claim-details {
@@ -49,20 +60,20 @@
 
 .claim-details h3 {
   font-size: 1.3rem;
-  color: #333;
+  color: #111827;
   margin: 0 0 15px 0;
   word-wrap: break-word;
 }
 
 .claim-details p {
   margin: 10px 0;
-  color: #666;
+  color: #4b5563;
   font-size: 0.95rem;
   line-height: 1.6;
 }
 
 .claim-details strong {
-  color: #333;
+  color: #111827;
   font-weight: 600;
 }
 
@@ -101,8 +112,8 @@
 }
 
 .otp-info {
-  background: #f0f8ff;
-  border: 1px solid #b3d9ff;
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
   border-radius: 6px;
   padding: 15px;
   margin-top: 15px;
@@ -110,25 +121,68 @@
 }
 
 .otp-info code {
-  background: #e8f4f8;
+  background: #ccfbf1;
   padding: 8px 12px;
   border-radius: 4px;
   display: inline-block;
   font-family: 'Courier New', monospace;
   font-size: 1.1rem;
   font-weight: bold;
-  color: #0066cc;
+  color: #0f766e;
   letter-spacing: 2px;
 }
 
 .otp-info p {
   margin: 8px 0;
-  color: #333;
+  color: #111827;
 }
 
 .otp-info small {
-  color: #666;
+  color: #4b5563;
   font-size: 0.85rem;
+}
+
+.otp-action-panel {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+  padding: 14px;
+  margin-top: 14px;
+}
+
+.otp-action-panel p {
+  margin: 0 0 10px 0;
+  color: #065f46;
+}
+
+.otp-expired-panel {
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
+.otp-expired-panel p {
+  color: #9a3412;
+}
+
+.btn-generate-otp {
+  background: #0f766e;
+  color: #ffffff;
+  border: 1px solid #0f766e;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.btn-generate-otp:hover:not(:disabled) {
+  background: #0a5d57;
+  transform: translateY(-1px);
+}
+
+.btn-generate-otp:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
 .success-msg {
@@ -154,11 +208,22 @@
 .loading {
   text-align: center;
   padding: 40px 20px;
-  color: #666;
+  color: #4b5563;
   font-size: 1.1rem;
 }
 
-.container > p {
+.claims-error {
+  text-align: center;
+  color: #b42318;
+  background: #fef3f2;
+  border: 1px solid #fecdca;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 0 auto 24px;
+  max-width: 640px;
+}
+
+.my-claims-page > p {
   text-align: center;
   color: #999;
   font-size: 1.05rem;
@@ -167,11 +232,12 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .container {
-    padding: 15px;
+  .container.my-claims-page {
+    margin-top: 12px !important;
+    padding: 10px 15px 15px !important;
   }
 
-  .container h1 {
+  .my-claims-page h1 {
     font-size: 1.8rem;
     margin-bottom: 20px;
   }
@@ -180,7 +246,7 @@
     grid-template-columns: 1fr;
   }
 
-  .claim-card img {
+  .claim-image {
     height: 150px;
   }
 
@@ -199,11 +265,12 @@
 }
 
 @media (max-width: 480px) {
-  .container {
-    padding: 10px;
+  .container.my-claims-page {
+    margin-top: 10px !important;
+    padding: 8px 10px 10px !important;
   }
 
-  .container h1 {
+  .my-claims-page h1 {
     font-size: 1.5rem;
     margin-bottom: 15px;
   }

@@ -2,7 +2,20 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { itemsAPI } from '../services/api';
-import { NIC_HELPER_TEXT, NIC_VALIDATION_MESSAGE, isValidNic, normalizeNic, sanitizeNicInput } from '../utils/nicUtils';
+import { useAuth } from '../context/AuthContext';
+import { NIC_HELPER_TEXT, NIC_VALIDATION_MESSAGE, isValidNic, isValidNicNumber, normalizeNic, normalizeNicNumber, sanitizeNicInput } from '../utils/nicUtils';
+import { isValidStudentIdNumber, normalizeStudentIdNumber, validateStudentID } from '../utils/studentIdUtils';
+import {
+  formatCardNumber,
+  getCardCursorPosition,
+  getCardLast4,
+  isValidCardNumber,
+  maskCardNumber,
+  normalizeCardNumber
+} from '../utils/cardUtils';
+import { validateLostTimeWithDate } from '../utils/timeUtils';
+import { BANK_OPTIONS } from '../data/bankOptions';
+import TimeInputPicker from '../components/TimeInputPicker';
 import './ReportLostItem.css';
 
 const CATEGORY_OPTIONS = ['NIC', 'Student / Staff ID', 'Bank Card', 'Purse / Wallet', 'Others'];
@@ -15,18 +28,18 @@ const ReportLostItem = () => {
   const [formData, setFormData] = useState({
     nicName: '',
     nicNumber: '',
+    idHolderType: '',
     idName: '',
     studentOrStaffId: '',
     cardType: '',
     bankName: '',
-    cardLast4: '',
+    cardNumber: '',
     bankLocation1: '',
     bankLocation2: '',
     bankLocation3: '',
     bankDateLost: '',
     bankFromTime: '',
     bankToTime: '',
-    cvv: '',
     pursePhoto: null,
     purseIdNumber: '',
     purseLocation1: '',
@@ -48,22 +61,37 @@ const ReportLostItem = () => {
     otherToTime: '',
     nicLocation1: '',
     nicLocation2: '',
+    nicLocation3: '',
     nicDateLost: '',
     nicFromTime: '',
     nicToTime: '',
     idLocation1: '',
     idLocation2: '',
+    idLocation3: '',
     idDateLost: '',
     idFromTime: '',
     idToTime: '',
     purseWithIdLocation1: '',
     purseWithIdLocation2: '',
+    purseWithIdLocation3: '',
     purseWithIdDateLost: '',
     purseWithIdFromTime: '',
     purseWithIdToTime: ''
   });
 
+  const now = new Date();
+  const currentDateValue = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const currentTimeValue = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+  const getMaxTimeForDate = (selectedDate) => {
+    if (!selectedDate) {
+      return undefined;
+    }
+    return selectedDate === currentDateValue ? currentTimeValue : undefined;
+  };
+
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const handleCategoryChange = (e) => {
     setCategory(e.target.value);
@@ -72,7 +100,30 @@ const ReportLostItem = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    const nextValue = name === 'nicNumber' ? sanitizeNicInput(value) : value;
+    const inputEl = e.target;
+    const normalizePurseId = (rawValue) => String(rawValue).trim().toUpperCase();
+
+    const nextValue =
+      name === 'nicNumber'
+        ? sanitizeNicInput(value)
+        : name === 'studentOrStaffId'
+          ? normalizeStudentIdNumber(value)
+          : name === 'purseIdNumber'
+            ? normalizePurseId(value)
+          : name === 'cardNumber'
+            ? formatCardNumber(value)
+          : value;
+
+    if (name === 'cardNumber') {
+      const cursor = inputEl.selectionStart ?? value.length;
+      const digitsBeforeCursor = value.slice(0, cursor).replace(/\D/g, '').length;
+
+      requestAnimationFrame(() => {
+        const nextCursor = getCardCursorPosition(nextValue, digitsBeforeCursor);
+        inputEl.setSelectionRange(nextCursor, nextCursor);
+      });
+    }
+
     setFormData((prev) => ({ ...prev, [name]: nextValue }));
   };
 
@@ -80,8 +131,29 @@ const ReportLostItem = () => {
     setFormData((prev) => ({ ...prev, [name]: file || null }));
   };
 
+  const handleTimeChange = (name, nextValue) => {
+    setFormData((prev) => ({ ...prev, [name]: nextValue }));
+  };
+
   const validate = () => {
     const nextErrors = {};
+    const isFutureDate = (dateValue) => {
+      if (!dateValue) return false;
+      const selectedDate = new Date(`${dateValue}T00:00:00`);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return selectedDate > today;
+    };
+    const assignInvalidTimeError = (fieldName, dateValue, timeValue) => {
+      if (!timeValue) {
+        return;
+      }
+
+      const validationResult = validateLostTimeWithDate(dateValue, timeValue);
+      if (validationResult !== true) {
+        nextErrors[fieldName] = validationResult;
+      }
+    };
 
     if (!category) nextErrors.category = 'Please select a category.';
 
@@ -92,34 +164,49 @@ const ReportLostItem = () => {
       if (formData.nicNumber.trim() && !isValidNicNumber(formData.nicNumber)) {
         nextErrors.nicNumber = 'NIC must be 12 digits or 9 digits followed by V.';
       }
-      if (!formData.nicLocation1.trim()) nextErrors.nicLocation1 = 'Location is required.';
       if (!formData.nicDateLost) nextErrors.nicDateLost = 'Date is required.';
+      if (formData.nicDateLost && isFutureDate(formData.nicDateLost)) {
+        nextErrors.nicDateLost = 'Invalid date. Please select today or a past date.';
+      }
       if (!formData.nicFromTime) nextErrors.nicFromTime = 'From time is required.';
       if (!formData.nicToTime) nextErrors.nicToTime = 'To time is required.';
+      assignInvalidTimeError('nicFromTime', formData.nicDateLost, formData.nicFromTime);
+      assignInvalidTimeError('nicToTime', formData.nicDateLost, formData.nicToTime);
     }
 
     if (category === 'Student / Staff ID') {
+      if (!formData.idHolderType) nextErrors.idHolderType = 'Please choose Student or Staff.';
       if (!formData.idName.trim()) nextErrors.idName = 'Name is required.';
       if (!formData.studentOrStaffId.trim()) nextErrors.studentOrStaffId = 'Student ID or Staff ID is required.';
-      if (formData.studentOrStaffId.trim() && !isValidStudentIdNumber(formData.studentOrStaffId)) {
-        nextErrors.studentOrStaffId = 'Student ID must be 6 digits followed by 1 letter.';
+      if (formData.studentOrStaffId.trim()) {
+        const validationResult = validateStudentID(formData.studentOrStaffId);
+        if (validationResult !== true) {
+          nextErrors.studentOrStaffId = validationResult;
+        }
       }
-      if (!formData.idLocation1.trim()) nextErrors.idLocation1 = 'Location is required.';
       if (!formData.idDateLost) nextErrors.idDateLost = 'Date is required.';
+      if (formData.idDateLost && isFutureDate(formData.idDateLost)) {
+        nextErrors.idDateLost = 'Invalid date. Please select today or a past date.';
+      }
       if (!formData.idFromTime) nextErrors.idFromTime = 'From time is required.';
       if (!formData.idToTime) nextErrors.idToTime = 'To time is required.';
+      assignInvalidTimeError('idFromTime', formData.idDateLost, formData.idFromTime);
+      assignInvalidTimeError('idToTime', formData.idDateLost, formData.idToTime);
     }
 
     if (category === 'Bank Card') {
       if (!formData.cardType) nextErrors.cardType = 'Card Type is required.';
       if (!formData.bankName.trim()) nextErrors.bankName = 'Name of the Bank is required.';
-      if (formData.cardLast4.trim() && !/^\d{4}$/.test(formData.cardLast4)) {
-        nextErrors.cardLast4 = 'Please enter the last 4 digits of the card number.';
-      }
+      if (!isValidCardNumber(formData.cardNumber)) nextErrors.cardNumber = 'Please enter a valid 16-digit card number.';
       if (!formData.bankLocation1.trim()) nextErrors.bankLocation1 = 'Field 1 is required.';
       if (!formData.bankDateLost) nextErrors.bankDateLost = 'Date is required.';
+      if (formData.bankDateLost && isFutureDate(formData.bankDateLost)) {
+        nextErrors.bankDateLost = 'Invalid date. Please select today or a past date.';
+      }
       if (!formData.bankFromTime) nextErrors.bankFromTime = 'From time is required.';
       if (!formData.bankToTime) nextErrors.bankToTime = 'To time is required.';
+      assignInvalidTimeError('bankFromTime', formData.bankDateLost, formData.bankFromTime);
+      assignInvalidTimeError('bankToTime', formData.bankDateLost, formData.bankToTime);
     }
 
     if (category === 'Purse / Wallet') {
@@ -134,15 +221,25 @@ const ReportLostItem = () => {
         }
         if (!formData.purseWithIdLocation1.trim()) nextErrors.purseWithIdLocation1 = 'Location is required.';
         if (!formData.purseWithIdDateLost) nextErrors.purseWithIdDateLost = 'Date is required.';
+        if (formData.purseWithIdDateLost && isFutureDate(formData.purseWithIdDateLost)) {
+          nextErrors.purseWithIdDateLost = 'Invalid date. Please select today or a past date.';
+        }
         if (!formData.purseWithIdFromTime) nextErrors.purseWithIdFromTime = 'From time is required.';
         if (!formData.purseWithIdToTime) nextErrors.purseWithIdToTime = 'To time is required.';
+        assignInvalidTimeError('purseWithIdFromTime', formData.purseWithIdDateLost, formData.purseWithIdFromTime);
+        assignInvalidTimeError('purseWithIdToTime', formData.purseWithIdDateLost, formData.purseWithIdToTime);
       }
 
       if (purseOption === 'without-id') {
         if (!formData.purseLocation1.trim()) nextErrors.purseLocation1 = 'Field 1 is required.';
         if (!formData.purseDateLost) nextErrors.purseDateLost = 'Date is required.';
+        if (formData.purseDateLost && isFutureDate(formData.purseDateLost)) {
+          nextErrors.purseDateLost = 'Invalid date. Please select today or a past date.';
+        }
         if (!formData.purseFromTime) nextErrors.purseFromTime = 'From time is required.';
         if (!formData.purseToTime) nextErrors.purseToTime = 'To time is required.';
+        assignInvalidTimeError('purseFromTime', formData.purseDateLost, formData.purseFromTime);
+        assignInvalidTimeError('purseToTime', formData.purseDateLost, formData.purseToTime);
         if (!formData.purseItems1.trim()) nextErrors.purseItems1 = 'At least one item is required.';
       }
     }
@@ -151,8 +248,13 @@ const ReportLostItem = () => {
       if (!formData.otherDescription.trim()) nextErrors.otherDescription = 'Description is required.';
       if (!formData.otherLocation1.trim()) nextErrors.otherLocation1 = 'Field 1 is required.';
       if (!formData.otherDateLost) nextErrors.otherDateLost = 'Date is required.';
+      if (formData.otherDateLost && isFutureDate(formData.otherDateLost)) {
+        nextErrors.otherDateLost = 'Invalid date. Please select today or a past date.';
+      }
       if (!formData.otherFromTime) nextErrors.otherFromTime = 'From time is required.';
       if (!formData.otherToTime) nextErrors.otherToTime = 'To time is required.';
+      assignInvalidTimeError('otherFromTime', formData.otherDateLost, formData.otherFromTime);
+      assignInvalidTimeError('otherToTime', formData.otherDateLost, formData.otherToTime);
     }
 
     setErrors(nextErrors);
@@ -170,26 +272,29 @@ const ReportLostItem = () => {
       'Purse / Wallet': 'Wallet',
       'Others': 'Other'
     };
+    const defaultLocation = 'Not specified';
 
     let item_name, description, location, date, time, image;
 
     if (category === 'NIC') {
       item_name = `NIC - ${formData.nicName}`;
       description = `NIC Number: ${normalizeNic(formData.nicNumber)}`;
-      location = [formData.nicLocation1, formData.nicLocation2].filter(Boolean).join(', ');
+      location = [formData.nicLocation1, formData.nicLocation2, formData.nicLocation3].filter(Boolean).join(', ') || defaultLocation;
       date = formData.nicDateLost;
       time = formData.nicFromTime;
       image = null;
     } else if (category === 'Student / Staff ID') {
-      item_name = `Student/Staff ID - ${formData.idName}`;
-      description = `ID: ${formData.studentOrStaffId}`;
-      location = [formData.idLocation1, formData.idLocation2].filter(Boolean).join(', ');
+      const idType = formData.idHolderType || 'Student';
+      item_name = `${idType} ID - ${formData.idName}`;
+      description = `ID Type: ${idType} | Name: ${formData.idName || 'Unknown'} | ID Number: ${formData.studentOrStaffId}`;
+      location = [formData.idLocation1, formData.idLocation2, formData.idLocation3].filter(Boolean).join(', ') || defaultLocation;
       date = formData.idDateLost;
       time = formData.idFromTime;
       image = null;
     } else if (category === 'Bank Card') {
       item_name = `${formData.cardType} Card - ${formData.bankName}`;
-      description = formData.cardLast4 ? `Last 4 digits: ${formData.cardLast4}` : '';
+      const last4 = getCardLast4(formData.cardNumber);
+      description = `Card: ${maskCardNumber(formData.cardNumber) || '**** **** **** ****'}${last4 ? ` (last 4: ${last4})` : ''}`;
       location = [formData.bankLocation1, formData.bankLocation2, formData.bankLocation3].filter(Boolean).join(', ');
       date = formData.bankDateLost;
       time = formData.bankFromTime;
@@ -198,7 +303,7 @@ const ReportLostItem = () => {
       item_name = 'Purse / Wallet';
       if (purseOption === 'with-id') {
         description = `Contains ID/NIC: ${formData.purseIdNumber}`;
-        location = [formData.purseWithIdLocation1, formData.purseWithIdLocation2].filter(Boolean).join(', ');
+        location = [formData.purseWithIdLocation1, formData.purseWithIdLocation2, formData.purseWithIdLocation3].filter(Boolean).join(', ');
         date = formData.purseWithIdDateLost;
         time = formData.purseWithIdFromTime;
       } else {
@@ -220,7 +325,7 @@ const ReportLostItem = () => {
 
     setLoading(true);
     try {
-      await itemsAPI.create({
+      const payload = {
         type: 'lost',
         category: categoryMap[category],
         item_name,
@@ -229,11 +334,23 @@ const ReportLostItem = () => {
         date,
         time,
         image
-      });
+      };
+
+      if (category === 'Bank Card') {
+        payload.private_card_number = normalizeCardNumber(formData.cardNumber);
+      }
+
+      await itemsAPI.create(payload);
       toast.success('Lost item reported successfully!');
       navigate('/lost-items');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to submit. Please try again.');
+      const message = error.response?.data?.message || 'Failed to submit. Please try again.';
+      toast.error(message);
+
+      if (/suspend|banned|ban/i.test(String(message))) {
+        logout();
+        navigate('/login', { replace: true });
+      }
     } finally {
       setLoading(false);
     }
@@ -265,7 +382,9 @@ const ReportLostItem = () => {
                 {errors.nicName && <p className="report-lost-error">{errors.nicName}</p>}
               </div>
               <div className="report-lost-form-group">
+                {/* OTP note only for fields where user might expect OTP */}
                 <label className="required">NIC Number</label>
+                <small style={{ color: '#A1A5AB', fontSize: '0.75rem', marginBottom: '0.5rem', display: 'block', opacity: 0.85 }}>Not used for OTP</small>
                 <input
                   name="nicNumber"
                   value={formData.nicNumber}
@@ -278,19 +397,10 @@ const ReportLostItem = () => {
                 {errors.nicNumber && <p className="report-lost-error">{errors.nicNumber}</p>}
               </div>
               <div className="report-lost-private">
-                <h4>Where did you lose it?</h4>
-                <div className="report-lost-form-group">
-                  <label className="required">Field 1</label>
-                  <input name="nicLocation1" value={formData.nicLocation1} onChange={handleInputChange} />
-                  {errors.nicLocation1 && <p className="report-lost-error">{errors.nicLocation1}</p>}
-                </div>
-                <div className="report-lost-form-group">
-                  <label>Field 2 (optional)</label>
-                  <input name="nicLocation2" value={formData.nicLocation2} onChange={handleInputChange} />
-                </div>
+                <h4>When did you lose it?</h4>
                 <div className="report-lost-form-group">
                   <label className="required">What date did you lose it?</label>
-                  <input type="date" name="nicDateLost" value={formData.nicDateLost} onChange={handleInputChange} />
+                  <input type="date" name="nicDateLost" value={formData.nicDateLost} onChange={handleInputChange} max={currentDateValue} />
                   {errors.nicDateLost && <p className="report-lost-error">{errors.nicDateLost}</p>}
                 </div>
                 <div className="report-lost-form-group">
@@ -298,12 +408,20 @@ const ReportLostItem = () => {
                   <div className="report-lost-row">
                     <div>
                       <label>From</label>
-                      <input type="time" name="nicFromTime" value={formData.nicFromTime} onChange={handleInputChange} />
+                      <TimeInputPicker
+                        value={formData.nicFromTime}
+                        onChange={(nextValue) => handleTimeChange('nicFromTime', nextValue)}
+                        maxTime={getMaxTimeForDate(formData.nicDateLost)}
+                      />
                       {errors.nicFromTime && <p className="report-lost-error">{errors.nicFromTime}</p>}
                     </div>
                     <div>
                       <label>To</label>
-                      <input type="time" name="nicToTime" value={formData.nicToTime} onChange={handleInputChange} />
+                      <TimeInputPicker
+                        value={formData.nicToTime}
+                        onChange={(nextValue) => handleTimeChange('nicToTime', nextValue)}
+                        maxTime={getMaxTimeForDate(formData.nicDateLost)}
+                      />
                       {errors.nicToTime && <p className="report-lost-error">{errors.nicToTime}</p>}
                     </div>
                   </div>
@@ -316,35 +434,36 @@ const ReportLostItem = () => {
             <div className="report-lost-section">
               <h3>Student / Staff ID</h3>
               <div className="report-lost-form-group">
+                <label className="required">Student or Staff</label>
+                <select name="idHolderType" value={formData.idHolderType} onChange={handleInputChange}>
+                  <option value="">Select one</option>
+                  <option value="Student">Student</option>
+                  <option value="Staff">Staff</option>
+                </select>
+                {errors.idHolderType && <p className="report-lost-error">{errors.idHolderType}</p>}
+              </div>
+              <div className="report-lost-form-group">
                 <label className="required">Name</label>
                 <input name="idName" value={formData.idName} onChange={handleInputChange} />
                 {errors.idName && <p className="report-lost-error">{errors.idName}</p>}
               </div>
               <div className="report-lost-form-group">
+                {/* OTP note only for fields where user might expect OTP */}
                 <label className="required">Student ID or Staff ID</label>
+                <small style={{ color: '#A1A5AB', fontSize: '0.75rem', marginBottom: '0.5rem', display: 'block', opacity: 0.85 }}>Not used for OTP</small>
                 <input
                   name="studentOrStaffId"
                   value={formData.studentOrStaffId}
                   onChange={handleInputChange}
                   placeholder="e.g. 123456A"
-                  maxLength={7}
                 />
                 {errors.studentOrStaffId && <p className="report-lost-error">{errors.studentOrStaffId}</p>}
               </div>
               <div className="report-lost-private">
-                <h4>Where did you lose it?</h4>
-                <div className="report-lost-form-group">
-                  <label className="required">Field 1</label>
-                  <input name="idLocation1" value={formData.idLocation1} onChange={handleInputChange} />
-                  {errors.idLocation1 && <p className="report-lost-error">{errors.idLocation1}</p>}
-                </div>
-                <div className="report-lost-form-group">
-                  <label>Field 2 (optional)</label>
-                  <input name="idLocation2" value={formData.idLocation2} onChange={handleInputChange} />
-                </div>
+                <h4>When did you lose it?</h4>
                 <div className="report-lost-form-group">
                   <label className="required">What date did you lose it?</label>
-                  <input type="date" name="idDateLost" value={formData.idDateLost} onChange={handleInputChange} />
+                  <input type="date" name="idDateLost" value={formData.idDateLost} onChange={handleInputChange} max={currentDateValue} />
                   {errors.idDateLost && <p className="report-lost-error">{errors.idDateLost}</p>}
                 </div>
                 <div className="report-lost-form-group">
@@ -352,12 +471,20 @@ const ReportLostItem = () => {
                   <div className="report-lost-row">
                     <div>
                       <label>From</label>
-                      <input type="time" name="idFromTime" value={formData.idFromTime} onChange={handleInputChange} />
+                      <TimeInputPicker
+                        value={formData.idFromTime}
+                        onChange={(nextValue) => handleTimeChange('idFromTime', nextValue)}
+                        maxTime={getMaxTimeForDate(formData.idDateLost)}
+                      />
                       {errors.idFromTime && <p className="report-lost-error">{errors.idFromTime}</p>}
                     </div>
                     <div>
                       <label>To</label>
-                      <input type="time" name="idToTime" value={formData.idToTime} onChange={handleInputChange} />
+                      <TimeInputPicker
+                        value={formData.idToTime}
+                        onChange={(nextValue) => handleTimeChange('idToTime', nextValue)}
+                        maxTime={getMaxTimeForDate(formData.idDateLost)}
+                      />
                       {errors.idToTime && <p className="report-lost-error">{errors.idToTime}</p>}
                     </div>
                   </div>
@@ -383,41 +510,26 @@ const ReportLostItem = () => {
                 <label className="required">Name of the Bank</label>
                 <select name="bankName" value={formData.bankName} onChange={handleInputChange}>
                   <option value="">-- Select Bank --</option>
-                  <option>Bank of Ceylon</option>
-                  <option>People's Bank</option>
-                  <option>Commercial Bank of Ceylon</option>
-                  <option>Hatton National Bank (HNB)</option>
-                  <option>Sampath Bank</option>
-                  <option>Seylan Bank</option>
-                  <option>Nations Trust Bank (NTB)</option>
-                  <option>National Savings Bank (NSB)</option>
-                  <option>Pan Asia Banking Corporation</option>
-                  <option>Union Bank of Colombo</option>
-                  <option>DFCC Bank</option>
-                  <option>Cargills Bank</option>
-                  <option>Amana Bank</option>
-                  <option>MCB Bank</option>
-                  <option>Citibank Sri Lanka</option>
-                  <option>Standard Chartered Bank</option>
-                  <option>HSBC Sri Lanka</option>
-                  <option>Other</option>
+                  {BANK_OPTIONS.map((bank) => (
+                    <option key={bank} value={bank}>{bank}</option>
+                  ))}
                 </select>
                 {errors.bankName && <p className="report-lost-error">{errors.bankName}</p>}
               </div>
               <div className="report-lost-form-group">
-                <label>Card number (optional)</label>
-                <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #ccc', borderRadius: '6px', overflow: 'hidden', background: '#fff' }}>
-                  <span style={{ padding: '0 10px', color: '#aaa', letterSpacing: '2px', fontFamily: 'monospace', fontSize: '1rem', userSelect: 'none', whiteSpace: 'nowrap' }}>#### #### ####</span>
-                  <input
-                    name="cardLast4"
-                    value={formData.cardLast4}
-                    onChange={handleInputChange}
-                    placeholder="1234"
-                    maxLength={4}
-                    style={{ border: 'none', outline: 'none', width: '60px', padding: '10px 8px', fontFamily: 'monospace', fontSize: '1rem' }}
-                  />
-                </div>
-                {errors.cardLast4 && <p className="report-lost-error">{errors.cardLast4}</p>}
+                <label className="required">Card number</label>
+                <input
+                  name="cardNumber"
+                  value={formData.cardNumber}
+                  onChange={handleInputChange}
+                  placeholder="xxxx xxxx xxxx xxxx"
+                  maxLength={19}
+                  autoComplete="off"
+                  inputMode="numeric"
+                  pattern="[0-9 ]*"
+                />
+                <small className="report-lost-helper">Enter 16 digits. The number is grouped automatically as xxxx xxxx xxxx xxxx.</small>
+                {errors.cardNumber && <p className="report-lost-error">{errors.cardNumber}</p>}
               </div>
 
               <div className="report-lost-private">
@@ -428,17 +540,8 @@ const ReportLostItem = () => {
                   {errors.bankLocation1 && <p className="report-lost-error">{errors.bankLocation1}</p>}
                 </div>
                 <div className="report-lost-form-group">
-                  <label>Field 2 (optional)</label>
-                  <input name="bankLocation2" value={formData.bankLocation2} onChange={handleInputChange} />
-                </div>
-                <div className="report-lost-form-group">
-                  <label>Field 3 (optional)</label>
-                  <input name="bankLocation3" value={formData.bankLocation3} onChange={handleInputChange} />
-                </div>
-
-                <div className="report-lost-form-group">
                   <label className="required">What date did you lose it?</label>
-                  <input type="date" name="bankDateLost" value={formData.bankDateLost} onChange={handleInputChange} />
+                  <input type="date" name="bankDateLost" value={formData.bankDateLost} onChange={handleInputChange} max={currentDateValue} />
                   {errors.bankDateLost && <p className="report-lost-error">{errors.bankDateLost}</p>}
                 </div>
 
@@ -447,20 +550,23 @@ const ReportLostItem = () => {
                   <div className="report-lost-row">
                     <div>
                       <label>From</label>
-                      <input type="time" name="bankFromTime" value={formData.bankFromTime} onChange={handleInputChange} />
+                      <TimeInputPicker
+                        value={formData.bankFromTime}
+                        onChange={(nextValue) => handleTimeChange('bankFromTime', nextValue)}
+                        maxTime={getMaxTimeForDate(formData.bankDateLost)}
+                      />
                       {errors.bankFromTime && <p className="report-lost-error">{errors.bankFromTime}</p>}
                     </div>
                     <div>
                       <label>To</label>
-                      <input type="time" name="bankToTime" value={formData.bankToTime} onChange={handleInputChange} />
+                      <TimeInputPicker
+                        value={formData.bankToTime}
+                        onChange={(nextValue) => handleTimeChange('bankToTime', nextValue)}
+                        maxTime={getMaxTimeForDate(formData.bankDateLost)}
+                      />
                       {errors.bankToTime && <p className="report-lost-error">{errors.bankToTime}</p>}
                     </div>
                   </div>
-                </div>
-
-                <div className="report-lost-form-group">
-                  <label>CVV number if you remember (optional)</label>
-                  <input name="cvv" value={formData.cvv} onChange={handleInputChange} maxLength={4} />
                 </div>
               </div>
             </div>
@@ -510,13 +616,14 @@ const ReportLostItem = () => {
               {purseOption === 'with-id' && (
                 <div>
                   <div className="report-lost-form-group">
+                    {/* OTP note only for fields where user might expect OTP */}
                     <label className="required">Enter NIC number or Student/Staff ID</label>
+                    <small style={{ color: '#A1A5AB', fontSize: '0.75rem', marginBottom: '0.5rem', display: 'block', opacity: 0.85 }}>Not used for OTP</small>
                     <input
                       name="purseIdNumber"
                       value={formData.purseIdNumber}
                       onChange={handleInputChange}
                       placeholder="NIC: 200012345678 / Student ID: 123456A"
-                      maxLength={12}
                     />
                     {errors.purseIdNumber && <p className="report-lost-error">{errors.purseIdNumber}</p>}
                   </div>
@@ -532,8 +639,12 @@ const ReportLostItem = () => {
                       <input name="purseWithIdLocation2" value={formData.purseWithIdLocation2} onChange={handleInputChange} />
                     </div>
                     <div className="report-lost-form-group">
+                      <label>Field 3 (optional)</label>
+                      <input name="purseWithIdLocation3" value={formData.purseWithIdLocation3} onChange={handleInputChange} />
+                    </div>
+                    <div className="report-lost-form-group">
                       <label className="required">What date did you lose it?</label>
-                      <input type="date" name="purseWithIdDateLost" value={formData.purseWithIdDateLost} onChange={handleInputChange} />
+                      <input type="date" name="purseWithIdDateLost" value={formData.purseWithIdDateLost} onChange={handleInputChange} max={currentDateValue} />
                       {errors.purseWithIdDateLost && <p className="report-lost-error">{errors.purseWithIdDateLost}</p>}
                     </div>
                     <div className="report-lost-form-group">
@@ -541,12 +652,20 @@ const ReportLostItem = () => {
                       <div className="report-lost-row">
                         <div>
                           <label>From</label>
-                          <input type="time" name="purseWithIdFromTime" value={formData.purseWithIdFromTime} onChange={handleInputChange} />
+                          <TimeInputPicker
+                            value={formData.purseWithIdFromTime}
+                            onChange={(nextValue) => handleTimeChange('purseWithIdFromTime', nextValue)}
+                            maxTime={getMaxTimeForDate(formData.purseWithIdDateLost)}
+                          />
                           {errors.purseWithIdFromTime && <p className="report-lost-error">{errors.purseWithIdFromTime}</p>}
                         </div>
                         <div>
                           <label>To</label>
-                          <input type="time" name="purseWithIdToTime" value={formData.purseWithIdToTime} onChange={handleInputChange} />
+                          <TimeInputPicker
+                            value={formData.purseWithIdToTime}
+                            onChange={(nextValue) => handleTimeChange('purseWithIdToTime', nextValue)}
+                            maxTime={getMaxTimeForDate(formData.purseWithIdDateLost)}
+                          />
                           {errors.purseWithIdToTime && <p className="report-lost-error">{errors.purseWithIdToTime}</p>}
                         </div>
                       </div>
@@ -574,7 +693,7 @@ const ReportLostItem = () => {
 
                   <div className="report-lost-form-group">
                     <label className="required">What date did you lose it?</label>
-                    <input type="date" name="purseDateLost" value={formData.purseDateLost} onChange={handleInputChange} />
+                    <input type="date" name="purseDateLost" value={formData.purseDateLost} onChange={handleInputChange} max={currentDateValue} />
                     {errors.purseDateLost && <p className="report-lost-error">{errors.purseDateLost}</p>}
                   </div>
 
@@ -583,12 +702,20 @@ const ReportLostItem = () => {
                     <div className="report-lost-row">
                       <div>
                         <label>From</label>
-                        <input type="time" name="purseFromTime" value={formData.purseFromTime} onChange={handleInputChange} />
+                        <TimeInputPicker
+                          value={formData.purseFromTime}
+                          onChange={(nextValue) => handleTimeChange('purseFromTime', nextValue)}
+                          maxTime={getMaxTimeForDate(formData.purseDateLost)}
+                        />
                         {errors.purseFromTime && <p className="report-lost-error">{errors.purseFromTime}</p>}
                       </div>
                       <div>
                         <label>To</label>
-                        <input type="time" name="purseToTime" value={formData.purseToTime} onChange={handleInputChange} />
+                        <TimeInputPicker
+                          value={formData.purseToTime}
+                          onChange={(nextValue) => handleTimeChange('purseToTime', nextValue)}
+                          maxTime={getMaxTimeForDate(formData.purseDateLost)}
+                        />
                         {errors.purseToTime && <p className="report-lost-error">{errors.purseToTime}</p>}
                       </div>
                     </div>
@@ -655,7 +782,7 @@ const ReportLostItem = () => {
 
               <div className="report-lost-form-group">
                 <label className="required">Date lost</label>
-                <input type="date" name="otherDateLost" value={formData.otherDateLost} onChange={handleInputChange} />
+                <input type="date" name="otherDateLost" value={formData.otherDateLost} onChange={handleInputChange} max={currentDateValue} />
                 {errors.otherDateLost && <p className="report-lost-error">{errors.otherDateLost}</p>}
               </div>
 
@@ -664,12 +791,20 @@ const ReportLostItem = () => {
                 <div className="report-lost-row">
                   <div>
                     <label>From</label>
-                    <input type="time" name="otherFromTime" value={formData.otherFromTime} onChange={handleInputChange} />
+                    <TimeInputPicker
+                      value={formData.otherFromTime}
+                      onChange={(nextValue) => handleTimeChange('otherFromTime', nextValue)}
+                      maxTime={getMaxTimeForDate(formData.otherDateLost)}
+                    />
                     {errors.otherFromTime && <p className="report-lost-error">{errors.otherFromTime}</p>}
                   </div>
                   <div>
                     <label>To</label>
-                    <input type="time" name="otherToTime" value={formData.otherToTime} onChange={handleInputChange} />
+                    <TimeInputPicker
+                      value={formData.otherToTime}
+                      onChange={(nextValue) => handleTimeChange('otherToTime', nextValue)}
+                      maxTime={getMaxTimeForDate(formData.otherDateLost)}
+                    />
                     {errors.otherToTime && <p className="report-lost-error">{errors.otherToTime}</p>}
                   </div>
                 </div>

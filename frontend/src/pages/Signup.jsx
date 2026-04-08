@@ -2,6 +2,12 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getHomeRouteForUser } from '../utils/navigation';
+import { isValidEmail, isValidPhone, normalizeEmail, normalizePhone } from '../utils/contactValidation';
+import { isValidStudentIdNumber, normalizeStudentIdNumber } from '../utils/studentIdUtils';
+import PasswordInput from '../components/PasswordInput';
+
+const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d])\S{8,64}$/;
+const PASSWORD_REQUIREMENTS = 'Password must be 8-64 characters and include uppercase, lowercase, number, and special character.';
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -11,21 +17,128 @@ const Signup = () => {
     confirmPassword: '',
     full_name: '',
     role: 'student',
+    roleId: '',
     phone: ''
   });
+  const [phoneError, setPhoneError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
+  const [roleIdError, setRoleIdError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    if (name === 'phone') {
+      const normalizedPhone = normalizePhone(value);
+      setFormData((prev) => ({ ...prev, phone: normalizedPhone }));
+
+      if (normalizedPhone && !isValidPhone(normalizedPhone)) {
+        setPhoneError('Phone number invalid format');
+      } else {
+        setPhoneError('');
+      }
+      return;
+    }
+
+    if (name === 'email') {
+      const normalizedEmail = normalizeEmail(value);
+      setFormData((prev) => ({ ...prev, email: normalizedEmail }));
+
+      if (normalizedEmail && !isValidEmail(normalizedEmail)) {
+        setEmailError('Invalid email format');
+      } else {
+        setEmailError('');
+      }
+      return;
+    }
+
+    if (name === 'role') {
+      setFormData((prev) => ({
+        ...prev,
+        role: value,
+        // Reset role-specific ID when switching away from student/staff.
+        roleId: value === 'student' || value === 'staff' ? prev.roleId : ''
+      }));
+      setRoleIdError('');
+      return;
+    }
+
+    if (name === 'roleId') {
+      const normalizedId = normalizeStudentIdNumber(value);
+      setFormData((prev) => ({ ...prev, roleId: normalizedId }));
+      if (normalizedId && !isValidStudentIdNumber(normalizedId)) {
+        setRoleIdError('ID must be 6 digits followed by 1 letter (e.g. 123456A).');
+      } else {
+        setRoleIdError('');
+      }
+      return;
+    }
+
+    if (name === 'password') {
+      setFormData((prev) => ({ ...prev, password: value }));
+      if (value && !STRONG_PASSWORD_REGEX.test(value)) {
+        setPasswordError(PASSWORD_REQUIREMENTS);
+      } else {
+        setPasswordError('');
+      }
+
+      if (formData.confirmPassword && value !== formData.confirmPassword) {
+        setConfirmPasswordError('Passwords do not match');
+      } else {
+        setConfirmPasswordError('');
+      }
+      return;
+    }
+
+    if (name === 'confirmPassword') {
+      setFormData((prev) => ({ ...prev, confirmPassword: value }));
+      if (value && value !== formData.password) {
+        setConfirmPasswordError('Passwords do not match');
+      } else {
+        setConfirmPasswordError('');
+      }
+      return;
+    }
+
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!isValidEmail(formData.email)) {
+      setEmailError('Invalid email format');
+      return;
+    }
+
+    if (formData.phone && !isValidPhone(formData.phone)) {
+      setPhoneError('Phone number invalid format');
+      return;
+    }
+
+    if (formData.role === 'student' || formData.role === 'staff') {
+      if (!formData.roleId.trim()) {
+        setRoleIdError(`${formData.role === 'student' ? 'Student' : 'Staff'} ID is required`);
+        return;
+      }
+
+      if (!isValidStudentIdNumber(formData.roleId)) {
+        setRoleIdError('ID must be 6 digits followed by 1 letter (e.g. 123456A).');
+        return;
+      }
+    }
+
+    if (!STRONG_PASSWORD_REGEX.test(formData.password)) {
+      setPasswordError(PASSWORD_REQUIREMENTS);
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match');
+      setConfirmPasswordError('Passwords do not match');
       return;
     }
 
@@ -37,6 +150,8 @@ const Signup = () => {
     if (result.success) {
       if (result.requiresVerification) {
         navigate('/verify-email');
+      } else if (result.pendingApproval) {
+        navigate('/login');
       } else {
         navigate(getHomeRouteForUser(result.user));
       }
@@ -85,6 +200,7 @@ const Signup = () => {
               required
               placeholder="Enter your email"
             />
+            {emailError && <small style={{ color: '#DC2626' }}>{emailError}</small>}
           </div>
 
           <div className="form-group">
@@ -94,8 +210,10 @@ const Signup = () => {
               name="phone"
               value={formData.phone}
               onChange={handleChange}
+              maxLength="10"
               placeholder="Contact number (not used for OTP)"
             />
+            {phoneError && <small style={{ color: '#DC2626' }}>{phoneError}</small>}
           </div>
 
           <div className="form-group">
@@ -103,32 +221,52 @@ const Signup = () => {
             <select name="role" value={formData.role} onChange={handleChange} required>
               <option value="student">Student</option>
               <option value="staff">Staff</option>
+              <option value="security">Security</option>
+              <option value="admin">Admin</option>
             </select>
           </div>
 
+          {(formData.role === 'student' || formData.role === 'staff') && (
+            <div className="form-group">
+              <label>{formData.role === 'student' ? 'Student ID' : 'Staff ID'}</label>
+              <input
+                type="text"
+                name="roleId"
+                value={formData.roleId}
+                onChange={handleChange}
+                required
+                maxLength="7"
+                placeholder="e.g. 123456A"
+              />
+              {roleIdError && <small style={{ color: '#DC2626' }}>{roleIdError}</small>}
+            </div>
+          )}
+
           <div className="form-group">
             <label>Password</label>
-            <input
-              type="password"
+            <PasswordInput
               name="password"
               value={formData.password}
               onChange={handleChange}
               required
-              minLength="6"
-              placeholder="Enter password (min 6 characters)"
+              minLength="8"
+              placeholder="Enter password"
+              autoComplete="new-password"
             />
+            {passwordError && <small style={{ color: '#DC2626' }}>{passwordError}</small>}
           </div>
 
           <div className="form-group">
             <label>Confirm Password</label>
-            <input
-              type="password"
+            <PasswordInput
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
               required
               placeholder="Confirm password"
+              autoComplete="new-password"
             />
+            {confirmPasswordError && <small style={{ color: '#DC2626' }}>{confirmPasswordError}</small>}
           </div>
 
           <button type="submit" className="btn-primary" disabled={loading}>

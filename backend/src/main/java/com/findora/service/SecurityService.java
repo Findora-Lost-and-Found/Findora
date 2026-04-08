@@ -1,18 +1,26 @@
 package com.findora.service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,7 +41,10 @@ import com.findora.repository.NotificationRepository;
 import com.findora.repository.SecurityTransactionRepository;
 import com.findora.repository.UserRepository;
 
+import jakarta.annotation.PostConstruct;
+
 @Service
+@SuppressWarnings("null")
 public class SecurityService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
@@ -44,18 +55,31 @@ public class SecurityService {
     private final SecurityTransactionRepository securityTransactionRepository;
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     public SecurityService(
             ClaimRepository claimRepository,
             ItemRepository itemRepository,
             SecurityTransactionRepository securityTransactionRepository,
             NotificationRepository notificationRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            JdbcTemplate jdbcTemplate) {
         this.claimRepository = claimRepository;
         this.itemRepository = itemRepository;
         this.securityTransactionRepository = securityTransactionRepository;
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
+    @PostConstruct
+    public void initializeSchemaCompatibility() {
+        try {
+            ensureItemStatusSupportsSecurityStates();
+            log.info("Verified items.status enum compatibility for security workflow");
+        } catch (Exception e) {
+            log.error("Unable to auto-patch items.status enum compatibility: {}", e.getMessage(), e);
+        }
     }
 
     @Transactional
@@ -67,15 +91,27 @@ public class SecurityService {
             throw new IllegalArgumentException("Only the item creator can request handover");
         }
 
+        if (item.getStatus() == ItemStatus.HANDOVER_REQUESTED) {
+            throw new IllegalArgumentException("Handover is already waiting for approval");
+        }
+
         if (item.getStatus() == ItemStatus.HELD_BY_SECURITY
             || item.getStatus() == ItemStatus.HANDED_TO_SECURITY) {
             throw new IllegalArgumentException("Item is already handed over to security");
         }
 
-        // Transaction-table persistence is intentionally skipped here because
-        // deployments may have inconsistent legacy schemas for security_transactions.
-        // Item status update is also skipped because legacy DBs may not support
-        // the HANDOVER_REQUESTED enum value in items.status.
+        // Ensure legacy schemas support security workflow statuses before updating.
+        ensureItemStatusSupportsSecurityStates();
+
+        item.setStatus(ItemStatus.HANDOVER_REQUESTED);
+        try {
+            itemRepository.saveAndFlush(item);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Detected outdated items.status enum during flush. Retrying after compatibility patch.");
+            ensureItemStatusSupportsSecurityStates();
+            itemRepository.saveAndFlush(item);
+        }
+
         log.info("Handover requested for item {} by user {}", itemId, currentUserId);
 
         List<User> securityUsers = userRepository.findByRole(User.UserRole.SECURITY);
@@ -86,6 +122,7 @@ public class SecurityService {
             notification.setTitle("New Handover Request");
             notification.setMessage("New item handover request received");
             notification.setRelatedId(itemId);
+            notification.setIsRead(false);
             notificationRepository.save(notification);
         }
     }
@@ -107,7 +144,7 @@ public class SecurityService {
             throw new IllegalArgumentException("Invalid OTP");
         }
 
-        if (claim.getOtpExpiry() != null && LocalDateTime.now().isAfter(claim.getOtpExpiry())) {
+        if (claim.getOtpExpiry() != null && LocalDateTime.now(ZoneOffset.UTC).isAfter(claim.getOtpExpiry())) {
             throw new IllegalArgumentException("OTP has expired");
         }
 
@@ -120,20 +157,24 @@ public class SecurityService {
 
         claim.setStatus(Claim.ClaimStatus.COLLECTED);
         claim.setSecurityOfficerId(securityOfficerId);
-        claim.setCollectedAt(LocalDateTime.now());
+        claim.setCollectedAt(LocalDateTime.now(ZoneOffset.UTC));
         claimRepository.save(claim);
 
         item.setStatus(ItemStatus.CLAIMED);
         itemRepository.save(item);
 
-        SecurityTransaction releaseTx = new SecurityTransaction();
-        releaseTx.setSecurityOfficerId(securityOfficerId);
-        releaseTx.setItemId(item.getId());
-        releaseTx.setClaimId(claim.getId());
-        releaseTx.setTransactionType(SecurityTransaction.TransactionType.RELEASE);
-        releaseTx.setStatus(SecurityTransaction.TransactionStatus.RECEIVED);
-        releaseTx.setReleasedTo(resolveClaimerName(claim));
-        securityTransactionRepository.save(releaseTx);
+        if (supportsSecurityTransactionWorkflowColumns()) {
+            SecurityTransaction releaseTx = new SecurityTransaction();
+            releaseTx.setSecurityOfficerId(securityOfficerId);
+            releaseTx.setItemId(item.getId());
+            releaseTx.setClaimId(claim.getId());
+            releaseTx.setTransactionType(SecurityTransaction.TransactionType.RELEASE);
+            releaseTx.setStatus(SecurityTransaction.TransactionStatus.RECEIVED);
+            releaseTx.setReleasedTo(resolveClaimerName(claim));
+            securityTransactionRepository.save(releaseTx);
+        } else {
+            log.warn("Skipping release security transaction write due to legacy schema (missing status/transaction_type columns)");
+        }
 
         Notification notification = new Notification();
         notification.setUserId(claim.getClaimerId());
@@ -146,37 +187,17 @@ public class SecurityService {
 
     @Transactional(readOnly = true)
     public List<SecurityReceiveItemDTO> getReceiveItems() {
-        try {
-            List<SecurityTransaction> requestedTx = securityTransactionRepository
-                .findByStatusOrderByCreatedAtDesc(SecurityTransaction.TransactionStatus.REQUESTED);
-
-            return requestedTx.stream()
-                .map(tx -> itemRepository.findById(tx.getItemId()).orElse(null))
-                .filter(Objects::nonNull)
-                .map(item -> new SecurityReceiveItemDTO(
-                    item.getId(),
-                    item.getItemName(),
-                    item.getImageUrl(),
-                    item.getUser() != null ? item.getUser().getFullName() : "Unknown Finder",
-                    item.getLocation(),
-                    item.getDate() != null ? item.getDate().format(DATE_FORMATTER) : null
-                ))
-                .toList();
-        } catch (RuntimeException e) {
-            log.warn("Falling back to items table for receive-items due to transaction schema mismatch: {}", e.getMessage());
-
-            return itemRepository.findByTypeAndStatus(ItemType.FOUND, ItemStatus.HANDOVER_REQUESTED)
-                .stream()
-                .map(item -> new SecurityReceiveItemDTO(
-                    item.getId(),
-                    item.getItemName(),
-                    item.getImageUrl(),
-                    item.getUser() != null ? item.getUser().getFullName() : "Unknown Finder",
-                    item.getLocation(),
-                    item.getDate() != null ? item.getDate().format(DATE_FORMATTER) : null
-                ))
-                .toList();
-        }
+        return itemRepository.findByTypeAndStatus(ItemType.FOUND, ItemStatus.HANDOVER_REQUESTED)
+            .stream()
+            .map(item -> new SecurityReceiveItemDTO(
+                item.getId(),
+                item.getItemName(),
+                item.getImageUrl(),
+                item.getUser() != null ? item.getUser().getFullName() : "Unknown Finder",
+                item.getLocation(),
+                item.getDate() != null ? item.getDate().format(DATE_FORMATTER) : null
+            ))
+            .toList();
     }
 
     @Transactional
@@ -184,7 +205,10 @@ public class SecurityService {
         Item item = itemRepository.findById(itemId)
             .orElseThrow(() -> new IllegalArgumentException("Item not found"));
 
-        try {
+        // Ensure legacy schemas support security workflow statuses before updating item state.
+        ensureItemStatusSupportsSecurityStates();
+
+        if (supportsSecurityTransactionWorkflowColumns()) {
             SecurityTransaction tx = securityTransactionRepository.findFirstByItemIdOrderByCreatedAtDesc(itemId)
                 .orElseThrow(() -> new IllegalArgumentException("No handover request found for item"));
 
@@ -195,20 +219,35 @@ public class SecurityService {
             tx.setStatus(SecurityTransaction.TransactionStatus.RECEIVED);
             tx.setSecurityOfficerId(securityOfficerId);
             securityTransactionRepository.save(tx);
-        } catch (RuntimeException e) {
-            log.warn("Skipping security transaction update due to schema mismatch: {}", e.getMessage());
+        } else {
+            log.warn("Skipping security transaction update due to legacy schema (missing status/transaction_type columns)");
         }
 
         item.setStatus(ItemStatus.HELD_BY_SECURITY);
-        itemRepository.save(item);
+        try {
+            itemRepository.saveAndFlush(item);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Detected outdated items.status enum during receive-item. Retrying after compatibility patch.");
+            ensureItemStatusSupportsSecurityStates();
+            itemRepository.saveAndFlush(item);
+        }
 
-        Notification notification = new Notification();
-        notification.setUserId(item.getUserId());
-        notification.setType(Notification.NotificationType.SYSTEM);
-        notification.setTitle("Handover Completed");
-        notification.setMessage("You successfully handed over the item to Security");
-        notification.setRelatedId(itemId);
-        notificationRepository.save(notification);
+        try {
+            if (item.getUserId() != null) {
+                Notification notification = new Notification();
+                notification.setUserId(item.getUserId());
+                notification.setType(Notification.NotificationType.SYSTEM);
+                notification.setTitle("Handover Completed");
+                notification.setMessage("You successfully handed over the item to Security");
+                notification.setRelatedId(itemId);
+                notification.setIsRead(false);
+                notificationRepository.save(notification);
+            } else {
+                log.warn("Skipping handover notification for item {} because finder userId is null", itemId);
+            }
+        } catch (RuntimeException e) {
+            log.warn("Skipping handover notification due to persistence issue for item {}: {}", itemId, e.getMessage());
+        }
     }
 
     @Transactional(readOnly = true)
@@ -216,6 +255,7 @@ public class SecurityService {
         return claimRepository
             .findByStatusInOrderByClaimedAtDesc(EnumSet.of(Claim.ClaimStatus.PENDING, Claim.ClaimStatus.APPROVED))
             .stream()
+            .filter(this::isEligibleForPendingClaims)
             .map(this::toPendingClaimDto)
             .toList();
     }
@@ -287,6 +327,9 @@ public class SecurityService {
         String location = item != null && item.getLocation() != null ? item.getLocation() : "Unknown location";
         String fullName = claimer != null && claimer.getFullName() != null ? claimer.getFullName() : "Unknown claimer";
         String phone = claimer != null && claimer.getPhone() != null ? claimer.getPhone() : "N/A";
+        ItemStatus itemStatus = item != null ? item.getStatus() : null;
+        boolean receivedBySecurity = itemStatus == ItemStatus.HELD_BY_SECURITY
+            || itemStatus == ItemStatus.HANDED_TO_SECURITY;
 
         return new SecurityPendingClaimDTO(
             claim.getId(),
@@ -297,8 +340,84 @@ public class SecurityService {
             location,
             fullName,
             phone,
-            claim.getClaimedAt()
+            claim.getClaimedAt(),
+            itemStatus != null ? itemStatus.name() : null,
+            receivedBySecurity
         );
+    }
+
+    private boolean isEligibleForPendingClaims(Claim claim) {
+        Item item = claim.getItem();
+        if (item == null && claim.getItemId() != null) {
+            item = itemRepository.findById(claim.getItemId()).orElse(null);
+        }
+
+        if (item == null || item.getType() != ItemType.FOUND || item.getStatus() == null) {
+            return false;
+        }
+
+        return item.getStatus() != ItemStatus.CLAIMED && item.getStatus() != ItemStatus.CLOSED;
+    }
+
+    private void ensureItemStatusSupportsSecurityStates() {
+        try {
+            String columnType = jdbcTemplate.queryForObject(
+                "SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS "
+                    + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'items' AND COLUMN_NAME = 'status'",
+                String.class
+            );
+
+            if (columnType == null || columnType.isBlank()) {
+                log.warn("Could not inspect items.status column - database may be unavailable");
+                return;
+            }
+
+            log.info("items.status column type before compatibility check: {}", columnType);
+
+            Set<String> values = new LinkedHashSet<>();
+            Matcher matcher = Pattern.compile("'([^']*)'").matcher(columnType.toLowerCase());
+            while (matcher.find()) {
+                values.add(matcher.group(1));
+            }
+
+            boolean changed = false;
+            for (String required : List.of("active", "handover_requested", "held_by_security", "handed_to_security", "claimed", "closed")) {
+                if (values.add(required)) {
+                    changed = true;
+                }
+            }
+
+            if (!changed) {
+                log.info("items.status already supports all required security states");
+                return;
+            }
+
+            List<String> escapedValues = new ArrayList<>();
+            for (String value : values) {
+                escapedValues.add("'" + value.replace("'", "''") + "'");
+            }
+
+            String alterSql = "ALTER TABLE items MODIFY COLUMN status ENUM("
+                + String.join(",", escapedValues)
+                + ") DEFAULT 'active'";
+            log.info("Applying items.status compatibility patch: {}", alterSql);
+            jdbcTemplate.execute(alterSql);
+            log.info("Patched items.status enum values for handover compatibility");
+        } catch (DataAccessException e) {
+            log.warn("Schema compatibility check skipped (database may be unavailable): {}", e.getMessage());
+        }
+    }
+
+    private boolean supportsSecurityTransactionWorkflowColumns() {
+        Integer presentColumns = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                + "WHERE TABLE_SCHEMA = DATABASE() "
+                + "AND TABLE_NAME = 'security_transactions' "
+                + "AND COLUMN_NAME IN ('status', 'transaction_type')",
+            Integer.class
+        );
+
+        return presentColumns != null && presentColumns >= 2;
     }
 
     private Integer safeLongToInteger(long value) {

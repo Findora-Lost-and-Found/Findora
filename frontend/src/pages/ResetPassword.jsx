@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { authAPI } from '../services/api';
 import { toast } from 'react-toastify';
+import PasswordInput from '../components/PasswordInput';
 
 const ResetPassword = () => {
   const location = useLocation();
@@ -95,25 +96,25 @@ const ResetPassword = () => {
 
           <div className="form-group">
             <label>New Password</label>
-            <input
-              type="password"
+            <PasswordInput
               name="newPassword"
               placeholder="Enter new password"
               value={formData.newPassword}
               onChange={handleChange}
               required
+              autoComplete="new-password"
             />
           </div>
 
           <div className="form-group">
             <label>Confirm Password</label>
-            <input
-              type="password"
+            <PasswordInput
               name="confirmPassword"
               placeholder="Confirm new password"
               value={formData.confirmPassword}
               onChange={handleChange}
               required
+              autoComplete="new-password"
             />
           </div>
 

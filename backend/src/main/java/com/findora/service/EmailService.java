@@ -13,6 +13,7 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
 @Service
+@SuppressWarnings("null")
 public class EmailService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailService.class);
@@ -32,6 +33,16 @@ public class EmailService {
 
     public void sendPasswordResetOtp(String toEmail, String fullName, String otp) {
         sendOtp(toEmail, fullName, otp, "Password Reset OTP", "reset your password");
+    }
+
+    public void sendPhoneChangeOtp(String toEmail, String fullName, String otp, String pendingPhone) {
+        String action = "verify your new phone number ending with "
+            + (pendingPhone != null && pendingPhone.length() >= 4 ? pendingPhone.substring(pendingPhone.length() - 4) : "XXXX");
+        sendOtp(toEmail, fullName, otp, "Phone Update Verification OTP", action);
+    }
+
+    public void sendAccountDeletionOtp(String toEmail, String fullName, String otp) {
+        sendOtp(toEmail, fullName, otp, "Account Deletion OTP", "confirm permanent account deletion");
     }
 
     private void sendOtp(String toEmail, String fullName, String otp, String subject, String actionText) {

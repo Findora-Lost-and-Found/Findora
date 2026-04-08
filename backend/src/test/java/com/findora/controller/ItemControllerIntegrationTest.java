@@ -12,6 +12,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -33,6 +34,7 @@ import com.findora.security.JwtTokenProvider;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@SuppressWarnings("null")
 class ItemControllerIntegrationTest {
 
     @Autowired
@@ -54,7 +56,6 @@ class ItemControllerIntegrationTest {
     private String testToken;
 
     @BeforeEach
-    @SuppressWarnings("unused")
     public void setUp() {
         itemRepository.deleteAll();
         userRepository.deleteAll();
@@ -219,5 +220,32 @@ class ItemControllerIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.pageNumber").value(2))
             .andExpect(jsonPath("$.content.length()").value(5)); // 25 items total, page 2 has 5
+    }
+
+    @Test
+    void testBadLanguagePostIsAutoClosedAndExcludedFromPublicList() throws Exception {
+        Item badItem = new Item();
+        badItem.setUserId(testUser.getId());
+        badItem.setType(ItemType.FOUND);
+        badItem.setCategory(ItemCategory.OTHER);
+        badItem.setItemName("Fuck Wallet");
+        badItem.setDescription("contains bad term");
+        badItem.setLocation("Library");
+        badItem.setDate(LocalDate.now());
+        badItem.setTime(LocalTime.now());
+        badItem.setStatus(ItemStatus.ACTIVE);
+        badItem = itemRepository.save(badItem);
+
+        mockMvc.perform(
+            get("/api/items")
+                .param("page", "0")
+                .param("size", "50")
+                .header("Authorization", "Bearer " + testToken)
+        )
+            .andExpect(status().isOk())
+            .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Fuck Wallet"))));
+
+        Item moderated = itemRepository.findById(badItem.getId()).orElseThrow();
+        assert moderated.getStatus() == ItemStatus.CLOSED;
     }
 }

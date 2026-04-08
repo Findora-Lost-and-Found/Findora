@@ -16,6 +16,10 @@ public class UserDTO {
     private String role;              // e.g., "STUDENT", "ADMIN"
     private String email;
     private String phone;
+    @JsonProperty("pending_phone")
+    private String pendingPhone;
+    @JsonProperty("is_phone_verified")
+    private Boolean isPhoneVerified;
     @JsonProperty("is_verified")
     private Boolean isVerified;
     @JsonProperty("is_approved")
@@ -24,6 +28,10 @@ public class UserDTO {
     private Boolean isBanned;
     @JsonProperty("is_suspended")
     private Boolean isSuspended;
+    @JsonProperty("bad_post_attempts")
+    private Integer badPostAttempts;
+    @JsonProperty("suspension_until")
+    private String suspensionUntil;
     @JsonProperty("created_at")
     private String createdAt;
 
@@ -31,7 +39,9 @@ public class UserDTO {
     }
 
     public UserDTO(Long id, String username, String name, String fullName, String role, String email, String phone,
-                   Boolean isVerified, Boolean isApproved, Boolean isBanned, Boolean isSuspended, String createdAt) {
+                   String pendingPhone, Boolean isPhoneVerified, Boolean isVerified, Boolean isApproved,
+                   Boolean isBanned, Boolean isSuspended, Integer badPostAttempts, String suspensionUntil,
+                   String createdAt) {
         this.id = id;
         this.username = username;
         this.name = name;
@@ -39,10 +49,14 @@ public class UserDTO {
         this.role = role;
         this.email = email;
         this.phone = phone;
+        this.pendingPhone = pendingPhone;
+        this.isPhoneVerified = isPhoneVerified;
         this.isVerified = isVerified;
         this.isApproved = isApproved;
         this.isBanned = isBanned;
         this.isSuspended = isSuspended;
+        this.badPostAttempts = badPostAttempts;
+        this.suspensionUntil = suspensionUntil;
         this.createdAt = createdAt;
     }
 
@@ -102,6 +116,22 @@ public class UserDTO {
         this.phone = phone;
     }
 
+    public String getPendingPhone() {
+        return pendingPhone;
+    }
+
+    public void setPendingPhone(String pendingPhone) {
+        this.pendingPhone = pendingPhone;
+    }
+
+    public Boolean getIsPhoneVerified() {
+        return isPhoneVerified;
+    }
+
+    public void setIsPhoneVerified(Boolean isPhoneVerified) {
+        this.isPhoneVerified = isPhoneVerified;
+    }
+
     public Boolean getIsVerified() {
         return isVerified;
     }
@@ -132,6 +162,22 @@ public class UserDTO {
 
     public void setIsSuspended(Boolean isSuspended) {
         this.isSuspended = isSuspended;
+    }
+
+    public Integer getBadPostAttempts() {
+        return badPostAttempts;
+    }
+
+    public void setBadPostAttempts(Integer badPostAttempts) {
+        this.badPostAttempts = badPostAttempts;
+    }
+
+    public String getSuspensionUntil() {
+        return suspensionUntil;
+    }
+
+    public void setSuspensionUntil(String suspensionUntil) {
+        this.suspensionUntil = suspensionUntil;
     }
 
     public String getCreatedAt() {

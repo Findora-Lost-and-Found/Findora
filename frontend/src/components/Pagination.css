@@ -1,0 +1,108 @@
+:root {
+  --pagination-bg: #f2f7f8;
+  --pagination-surface: #ffffff;
+  --pagination-text: #2b3a42;
+  --pagination-muted: #8ea0aa;
+  --pagination-border: #d9e5e9;
+  --pagination-primary: #0f9f8a;
+  --pagination-primary-dark: #0d7f6f;
+  --pagination-shadow: 0 6px 14px rgba(15, 35, 45, 0.08);
+  --pagination-shadow-hover: 0 10px 20px rgba(15, 35, 45, 0.14);
+}
+
+.pagination-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin: 1rem auto;
+  padding: 0.75rem;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f9fcfd 0%, var(--pagination-bg) 100%);
+}
+
+.pagination-btn {
+  min-width: 42px;
+  height: 42px;
+  border: 1px solid var(--pagination-border);
+  border-radius: 12px;
+  background: var(--pagination-surface);
+  color: var(--pagination-text);
+  box-shadow: var(--pagination-shadow);
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0 0.85rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease,
+    background-color 0.2s ease, color 0.2s ease;
+}
+
+.pagination-number {
+  padding: 0 0.75rem;
+}
+
+.pagination-nav {
+  border-radius: 999px;
+  min-width: 120px;
+  padding: 0 1rem;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--pagination-shadow-hover);
+  border-color: #bed0d8;
+}
+
+.pagination-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.96);
+}
+
+.pagination-number.is-active {
+  background: var(--pagination-primary);
+  border-color: var(--pagination-primary);
+  color: #ffffff;
+  box-shadow: 0 10px 20px rgba(15, 159, 138, 0.3);
+}
+
+.pagination-number.is-active:hover {
+  background: var(--pagination-primary-dark);
+  border-color: var(--pagination-primary-dark);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.45;
+  box-shadow: none;
+  cursor: not-allowed;
+  color: var(--pagination-muted);
+  background: #f5f8f9;
+}
+
+.pagination-icon {
+  font-size: 0.95rem;
+}
+
+@media (max-width: 640px) {
+  .pagination-wrap {
+    gap: 8px;
+    padding: 0.55rem;
+  }
+
+  .pagination-btn {
+    min-width: 36px;
+    height: 36px;
+    font-size: 0.82rem;
+    padding: 0 0.6rem;
+  }
+
+  .pagination-nav {
+    min-width: 96px;
+    padding: 0 0.75rem;
+  }
+}

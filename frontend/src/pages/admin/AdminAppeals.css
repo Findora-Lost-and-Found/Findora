@@ -1,0 +1,157 @@
+.admin-appeals-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-appeals-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.admin-appeals-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.admin-appeals-controls select {
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.96rem;
+}
+
+.admin-appeals-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 1rem;
+}
+
+.admin-appeals-list,
+.admin-appeals-detail {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+}
+
+.admin-appeals-list {
+  max-height: 70vh;
+  overflow: auto;
+}
+
+.admin-appeal-item {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.admin-appeal-item.highlighted {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18);
+}
+
+.appeal-status-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.status-pending {
+  background: #fff7ed;
+  color: #b45309;
+}
+
+.status-approved {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-declined {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.admin-appeals-card {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.admin-appeal-text {
+  white-space: pre-wrap;
+  border: 1px dashed var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 0.7rem;
+  margin-bottom: 0.8rem;
+  background: var(--bg-surface-muted);
+}
+
+.admin-appeals-card textarea {
+  width: 100%;
+  margin-top: 0.4rem;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem;
+}
+
+.admin-appeal-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+
+.appeal-approve-btn {
+  background: #15803d;
+}
+
+.appeal-approve-btn:hover {
+  background: #166534;
+}
+
+.appeal-decline-btn {
+  background: #b91c1c;
+}
+
+.appeal-decline-btn:hover {
+  background: #991b1b;
+}
+
+.admin-appeal-report-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.admin-appeal-report-row {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+  background: var(--bg-surface-muted);
+}
+
+.admin-appeals-empty {
+  color: var(--text-muted);
+}
+
+@media (max-width: 1024px) {
+  .admin-appeals-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-appeals-list {
+    max-height: none;
+  }
+}

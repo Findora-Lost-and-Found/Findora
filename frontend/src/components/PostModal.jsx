@@ -1,8 +1,29 @@
+import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import './PostModal.css';
 
 const PostModal = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    const { body, documentElement } = document;
+    const previousOverflow = body.style.overflow;
+    const previousPaddingRight = body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - documentElement.clientWidth;
+
+    body.style.overflow = 'hidden';
+    if (scrollbarWidth > 0) {
+      body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    return () => {
+      body.style.overflow = previousOverflow;
+      body.style.paddingRight = previousPaddingRight;
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -16,16 +37,11 @@ const PostModal = ({ isOpen, onClose }) => {
     navigate('/report-found');
   };
 
-  return (
-    <>
-      {/* Backdrop */}
-      <div className="modal-backdrop" onClick={onClose}></div>
-
-      {/* Modal */}
-      <div className="modal-container">
-        <div className="modal-content">
+  return createPortal(
+    <div className="modal-root" onClick={onClose}>
+      <div className="modal-content" role="dialog" aria-modal="true" aria-labelledby="post-modal-title" onClick={(event) => event.stopPropagation()}>
           <div className="modal-header">
-            <h2>Create a Post</h2>
+            <h2 id="post-modal-title">Create a Post</h2>
             <button className="modal-close" onClick={onClose}>
               ✕
             </button>
@@ -60,9 +76,9 @@ const PostModal = ({ isOpen, onClose }) => {
               Cancel
             </button>
           </div>
-        </div>
       </div>
-    </>
+    </div>,
+    document.body
   );
 };
 

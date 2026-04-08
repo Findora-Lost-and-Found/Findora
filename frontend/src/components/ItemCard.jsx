@@ -1,36 +1,68 @@
 import { normalizeCategory } from '../utils/categoryUtils';
+import SampleItemImage from './SampleItemImage';
+import { maskSensitiveDescription } from '../utils/itemDisplayUtils';
 
-const ItemCard = ({ item, showActions = false, onDelete }) => {
+const ItemCard = ({ item, showActions = false, onDelete, showPostedBy = true, onStatusClick }) => {
   if (!item) return null;
 
-  const API_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8080';
+  const configuredApiUrl = import.meta.env.VITE_API_URL;
+  const API_URL = configuredApiUrl?.includes('localhost:5000')
+    ? configuredApiUrl.replace('localhost:5000', 'localhost:8080').replace('/api', '')
+    : configuredApiUrl?.replace('/api', '') || 'http://localhost:8080';
   const normalizedCategory = normalizeCategory(item.category, item.item_name || item.name);
-  const displayDate = item.date ? new Date(item.date).toLocaleDateString() : 'Not provided';
-
-  // Construct full image URL if image_url is relative
-  const getImageUrl = () => {
-    const imageField = item.image_url || item.image;
-    if (!imageField) return null;
-    if (imageField.startsWith('http')) return imageField;
-    return `${API_URL}${imageField}`;
-  };
+  const formattedDate = (() => {
+    if (!item.date) return 'N/A';
+    const parsed = new Date(item.date);
+    return Number.isNaN(parsed.getTime()) ? 'N/A' : parsed.toLocaleDateString();
+  })();
+  const formattedTime = item.time || '--:--';
+  const displayStatus = item.status || 'active';
+  const statusClass = String(displayStatus).toLowerCase();
+  const statusLabel = statusClass === 'active' ? 'view' : displayStatus;
+  const displayDescription = maskSensitiveDescription(item.description, normalizedCategory);
+  const badgeLabel = normalizedCategory || 'Other';
+  const rawImage = item.image_url || item.imageUrl || item.image;
+  const normalizedImage = rawImage ? String(rawImage).trim().replace(/\\/g, '/') : '';
+  const normalizedPath = normalizedImage ? normalizedImage.replace(/\/+/g, '/').replace(/^\/+/, '') : '';
+  const imageSrc = !normalizedImage
+    ? ''
+    : normalizedImage.startsWith('http://') || normalizedImage.startsWith('https://')
+      ? normalizedImage
+      : `${API_URL}/${normalizedPath}`;
 
   return (
     <div className="item-card">
-      {getImageUrl() && (
-        <img src={getImageUrl()} alt={item.item_name || 'Lost item'} className="item-image" />
-      )}
+      <div className="item-image-container">
+        {imageSrc ? (
+          <img src={imageSrc} alt={item.item_name} className="item-image" />
+        ) : (
+          <SampleItemImage category={normalizedCategory} item={item} />
+        )}
+      </div>
       <div className="item-details">
-        <span className={`category-badge ${item.type}`}>{normalizedCategory}</span>
+        <span className={`category-badge ${item.type}`}>{badgeLabel}</span>
         <span className={`type-badge ${item.type}`}>{item.type}</span>
         <h3>{item.item_name || 'Unnamed Item'}</h3>
-        <p className="item-description">{item.description || 'No description provided.'}</p>
+        <p className="item-description">{displayDescription || 'No description provided.'}</p>
         <div className="item-info">
-          <p><strong>Date:</strong> {displayDate}</p>
-          <p><strong>Time:</strong> {item.time || '--:--'}</p>
-          <p><strong>Status:</strong> <span className={`status-badge ${item.status || 'active'}`}>{item.status || 'active'}</span></p>
+          <p><strong>Date:</strong> {formattedDate}</p>
+          <p><strong>Time:</strong> {formattedTime}</p>
+          <p>
+            <strong>Status:</strong>{' '}
+            {onStatusClick ? (
+              <button
+                type="button"
+                className={`status-badge status-clickable ${statusClass}`}
+                onClick={() => onStatusClick(item)}
+              >
+                {statusLabel}
+              </button>
+            ) : (
+              <span className={`status-badge ${statusClass}`}>{statusLabel}</span>
+            )}
+          </p>
         </div>
-        {item.full_name && <p className="posted-by"><small>Posted by: {item.full_name}</small></p>}
+        {showPostedBy && item.full_name && <p className="posted-by"><small>Posted by: {item.full_name}</small></p>}
         
         {showActions && onDelete && (
           <div className="item-actions">

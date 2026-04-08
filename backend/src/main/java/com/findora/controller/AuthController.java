@@ -2,6 +2,7 @@ package com.findora.controller;
 
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -10,12 +11,15 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.findora.dto.AuthResponse;
+import com.findora.dto.UpdatePhoneRequestDTO;
 import com.findora.dto.UserDTO;
+import com.findora.service.AccessControlService;
 import com.findora.service.AuthService;
 
 /**
@@ -28,10 +32,16 @@ import com.findora.service.AuthService;
 public class AuthController {
 
     private final AuthService authService;
+    private final AccessControlService accessControlService;
+    private final boolean exposeResetOtp;
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService,
+            AccessControlService accessControlService,
+            @Value("${app.dev.expose-reset-otp:false}") boolean exposeResetOtp) {
         this.authService = authService;
+        this.accessControlService = accessControlService;
+        this.exposeResetOtp = exposeResetOtp;
     }
 
     /**
@@ -74,7 +84,7 @@ public class AuthController {
     /**
      * POST /api/auth/register
      * Register new user.
-     * Request: { username, email, password, fullName, role }
+        * Request: { username, email, password, fullName, role, phone? }
      * Response: { token, user: {...}, message }
      */
     @PostMapping("/register")
@@ -83,6 +93,7 @@ public class AuthController {
             String username = registerRequest.get("username");
             String email = registerRequest.get("email");
             String password = registerRequest.get("password");
+            String phone = registerRequest.get("phone");
             String fullName = firstNonBlank(registerRequest.get("fullName"), registerRequest.get("full_name"));
             String role = registerRequest.getOrDefault("role", "STUDENT");
 
@@ -91,7 +102,7 @@ public class AuthController {
                     .body(Map.of("success", false, "message", "Missing required fields"));
             }
 
-            AuthResponse response = authService.register(username, email, password, fullName, role);
+            AuthResponse response = authService.register(username, email, password, fullName, role, phone);
 
             log.info("User registered: {}", username);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -119,7 +130,6 @@ public class AuthController {
     /**
      * POST /api/auth/verify-email
      * Verify email with OTP.
-     * TODO: Implement OTP validation
      */
     @PostMapping("/verify-email")
     public ResponseEntity<?> verifyEmail(@RequestBody Map<String, String> verifyRequest) {
@@ -162,7 +172,7 @@ public class AuthController {
 
     /**
      * POST /api/auth/resend-otp
-     * TODO: Implement OTP resend
+     * Resend email verification OTP.
      */
     @PostMapping("/resend-otp")
     public ResponseEntity<?> resendOtp(@RequestBody Map<String, String> request) {
@@ -180,7 +190,14 @@ public class AuthController {
                 }
             }
 
-            authService.resendVerificationOtp(usernameOrEmail);
+            String otp = authService.resendVerificationOtp(usernameOrEmail);
+            if (otp != null && !otp.isBlank()) {
+                return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "OTP regenerated. Email delivery failed, use the OTP shown in-app.",
+                    "otp", otp
+                ));
+            }
             return ResponseEntity.ok(Map.of("success", true, "message", "OTP resent successfully"));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
@@ -190,7 +207,7 @@ public class AuthController {
     /**
      * POST /api/auth/forgot-password
      * Initiate password reset.
-     * TODO: Integrate with email service
+     * Uses email service to deliver reset OTP.
      */
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> request) {
@@ -201,8 +218,20 @@ public class AuthController {
                     .body(Map.of("success", false, "message", "Email is required"));
             }
 
-            authService.initiatePasswordReset(email);
-            return ResponseEntity.ok(Map.of("success", true, "message", "Password reset OTP sent"));
+            String otp = authService.initiatePasswordReset(email);
+
+            if (exposeResetOtp && otp != null) {
+                return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Password reset OTP generated",
+                    "otp", otp
+                ));
+            }
+
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "If the email is registered, a password reset OTP has been sent"
+            ));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
         }
@@ -211,7 +240,7 @@ public class AuthController {
     /**
      * POST /api/auth/reset-password
      * Reset password with OTP.
-     * TODO: Implement password reset
+     * Validates OTP and updates password.
      */
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> resetRequest) {
@@ -232,6 +261,77 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/appeal-access")
+    public ResponseEntity<?> submitAccessAppeal(@RequestBody Map<String, String> request) {
+        try {
+            String identifier = firstNonBlank(
+                request.get("identifier"),
+                request.get("username"),
+                request.get("email")
+            );
+            String reason = firstNonBlank(request.get("reason"), request.get("appeal"));
+
+            Map<String, Object> result = accessControlService.submitAccessAppeal(identifier, reason);
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+                "success", true,
+                "message", result.get("message"),
+                "appeal_id", result.get("appeal_id"),
+                "status", result.get("status")
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("success", false, "message", "Server error"));
+        }
+    }
+
+    @PutMapping("/update-phone")
+    public ResponseEntity<?> updatePhone(@RequestBody UpdatePhoneRequestDTO request) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+            .body(Map.of("success", false, "message", "Phone number update is disabled"));
+    }
+
+    @PostMapping("/delete-account/request-otp")
+    public ResponseEntity<?> requestDeleteAccountOtp() {
+        try {
+            String username = getCurrentUsername();
+            authService.requestAccountDeletionOtp(username);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Account deletion OTP sent to your email"
+            ));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("success", false, "message", "Authentication required"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/delete-account/confirm")
+    public ResponseEntity<?> confirmDeleteAccount(@RequestBody Map<String, String> request) {
+        try {
+            String otp = request != null ? request.get("otp") : null;
+            if (otp == null || otp.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "OTP is required"));
+            }
+
+            String username = getCurrentUsername();
+            authService.confirmAccountDeletion(username, otp);
+
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Account deleted successfully"
+            ));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("success", false, "message", "Authentication required"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
     /**
      * GET /api/auth/me
      * Get current authenticated user.
@@ -244,6 +344,19 @@ public class AuthController {
             UserDTO user = authService.getCurrentUserByUsername(username);
 
             return ResponseEntity.ok(Map.of("success", true, "user", user));
+
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("success", false, "message", "Authentication required"));
+
+        } catch (RuntimeException e) {
+            if ("User not found".equalsIgnoreCase(e.getMessage())) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("success", false, "message", "Session expired. Please login again"));
+            }
+            log.error("Error fetching current user", e);
+            return ResponseEntity.badRequest()
+                .body(Map.of("success", false, "message", e.getMessage()));
 
         } catch (Exception e) {
             log.error("Error fetching current user", e);
@@ -260,7 +373,11 @@ public class AuthController {
         if (auth == null || !auth.isAuthenticated()) {
             throw new IllegalStateException("User not authenticated");
         }
-        return auth.getName();
+        String username = auth.getName();
+        if (username == null || username.isBlank() || "anonymousUser".equalsIgnoreCase(username)) {
+            throw new IllegalStateException("User not authenticated");
+        }
+        return username;
     }
 
     private String getCurrentUsernameOptional() {

@@ -20,7 +20,7 @@ import jakarta.persistence.Table;
 
 /**
  * User entity - maps to users table.
- * Supports roles: STUDENT, STAFF, SECURITY, ADMIN
+ * Supports roles: STUDENT, STAFF, SECURITY, ADMIN, SUPER_ADMIN
  */
 @Entity
 @Table(name = "users", indexes = {
@@ -53,6 +53,18 @@ public class User {
     @Column(length = 20)
     private String phone;
 
+    @Column(name = "pending_phone", length = 20)
+    private String pendingPhone;
+
+    @Column(name = "phone_verification_otp", length = 6)
+    private String phoneVerificationOtp;
+
+    @Column(name = "phone_otp_expiry")
+    private LocalDateTime phoneOtpExpiry;
+
+    @Column(name = "is_phone_verified", nullable = false)
+    private Boolean isPhoneVerified = true;
+
     @Column(name = "is_verified", nullable = false)
     private Boolean isVerified = false;
 
@@ -64,6 +76,18 @@ public class User {
 
     @Column(name = "is_suspended", nullable = false)
     private Boolean isSuspended = false;
+
+    @Column(name = "is_deleted", nullable = false)
+    private Boolean isDeleted = false;
+
+    @Column(name = "bad_post_attempts", nullable = false)
+    private Integer badPostAttempts = 0;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    @Column(name = "suspension_until")
+    private LocalDateTime suspensionUntil;
 
     @Column(name = "verification_otp", length = 6)
     private String verificationOtp;
@@ -89,15 +113,17 @@ public class User {
     private List<Notification> notifications;
 
     public enum UserRole {
-        STUDENT, STAFF, SECURITY, ADMIN
+        STUDENT, STAFF, SECURITY, ADMIN, SUPER_ADMIN
     }
 
     public User() {
     }
 
     public User(Long id, String username, String email, String password, String fullName, UserRole role, String phone,
+                String pendingPhone, String phoneVerificationOtp, LocalDateTime phoneOtpExpiry, Boolean isPhoneVerified,
                 Boolean isVerified, Boolean isApproved, Boolean isBanned, Boolean isSuspended, String verificationOtp,
-                String resetOtp, LocalDateTime otpExpiry, LocalDateTime createdAt, LocalDateTime updatedAt,
+                Integer badPostAttempts, LocalDateTime suspensionUntil, String resetOtp, LocalDateTime otpExpiry,
+                LocalDateTime createdAt, LocalDateTime updatedAt,
                 List<Item> items, List<Notification> notifications) {
         this.id = id;
         this.username = username;
@@ -106,10 +132,16 @@ public class User {
         this.fullName = fullName;
         this.role = role;
         this.phone = phone;
+        this.pendingPhone = pendingPhone;
+        this.phoneVerificationOtp = phoneVerificationOtp;
+        this.phoneOtpExpiry = phoneOtpExpiry;
+        this.isPhoneVerified = isPhoneVerified;
         this.isVerified = isVerified;
         this.isApproved = isApproved;
         this.isBanned = isBanned;
         this.isSuspended = isSuspended;
+        this.badPostAttempts = badPostAttempts;
+        this.suspensionUntil = suspensionUntil;
         this.verificationOtp = verificationOtp;
         this.resetOtp = resetOtp;
         this.otpExpiry = otpExpiry;
@@ -175,6 +207,38 @@ public class User {
         this.phone = phone;
     }
 
+    public String getPendingPhone() {
+        return pendingPhone;
+    }
+
+    public void setPendingPhone(String pendingPhone) {
+        this.pendingPhone = pendingPhone;
+    }
+
+    public String getPhoneVerificationOtp() {
+        return phoneVerificationOtp;
+    }
+
+    public void setPhoneVerificationOtp(String phoneVerificationOtp) {
+        this.phoneVerificationOtp = phoneVerificationOtp;
+    }
+
+    public LocalDateTime getPhoneOtpExpiry() {
+        return phoneOtpExpiry;
+    }
+
+    public void setPhoneOtpExpiry(LocalDateTime phoneOtpExpiry) {
+        this.phoneOtpExpiry = phoneOtpExpiry;
+    }
+
+    public Boolean getIsPhoneVerified() {
+        return isPhoneVerified;
+    }
+
+    public void setIsPhoneVerified(Boolean isPhoneVerified) {
+        this.isPhoneVerified = isPhoneVerified;
+    }
+
     public Boolean getIsVerified() {
         return isVerified;
     }
@@ -205,6 +269,38 @@ public class User {
 
     public void setIsSuspended(Boolean isSuspended) {
         this.isSuspended = isSuspended;
+    }
+
+    public Boolean getIsDeleted() {
+        return isDeleted;
+    }
+
+    public void setIsDeleted(Boolean isDeleted) {
+        this.isDeleted = isDeleted;
+    }
+
+    public Integer getBadPostAttempts() {
+        return badPostAttempts;
+    }
+
+    public void setBadPostAttempts(Integer badPostAttempts) {
+        this.badPostAttempts = badPostAttempts;
+    }
+
+    public LocalDateTime getSuspensionUntil() {
+        return suspensionUntil;
+    }
+
+    public void setSuspensionUntil(LocalDateTime suspensionUntil) {
+        this.suspensionUntil = suspensionUntil;
+    }
+
+    public LocalDateTime getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void setDeletedAt(LocalDateTime deletedAt) {
+        this.deletedAt = deletedAt;
     }
 
     public String getVerificationOtp() {

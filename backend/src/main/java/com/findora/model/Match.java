@@ -31,7 +31,6 @@ import jakarta.persistence.UniqueConstraint;
     @Index(name = "idx_matches_status", columnList = "status"),
     @Index(name = "idx_matches_notified_at", columnList = "notified_at")
 })
-@SuppressWarnings({"unused", "FieldMayBeFinal"})
 public class Match {
 
     @Id
@@ -52,7 +51,7 @@ public class Match {
     @JoinColumn(name = "found_item_id", referencedColumnName = "id", insertable = false, updatable = false)
     private Item foundItem;
 
-    @Column(name = "score", nullable = false)
+    @Column(name = "match_score", nullable = false)
     private Double score;
 
     @Column(name = "threshold", nullable = false)
