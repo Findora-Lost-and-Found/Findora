@@ -108,7 +108,7 @@ public class ItemService {
             }
         }
 
-        ItemStatus itemStatus = ItemStatus.ACTIVE;
+        ItemStatus itemStatus = null;
         if (status != null && !status.isEmpty()) {
             try {
                 itemStatus = ItemStatus.valueOf(status.toUpperCase());

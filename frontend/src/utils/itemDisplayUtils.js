@@ -80,11 +80,16 @@ export const maskSensitiveDescription = (text = '', category = '') => {
 export const isModerationRemovedItem = (item = {}) => {
   const name = String(item?.name || item?.item_name || '').trim().toLowerCase();
   const description = String(item?.description || '').trim().toLowerCase();
+  const location = String(item?.location || '').trim().toLowerCase();
 
   const removedTitle = '[removed by moderation]';
   const removedDescription = 'inappropriate content blocked by moderation.';
 
-  return name === removedTitle || description === removedDescription;
+  const hasBlockedLanguage = BLOCKED_WORD_PATTERNS.some((pattern) =>
+    pattern.test(name) || pattern.test(description) || pattern.test(location)
+  );
+
+  return name === removedTitle || description === removedDescription || hasBlockedLanguage;
 };
 
 const BLOCKED_WORD_PATTERNS = [

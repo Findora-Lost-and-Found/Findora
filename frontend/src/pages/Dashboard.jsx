@@ -121,7 +121,7 @@ const Dashboard = () => {
         const [itemsRes, claimsRes, foundRes] = await Promise.allSettled([
           itemsAPI.getMy(),
           claimsAPI.getMy(),
-          itemsAPI.getMy({ type: 'found', page: 0, size: 100, sort: 'createdAt,desc' })
+          itemsAPI.getAll({ type: 'found', page: 0, size: 100, sort: 'createdAt,desc' })
         ]);
 
         setStats({
@@ -142,7 +142,16 @@ const Dashboard = () => {
               full_name: item.full_name || item.username || 'Unknown User'
             }
           }));
-          const visibleItems = apiItems.filter((item) => !isModerationRemovedItem(item));
+          const visibleItems = apiItems.filter((item) => {
+            const ownerId = item?.posted_by?.id;
+            const isOwnItem = ownerId !== undefined
+              && ownerId !== null
+              && user?.id !== undefined
+              && user?.id !== null
+              && String(ownerId) === String(user.id);
+
+            return !isOwnItem && !isModerationRemovedItem(item);
+          });
           const sortedFoundItems = sortFoundItems(visibleItems, FOUND_ITEM_SORT.LATEST);
           setFoundItems(sortedFoundItems);
           setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
@@ -156,7 +165,7 @@ const Dashboard = () => {
           adminAPI.getItems({ status: 'found', page: 0, size: ADMIN_PREVIEW_LIMIT, sort: 'createdAt,desc' }),
           adminAPI.getItems({ status: 'received', page: 0, size: ADMIN_PREVIEW_LIMIT, sort: 'createdAt,desc' }),
           adminAPI.getItems({ status: 'released', page: 0, size: ADMIN_PREVIEW_LIMIT, sort: 'createdAt,desc' }),
-          itemsAPI.getAll({ type: 'found', status: 'active', page: 0, size: 300, sort: 'createdAt,desc' })
+          itemsAPI.getAll({ type: 'found', status: 'active', page: 0, size: 100, sort: 'createdAt,desc' })
         ]);
 
         const extractItems = (result) => {

@@ -5,7 +5,7 @@ import { itemsAPI, claimsAPI } from '../services/api';
 import PostModal from '../components/PostModal';
 import FoundItemCard from '../components/FoundItemCard';
 import { normalizeCategory } from '../utils/categoryUtils';
-import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
+import { FOUND_ITEM_SORT, isModerationRemovedItem, sortFoundItems } from '../utils/itemDisplayUtils';
 
 const DEFAULT_POST_ROLES = ['student', 'staff', 'security'];
 const INITIAL_FOUND_VISIBLE = 6;
@@ -86,7 +86,7 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
       const [itemsRes, claimsRes, foundRes] = await Promise.allSettled([
         itemsAPI.getMy(),
         claimsAPI.getMy(),
-        itemsAPI.getMy({ type: 'found', page: 0, size: 100, sort: 'createdAt,desc' })
+        itemsAPI.getAll({ type: 'found', page: 0, size: 100, sort: 'createdAt,desc' })
       ]);
 
       setStats({
@@ -106,7 +106,17 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
             full_name: item.full_name || item.username || 'Unknown User'
           }
         }));
-        const sortedFoundItems = sortFoundItems(apiItems, FOUND_ITEM_SORT.LATEST);
+        const visibleItems = apiItems.filter((item) => {
+          const ownerId = item?.posted_by?.id;
+          const isOwnItem = ownerId !== undefined
+            && ownerId !== null
+            && user?.id !== undefined
+            && user?.id !== null
+            && String(ownerId) === String(user.id);
+
+          return !isOwnItem && !isModerationRemovedItem(item);
+        });
+        const sortedFoundItems = sortFoundItems(visibleItems, FOUND_ITEM_SORT.LATEST);
         setFoundItems(sortedFoundItems);
         setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
       } else {

@@ -8,7 +8,7 @@ import Pagination from '../components/Pagination';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT, isModerationRemovedItem, sortFoundItems } from '../utils/itemDisplayUtils';
 
-const PAGE_SIZE = 4;
+const PAGE_SIZE = 8;
 const configuredApiUrl = import.meta.env.VITE_API_URL;
 const API_ORIGIN = (configuredApiUrl?.includes('localhost:5000')
   ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')

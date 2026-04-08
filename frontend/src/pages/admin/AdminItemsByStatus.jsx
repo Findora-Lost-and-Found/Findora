@@ -119,7 +119,7 @@ const AdminItemsByStatus = () => {
       setLoading(true);
       const response = await adminAPI.getItems({
         page: 0,
-        size: 300,
+        size: 100,
         status: config.apiStatus,
         sort: 'created_at,desc'
       });

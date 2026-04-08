@@ -87,6 +87,21 @@ public class DatabaseInitializer {
                   MODIFY COLUMN role ENUM('student', 'staff', 'security', 'admin', 'super_admin') NOT NULL
                   """);
 
+            // Backfill columns for databases created before moderation/phone verification features.
+            ensureColumnExists(stmt, "users", "pending_phone", "VARCHAR(20) NULL");
+            ensureColumnExists(stmt, "users", "is_phone_verified", "BOOLEAN NOT NULL DEFAULT TRUE");
+            ensureColumnExists(stmt, "users", "is_approved", "BOOLEAN NOT NULL DEFAULT TRUE");
+            ensureColumnExists(stmt, "users", "is_banned", "BOOLEAN NOT NULL DEFAULT FALSE");
+            ensureColumnExists(stmt, "users", "is_suspended", "BOOLEAN NOT NULL DEFAULT FALSE");
+            ensureColumnExists(stmt, "users", "is_deleted", "BOOLEAN NOT NULL DEFAULT FALSE");
+            ensureColumnExists(stmt, "users", "bad_post_attempts", "INT NOT NULL DEFAULT 0");
+            ensureColumnExists(stmt, "users", "suspension_until", "DATETIME NULL");
+            ensureColumnExists(stmt, "users", "deleted_at", "DATETIME NULL");
+            ensureColumnExists(stmt, "users", "phone_verification_otp", "VARCHAR(6) NULL");
+            ensureColumnExists(stmt, "users", "phone_otp_expiry", "DATETIME NULL");
+            ensureColumnExists(stmt, "users", "phone_otp_reset", "VARCHAR(6) NULL");
+            ensureColumnExists(stmt, "users", "pending_phone_otp", "VARCHAR(6) NULL");
+
             // Ensure user_access_appeals table exists
             checkTableSQL = "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='findora_db' AND TABLE_NAME='user_access_appeals'";
             if (!stmt.executeQuery(checkTableSQL).next()) {

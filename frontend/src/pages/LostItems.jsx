@@ -7,7 +7,7 @@ import MatchCard from '../components/MatchCard';
 import matchesAPI from '../services/matchesAPI';
 import { FOUND_ITEM_SORT, isModerationRemovedItem } from '../utils/itemDisplayUtils';
 
-const PAGE_SIZE = 4;
+const PAGE_SIZE = 8;
 
 const LostItems = () => {
   const [items, setItems] = useState([]);

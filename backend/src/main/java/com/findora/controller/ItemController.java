@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -48,7 +49,6 @@ import com.findora.model.ItemType;
 import com.findora.repository.ItemRepository;
 import com.findora.repository.UserRepository;
 import com.findora.service.ItemService;
-import com.findora.service.MatchService;
 
 /**
  * ItemController - REST endpoints for items (lost/found).
@@ -58,7 +58,6 @@ import com.findora.service.MatchService;
  */
 @RestController
 @RequestMapping("/api/items")
-@SuppressWarnings("null")
 public class ItemController {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("uuuu-MM-dd").withResolverStyle(ResolverStyle.STRICT);
@@ -67,22 +66,16 @@ public class ItemController {
     private final ItemService itemService;
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
-    private final MatchService matchService;
     private static final Logger log = LoggerFactory.getLogger(ItemController.class);
     private static final Pattern CARD_NUMBER_PATTERN = Pattern.compile("^\\d{16}$");
 
     @Value("${app.upload.dir:uploads}")
     private String uploadDir;
 
-    public ItemController(
-            ItemService itemService,
-            ItemRepository itemRepository,
-            UserRepository userRepository,
-            MatchService matchService) {
+    public ItemController(ItemService itemService, ItemRepository itemRepository, UserRepository userRepository) {
         this.itemService = itemService;
         this.itemRepository = itemRepository;
         this.userRepository = userRepository;
-        this.matchService = matchService;
     }
 
     /**
@@ -111,13 +104,13 @@ public class ItemController {
      */
     @GetMapping
     public ResponseEntity<?> getAllItems(
-            @RequestParam(name = "page", defaultValue = "0") Integer page,
-            @RequestParam(name = "size", defaultValue = "10") Integer size,
-            @RequestParam(name = "sort", defaultValue = "createdAt,desc") String sort,
-            @RequestParam(name = "category", required = false) String category,
-            @RequestParam(name = "keyword", required = false) String keyword,
-            @RequestParam(name = "type", required = false) String type,
-            @RequestParam(name = "status", required = false) String status) {
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "10") Integer size,
+            @RequestParam(defaultValue = "createdAt,desc") String sort,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String status) {
 
         try {
             log.debug("GET /api/items: page={}, size={}, category={}, keyword={}", page, size, category, keyword);
@@ -145,7 +138,7 @@ public class ItemController {
      * GET /api/items/:id - Get single item by ID.
      */
     @GetMapping("/{id}")
-    public ResponseEntity<?> getItem(@PathVariable("id") Long id) {
+    public ResponseEntity<?> getItem(@PathVariable Long id) {
         try {
             Optional<ItemDTO> item = itemService.getItemById(id);
 
@@ -168,12 +161,12 @@ public class ItemController {
      */
     @GetMapping("/my/items")
     public ResponseEntity<?> getMyItems(
-            @RequestParam(name = "page", defaultValue = "0") Integer page,
-            @RequestParam(name = "size", defaultValue = "10") Integer size,
-            @RequestParam(name = "type", required = false) String type,
-            @RequestParam(name = "status", required = false) String status,
-            @RequestParam(name = "category", required = false) String category,
-            @RequestParam(name = "keyword", required = false) String keyword) {
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "10") Integer size,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String keyword) {
 
         try {
             Long userId = getCurrentUserId();
@@ -223,8 +216,11 @@ public class ItemController {
 
             item.setDescription(finalDescription);
             item.setLocation(location.trim());
-            item.setDate(parseAndValidateDate(date));
-            item.setTime(parseAndValidateTime(time));
+            LocalDate parsedDate = parseAndValidateDate(date);
+            LocalTime parsedTime = parseAndValidateTime(time);
+            validateNotFutureDateTime(parsedDate, parsedTime);
+            item.setDate(parsedDate);
+            item.setTime(parsedTime);
             item.setStatus(ItemStatus.ACTIVE);
 
             if (image != null && !image.isEmpty()) {
@@ -238,15 +234,6 @@ public class ItemController {
 
             if (savedDto.isPresent()) {
                 log.info("Item created with ID: {}, image_url: {}", saved.getId(), savedDto.get().getImageUrl());
-            }
-
-            try {
-                int immediateNotifications = matchService.runImmediateIdBasedMatching(saved.getId());
-                if (immediateNotifications > 0) {
-                    log.info("Immediate ID-based matching sent notifications={} for itemId={}", immediateNotifications, saved.getId());
-                }
-            } catch (Exception immediateMatchError) {
-                log.warn("Immediate ID-based matching failed for itemId={}: {}", saved.getId(), immediateMatchError.getMessage());
             }
 
             return ResponseEntity.status(HttpStatus.CREATED)
@@ -287,6 +274,17 @@ public class ItemController {
         }
     }
 
+    private void validateNotFutureDateTime(LocalDate date, LocalTime time) {
+        if (date == null || time == null) {
+            return;
+        }
+
+        LocalDateTime submittedDateTime = LocalDateTime.of(date, time);
+        if (submittedDateTime.isAfter(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Invalid date/time. Please select current time or a past date and time.");
+        }
+    }
+
     private String saveImage(MultipartFile image) throws IOException {
         String original = image.getOriginalFilename();
         String extension = "";
@@ -318,7 +316,7 @@ public class ItemController {
     @PutMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> updateItemStatus(
-            @PathVariable("id") Long id,
+            @PathVariable Long id,
             @RequestBody Map<String, String> statusUpdate) {
         try {
             Item item = itemRepository.findById(id)
@@ -351,7 +349,7 @@ public class ItemController {
 
     /**
      * DELETE /api/items/:id - Delete item.
-     * Requires authorization: only item owner or admin can delete.
+     * Requires authorization to delete item.
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteItem(@PathVariable Long id) {
@@ -407,4 +405,3 @@ public class ItemController {
         return body;
     }
 }
-
