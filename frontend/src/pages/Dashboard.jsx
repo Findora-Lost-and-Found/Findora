@@ -7,6 +7,7 @@ import PostModal from '../components/PostModal';
 import FoundItemCard from '../components/FoundItemCard';
 import FilterSelect from '../components/FilterSelect';
 import SecurityDashboard from './SecurityDashboard';
+import StudentDashboard from './StudentDashboard';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT, getModeratedItemTitle, isModerationRemovedItem, sortFoundItems } from '../utils/itemDisplayUtils';
 import { sampleFoundItems } from '../data/sampleFoundItems';
@@ -15,6 +16,7 @@ import SampleItemImage from '../components/SampleItemImage';
 const ADMIN_PREVIEW_LIMIT = 5;
 const INITIAL_FOUND_VISIBLE = 6;
 const FOUND_LOAD_STEP = 3;
+const STUDENT_DASHBOARD_FOUND_STATUSES = ['active', 'handover_requested', 'held_by_security', 'handed_to_security'];
 const configuredApiUrl = import.meta.env.VITE_API_URL;
 const API_ORIGIN = (configuredApiUrl?.includes('localhost:5000')
   ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')
@@ -107,7 +109,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (user) {
-      if (user.role === 'security') {
+      if (user.role === 'security' || user.role === 'student' || user.role === 'staff') {
         setLoading(false);
         return;
       }
@@ -119,10 +121,15 @@ const Dashboard = () => {
   const loadDashboardData = async () => {
     try {
       if (user.role === 'student' || user.role === 'staff') {
-        const [itemsRes, claimsRes, foundRes] = await Promise.allSettled([
+        const foundRequests = STUDENT_DASHBOARD_FOUND_STATUSES.map((status) =>
+          itemsAPI.getAll({ type: 'found', status, page: 0, size: 100, sort: 'createdAt,desc' })
+        );
+
+        const [itemsRes, claimsRes, myFoundRes, ...foundStatusResults] = await Promise.allSettled([
           itemsAPI.getMy(),
           claimsAPI.getMy(),
-          itemsAPI.getMy({ type: 'found', page: 0, size: 100, sort: 'createdAt,desc' })
+          itemsAPI.getMy({ type: 'found', page: 0, size: 100, sort: 'createdAt,desc' }),
+          ...foundRequests
         ]);
 
         setStats({
@@ -130,9 +137,20 @@ const Dashboard = () => {
           myClaims: claimsRes.status === 'fulfilled' ? claimsRes.value.data.count : 0
         });
 
-        if (foundRes.status === 'fulfilled') {
-          console.log('Dashboard found items fetched:', foundRes.value.data.items || foundRes.value.data.content || []);
-          const apiItems = (foundRes.value.data.items || foundRes.value.data.content || []).map((item) => ({
+        const fulfilledFoundResults = foundStatusResults.filter((result) => result.status === 'fulfilled');
+
+        if (fulfilledFoundResults.length > 0) {
+          const mergedFoundItemsById = new Map();
+
+          fulfilledFoundResults.forEach((result) => {
+            (result.value.data.items || result.value.data.content || []).forEach((item) => {
+              if (item?.id !== undefined && item?.id !== null) {
+                mergedFoundItemsById.set(item.id, item);
+              }
+            });
+          });
+
+          let apiItems = Array.from(mergedFoundItemsById.values()).map((item) => ({
             ...item,
             name: item.name || item.item_name,
             date_found: item.date_found || item.date || item.created_at,
@@ -143,12 +161,32 @@ const Dashboard = () => {
               full_name: item.full_name || item.username || 'Unknown User'
             }
           }));
+
+          // Keep student dashboard behavior as fallback when public feed has no visible rows.
+          if (apiItems.length === 0 && myFoundRes.status === 'fulfilled') {
+            apiItems = (myFoundRes.value.data.items || myFoundRes.value.data.content || []).map((item) => ({
+              ...item,
+              name: item.name || item.item_name,
+              date_found: item.date_found || item.date || item.created_at,
+              image: toImageUrl(readFirst(item, ['image_url', 'imageUrl', 'image'])),
+              category: normalizeCategory(item.category, item.name || item.item_name),
+              posted_by: item.posted_by || {
+                id: item.userId || item.user_id,
+                full_name: item.full_name || item.username || 'Unknown User'
+              }
+            }));
+          }
           const visibleItems = apiItems.filter((item) => !isModerationRemovedItem(item));
           const sortedFoundItems = sortFoundItems(visibleItems, FOUND_ITEM_SORT.LATEST);
           setFoundItems(sortedFoundItems);
           setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
         } else {
-          console.error('Dashboard found items fetch failed:', foundRes.reason?.response?.data || foundRes.reason?.message);
+          const failedReasons = foundStatusResults.map((result) =>
+            result.status === 'rejected'
+              ? (result.reason?.response?.data || result.reason?.message || 'Unknown error')
+              : null
+          ).filter(Boolean);
+          console.error('Dashboard found items fetch failed:', failedReasons);
           setFoundItems([]);
           setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
         }
@@ -262,6 +300,10 @@ const Dashboard = () => {
 
   if (loading) {
     return <div className="loading">Loading...</div>;
+  }
+
+  if (user?.role === 'student' || user?.role === 'staff') {
+    return <StudentDashboard />;
   }
 
   if (user?.role === 'security') {

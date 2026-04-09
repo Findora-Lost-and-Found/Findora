@@ -74,10 +74,14 @@ const Navbar = () => {
       <div className="nav-container">
         <div className="nav-header" aria-label="Application header">
           {user ? (
-            <span className="nav-logo" aria-label="Findora home title">Findora</span>
+            <span className="nav-logo" aria-label="Findora home title">
+              <img src="/findora-logo.png" alt="Findora logo" className="nav-logo-image" />
+              <span>Findora</span>
+            </span>
           ) : (
             <Link to="/" className="nav-logo" aria-label="Findora home title">
-              Findora
+              <img src="/findora-logo.png" alt="Findora logo" className="nav-logo-image" />
+              <span>Findora</span>
             </Link>
           )}
         </div>
