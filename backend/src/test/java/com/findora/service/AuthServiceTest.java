@@ -50,12 +50,25 @@ class AuthServiceTest {
     @Mock
     private AccessControlService accessControlService;
 
+    @Mock
+    private RoleFeatureProvider roleFeatureProvider;
+
     private AuthService authService;
 
     @BeforeEach
     @SuppressWarnings("unused")
     void setUp() {
         lenient().when(accessControlService.refreshAndGetAccessState(any(User.class))).thenReturn(AccessState.ALLOWED);
+        lenient().when(roleFeatureProvider.requiresEmailVerification(User.UserRole.STUDENT)).thenReturn(true);
+        lenient().when(roleFeatureProvider.requiresEmailVerification(User.UserRole.STAFF)).thenReturn(true);
+        lenient().when(roleFeatureProvider.requiresEmailVerification(User.UserRole.SECURITY)).thenReturn(true);
+        lenient().when(roleFeatureProvider.requiresEmailVerification(User.UserRole.ADMIN)).thenReturn(false);
+        lenient().when(roleFeatureProvider.requiresEmailVerification(User.UserRole.SUPER_ADMIN)).thenReturn(false);
+        lenient().when(roleFeatureProvider.isAutoApprovedAtSignup(User.UserRole.STUDENT)).thenReturn(true);
+        lenient().when(roleFeatureProvider.isAutoApprovedAtSignup(User.UserRole.STAFF)).thenReturn(false);
+        lenient().when(roleFeatureProvider.isAutoApprovedAtSignup(User.UserRole.SECURITY)).thenReturn(false);
+        lenient().when(roleFeatureProvider.isAutoApprovedAtSignup(User.UserRole.ADMIN)).thenReturn(false);
+        lenient().when(roleFeatureProvider.isAutoApprovedAtSignup(User.UserRole.SUPER_ADMIN)).thenReturn(false);
         authService = new AuthService(
             userRepository,
             passwordEncoder,
@@ -63,7 +76,8 @@ class AuthServiceTest {
             emailService,
             itemRepository,
             notificationRepository,
-            accessControlService
+            accessControlService,
+            roleFeatureProvider
         );
     }
 

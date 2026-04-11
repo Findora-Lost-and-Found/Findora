@@ -63,6 +63,8 @@ public class ItemController {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("uuuu-MM-dd").withResolverStyle(ResolverStyle.STRICT);
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm").withResolverStyle(ResolverStyle.STRICT);
+    private static final List<String> ALLOWED_IMAGE_CONTENT_TYPES = List.of("image/jpeg", "image/png", "image/webp", "image/gif");
+    private static final List<String> ALLOWED_IMAGE_EXTENSIONS = List.of(".jpg", ".jpeg", ".png", ".webp", ".gif");
 
     private final ItemService itemService;
     private final ItemRepository itemRepository;
@@ -73,6 +75,9 @@ public class ItemController {
 
     @Value("${app.upload.dir:uploads}")
     private String uploadDir;
+
+    @Value("${app.upload.max-size:5242880}")
+    private long maxUploadSizeBytes;
 
     public ItemController(
             ItemService itemService,
@@ -288,6 +293,8 @@ public class ItemController {
     }
 
     private String saveImage(MultipartFile image) throws IOException {
+        validateImageUpload(image);
+
         String original = image.getOriginalFilename();
         String extension = "";
         if (original != null && StringUtils.hasText(original) && original.contains(".")) {
@@ -301,6 +308,31 @@ public class ItemController {
 
         String normalizedUploadDir = uploadDir.replace("\\", "/").replaceAll("/+$", "");
         return normalizedUploadDir + "/" + storedName;
+    }
+
+    private void validateImageUpload(MultipartFile image) {
+        if (image == null || image.isEmpty()) {
+            throw new IllegalArgumentException("Image file is empty");
+        }
+
+        if (image.getSize() > maxUploadSizeBytes) {
+            throw new IllegalArgumentException("Image size must be 5 MB or less");
+        }
+
+        String contentType = image.getContentType();
+        if (!StringUtils.hasText(contentType) || !ALLOWED_IMAGE_CONTENT_TYPES.contains(contentType.toLowerCase(Locale.ROOT))) {
+            throw new IllegalArgumentException("Only JPG, PNG, WEBP, or GIF images are allowed");
+        }
+
+        String original = image.getOriginalFilename();
+        if (!StringUtils.hasText(original) || !original.contains(".")) {
+            throw new IllegalArgumentException("Image file must include a valid extension");
+        }
+
+        String extension = original.substring(original.lastIndexOf('.')).toLowerCase(Locale.ROOT);
+        if (!ALLOWED_IMAGE_EXTENSIONS.contains(extension)) {
+            throw new IllegalArgumentException("Only JPG, PNG, WEBP, or GIF images are allowed");
+        }
     }
 
     private String appendPrivateCardMarker(String description, String cardNumber) {

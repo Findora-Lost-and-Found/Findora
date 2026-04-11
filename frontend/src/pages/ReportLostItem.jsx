@@ -19,6 +19,7 @@ import TimeInputPicker from '../components/TimeInputPicker';
 import './ReportLostItem.css';
 
 const CATEGORY_OPTIONS = ['NIC', 'Student / Staff ID', 'Bank Card', 'Purse / Wallet', 'Others'];
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 
 const ReportLostItem = () => {
   const [category, setCategory] = useState('');
@@ -127,8 +128,26 @@ const ReportLostItem = () => {
     setFormData((prev) => ({ ...prev, [name]: nextValue }));
   };
 
+  const validateSelectedImage = (file) => {
+    if (!file) return null;
+
+    if (!String(file.type || '').toLowerCase().startsWith('image/')) {
+      return 'Only image files are allowed.';
+    }
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      return 'Image size must be 5 MB or less.';
+    }
+
+    return null;
+  };
+
   const handleFileChange = (name, file) => {
-    setFormData((prev) => ({ ...prev, [name]: file || null }));
+    const selectedFile = file || null;
+    const errorMessage = validateSelectedImage(selectedFile);
+
+    setErrors((prev) => ({ ...prev, [name]: errorMessage || undefined }));
+    setFormData((prev) => ({ ...prev, [name]: errorMessage ? null : selectedFile }));
   };
 
   const handleTimeChange = (name, nextValue) => {
@@ -210,6 +229,11 @@ const ReportLostItem = () => {
     }
 
     if (category === 'Purse / Wallet') {
+      if (formData.pursePhoto) {
+        const pursePhotoError = validateSelectedImage(formData.pursePhoto);
+        if (pursePhotoError) nextErrors.pursePhoto = pursePhotoError;
+      }
+
       if (purseOption === 'with-id') {
         if (!formData.purseIdNumber.trim()) nextErrors.purseIdNumber = 'NIC number or Student/Staff ID is required.';
         if (
@@ -245,6 +269,10 @@ const ReportLostItem = () => {
     }
 
     if (category === 'Others') {
+      if (formData.otherPhoto) {
+        const otherPhotoError = validateSelectedImage(formData.otherPhoto);
+        if (otherPhotoError) nextErrors.otherPhoto = otherPhotoError;
+      }
       if (!formData.otherDescription.trim()) nextErrors.otherDescription = 'Description is required.';
       if (!formData.otherLocation1.trim()) nextErrors.otherLocation1 = 'Field 1 is required.';
       if (!formData.otherDateLost) nextErrors.otherDateLost = 'Date is required.';
@@ -583,6 +611,7 @@ const ReportLostItem = () => {
                   accept="image/*"
                   onChange={(e) => handleFileChange('pursePhoto', e.target.files?.[0])}
                 />
+                {errors.pursePhoto && <p className="report-lost-error">{errors.pursePhoto}</p>}
               </div>
 
               <div className="report-lost-photo-box">
@@ -751,6 +780,7 @@ const ReportLostItem = () => {
                   accept="image/*"
                   onChange={(e) => handleFileChange('otherPhoto', e.target.files?.[0])}
                 />
+                {errors.otherPhoto && <p className="report-lost-error">{errors.otherPhoto}</p>}
               </div>
 
               <div className="report-lost-form-group">
