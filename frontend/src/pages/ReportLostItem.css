@@ -64,12 +64,40 @@
   font-family: inherit;
 }
 
+.report-lost-form-group select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  padding-right: 2.35rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #334155 50%),
+    linear-gradient(135deg, #334155 50%, transparent 50%),
+    linear-gradient(to right, #d1d5db, #d1d5db);
+  background-position:
+    calc(100% - 19px) 50%,
+    calc(100% - 13px) 50%,
+    calc(100% - 2.2rem) 50%;
+  background-size: 7px 7px, 7px 7px, 1px 62%;
+  background-repeat: no-repeat;
+}
+
 .report-lost-form-group input:focus,
 .report-lost-form-group select:focus,
 .report-lost-form-group textarea:focus {
   outline: none;
   border-color: #16a34a;
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.14);
+}
+
+.report-lost-form-group select:focus {
+  background-image:
+    linear-gradient(45deg, transparent 50%, #16a34a 50%),
+    linear-gradient(135deg, #16a34a 50%, transparent 50%),
+    linear-gradient(to right, #86efac, #86efac);
+}
+
+.report-lost-form-group select::-ms-expand {
+  display: none;
 }
 
 .report-lost-row {
@@ -146,9 +174,9 @@
 }
 
 .report-lost-status.otp {
-  border: 1px solid #bfdbfe;
-  background: #eff6ff;
-  color: #1d4ed8;
+  border: 1px solid #99f6e4;
+  background: #f0fdfa;
+  color: #0f766e;
 }
 
 .report-lost-status p {
@@ -198,6 +226,13 @@ body.dark-mode .report-lost-form-group textarea {
   border-color: #4b5563;
 }
 
+body.dark-mode .report-lost-form-group select {
+  background-image:
+    linear-gradient(45deg, transparent 50%, #cbd5e1 50%),
+    linear-gradient(135deg, #cbd5e1 50%, transparent 50%),
+    linear-gradient(to right, #475569, #475569);
+}
+
 body.dark-mode .report-lost-form-group input::placeholder,
 body.dark-mode .report-lost-form-group textarea::placeholder {
   color: #9ca3af;
@@ -208,6 +243,13 @@ body.dark-mode .report-lost-form-group select:focus,
 body.dark-mode .report-lost-form-group textarea:focus {
   border-color: #22c55e;
   box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.16);
+}
+
+body.dark-mode .report-lost-form-group select:focus {
+  background-image:
+    linear-gradient(45deg, transparent 50%, #5eead4 50%),
+    linear-gradient(135deg, #5eead4 50%, transparent 50%),
+    linear-gradient(to right, #0d9488, #0d9488);
 }
 
 body.dark-mode .report-lost-options input[type="radio"] {
@@ -240,9 +282,9 @@ body.dark-mode .report-lost-status.notify {
 }
 
 body.dark-mode .report-lost-status.otp {
-  border-color: #1d4ed8;
-  background: #12243d;
-  color: #93c5fd;
+  border-color: #0f766e;
+  background: rgba(13, 148, 136, 0.2);
+  color: #5eead4;
 }
 
 @media (max-width: 768px) {

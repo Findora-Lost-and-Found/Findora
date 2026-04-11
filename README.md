@@ -228,6 +228,12 @@ Frontend default URL:
 
 - `http://localhost:5173`
 
+### Production deployment note
+
+When deploying the frontend to Vercel, set `VITE_API_URL` in the Vercel project environment variables to your deployed backend API URL, for example `https://your-backend-domain.com/api`.
+
+The frontend does not ship with a production backend URL by default, so this variable must be configured for deployed builds.
+
 ## Email OTP Setup
 
 OTP is sent by email, not by phone number.

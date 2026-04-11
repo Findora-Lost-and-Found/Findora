@@ -90,3 +90,29 @@ export const isModerationRemovedItem = (item = {}) => {
 
   return name === removedTitle || description === removedDescription;
 };
+
+const BLOCKED_WORD_PATTERNS = [
+  /\bfuck(?:ing|ed|er|ers)?\b/i,
+  /\bshit(?:ty|ting|ted)?\b/i,
+  /\bbitch(?:es)?\b/i,
+  /\basshole(?:s)?\b/i,
+  /\bdick(?:head|heads)?\b/i,
+  /\bbastard(?:s)?\b/i,
+  /\bcunt(?:s)?\b/i,
+  /\bmotherfucker(?:s)?\b/i
+];
+
+export const getModeratedItemTitle = (title = '') => {
+  const normalized = String(title || '').trim();
+  if (!normalized) {
+    return 'Unnamed Item';
+  }
+
+  const lower = normalized.toLowerCase();
+  if (lower === '[removed by moderation]') {
+    return '[Removed by moderation]';
+  }
+
+  const hasBlockedWord = BLOCKED_WORD_PATTERNS.some((pattern) => pattern.test(normalized));
+  return hasBlockedWord ? '[Removed by moderation]' : normalized;
+};

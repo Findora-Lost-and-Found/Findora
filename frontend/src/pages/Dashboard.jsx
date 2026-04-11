@@ -5,14 +5,18 @@ import { itemsAPI, claimsAPI, securityAPI, adminAPI } from '../services/api';
 import { toast } from 'react-toastify';
 import PostModal from '../components/PostModal';
 import FoundItemCard from '../components/FoundItemCard';
+import FilterSelect from '../components/FilterSelect';
 import SecurityDashboard from './SecurityDashboard';
+import StudentDashboard from './StudentDashboard';
 import { normalizeCategory } from '../utils/categoryUtils';
-import { FOUND_ITEM_SORT, isModerationRemovedItem, sortFoundItems } from '../utils/itemDisplayUtils';
+import { FOUND_ITEM_SORT, getModeratedItemTitle, isModerationRemovedItem, sortFoundItems } from '../utils/itemDisplayUtils';
+import { sampleFoundItems } from '../data/sampleFoundItems';
 import SampleItemImage from '../components/SampleItemImage';
 
 const ADMIN_PREVIEW_LIMIT = 5;
 const INITIAL_FOUND_VISIBLE = 6;
 const FOUND_LOAD_STEP = 3;
+const STUDENT_DASHBOARD_FOUND_STATUSES = ['active', 'handover_requested', 'held_by_security', 'handed_to_security'];
 const configuredApiUrl = import.meta.env.VITE_API_URL;
 const API_ORIGIN = (configuredApiUrl?.includes('localhost:5000')
   ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')
@@ -64,6 +68,8 @@ const formatDateTime = (value) => {
 };
 
 const normalizeAdminDashboardItem = (item, section) => {
+  const rawItemName = readFirst(item, ['name', 'item_name', 'itemName'], 'Unnamed Item');
+  const moderatedItemName = getModeratedItemTitle(rawItemName);
   const dateTime = section === 'released'
     ? readFirst(item, ['released_at', 'releasedAt', 'date_released', 'dateReleased', 'created_at', 'createdAt'])
     : section === 'received'
@@ -72,8 +78,8 @@ const normalizeAdminDashboardItem = (item, section) => {
 
   return {
     id: item.id,
-    itemName: readFirst(item, ['name', 'item_name', 'itemName'], 'Unnamed Item'),
-    category: normalizeCategory(readFirst(item, ['category']), readFirst(item, ['name', 'item_name', 'itemName'])),
+    itemName: moderatedItemName,
+    category: normalizeCategory(readFirst(item, ['category']), moderatedItemName),
     itemImage: toImageUrl(readFirst(item, ['image_url', 'imageUrl', 'image'])),
     founder: readFirst(item, ['founder_username', 'founderUsername', 'found_by_username', 'posted_by_username', 'username'], 'Unknown'),
     security: readFirst(item, ['security_username', 'securityUsername', 'received_by_username', 'released_by_username'], 'Unknown'),
@@ -103,7 +109,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (user) {
-      if (user.role === 'security') {
+      if (user.role === 'security' || user.role === 'student' || user.role === 'staff') {
         setLoading(false);
         return;
       }
@@ -115,10 +121,15 @@ const Dashboard = () => {
   const loadDashboardData = async () => {
     try {
       if (user.role === 'student' || user.role === 'staff') {
-        const [itemsRes, claimsRes, foundRes] = await Promise.allSettled([
+        const foundRequests = STUDENT_DASHBOARD_FOUND_STATUSES.map((status) =>
+          itemsAPI.getAll({ type: 'found', status, page: 0, size: 100, sort: 'createdAt,desc' })
+        );
+
+        const [itemsRes, claimsRes, myFoundRes, ...foundStatusResults] = await Promise.allSettled([
           itemsAPI.getMy(),
           claimsAPI.getMy(),
-          itemsAPI.getMy({ type: 'found', page: 0, size: 100, sort: 'createdAt,desc' })
+          itemsAPI.getMy({ type: 'found', page: 0, size: 100, sort: 'createdAt,desc' }),
+          ...foundRequests
         ]);
 
         setStats({
@@ -126,9 +137,20 @@ const Dashboard = () => {
           myClaims: claimsRes.status === 'fulfilled' ? claimsRes.value.data.count : 0
         });
 
-        if (foundRes.status === 'fulfilled') {
-          console.log('Dashboard found items fetched:', foundRes.value.data.items || foundRes.value.data.content || []);
-          const apiItems = (foundRes.value.data.items || foundRes.value.data.content || []).map((item) => ({
+        const fulfilledFoundResults = foundStatusResults.filter((result) => result.status === 'fulfilled');
+
+        if (fulfilledFoundResults.length > 0) {
+          const mergedFoundItemsById = new Map();
+
+          fulfilledFoundResults.forEach((result) => {
+            (result.value.data.items || result.value.data.content || []).forEach((item) => {
+              if (item?.id !== undefined && item?.id !== null) {
+                mergedFoundItemsById.set(item.id, item);
+              }
+            });
+          });
+
+          let apiItems = Array.from(mergedFoundItemsById.values()).map((item) => ({
             ...item,
             name: item.name || item.item_name,
             date_found: item.date_found || item.date || item.created_at,
@@ -139,16 +161,36 @@ const Dashboard = () => {
               full_name: item.full_name || item.username || 'Unknown User'
             }
           }));
+
+          // Keep student dashboard behavior as fallback when public feed has no visible rows.
+          if (apiItems.length === 0 && myFoundRes.status === 'fulfilled') {
+            apiItems = (myFoundRes.value.data.items || myFoundRes.value.data.content || []).map((item) => ({
+              ...item,
+              name: item.name || item.item_name,
+              date_found: item.date_found || item.date || item.created_at,
+              image: toImageUrl(readFirst(item, ['image_url', 'imageUrl', 'image'])),
+              category: normalizeCategory(item.category, item.name || item.item_name),
+              posted_by: item.posted_by || {
+                id: item.userId || item.user_id,
+                full_name: item.full_name || item.username || 'Unknown User'
+              }
+            }));
+          }
           const visibleItems = apiItems.filter((item) => !isModerationRemovedItem(item));
           const sortedFoundItems = sortFoundItems(visibleItems, FOUND_ITEM_SORT.LATEST);
           setFoundItems(sortedFoundItems);
           setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
         } else {
-          console.error('Dashboard found items fetch failed:', foundRes.reason?.response?.data || foundRes.reason?.message);
+          const failedReasons = foundStatusResults.map((result) =>
+            result.status === 'rejected'
+              ? (result.reason?.response?.data || result.reason?.message || 'Unknown error')
+              : null
+          ).filter(Boolean);
+          console.error('Dashboard found items fetch failed:', failedReasons);
           setFoundItems([]);
           setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
         }
-      } else if (user.role === 'admin') {
+      } else if (user.role === 'admin' || user.role === 'super_admin') {
         const [foundRes, receivedRes, releasedRes, studentFoundRes] = await Promise.allSettled([
           adminAPI.getItems({ status: 'found', page: 0, size: ADMIN_PREVIEW_LIMIT, sort: 'createdAt,desc' }),
           adminAPI.getItems({ status: 'received', page: 0, size: ADMIN_PREVIEW_LIMIT, sort: 'createdAt,desc' }),
@@ -260,6 +302,10 @@ const Dashboard = () => {
     return <div className="loading">Loading...</div>;
   }
 
+  if (user?.role === 'student' || user?.role === 'staff') {
+    return <StudentDashboard />;
+  }
+
   if (user?.role === 'security') {
     return <SecurityDashboard />;
   }
@@ -287,7 +333,7 @@ const Dashboard = () => {
           </div>
         )}
 
-        {(user?.role === 'security' || user?.role === 'admin') && !user?.is_approved && (
+        {(user?.role === 'security' || user?.role === 'admin' || user?.role === 'super_admin') && !user?.is_approved && (
           <div className="alert alert-info">
             Your account is pending admin approval.
           </div>
@@ -300,14 +346,20 @@ const Dashboard = () => {
               <h2>Recently Found Items</h2>
             </div>
             <div className="filters">
-              <select name="category" value={filters.category} onChange={handleFilterChange}>
-                <option value="">All Categories</option>
-                <option value="NIC">NIC</option>
-                <option value="Student ID">Student ID</option>
-                <option value="Bank Card">Bank Card</option>
-                <option value="Wallet">Wallet</option>
-                <option value="Other">Other</option>
-              </select>
+              <FilterSelect
+                name="category"
+                value={filters.category}
+                onChange={handleFilterChange}
+                ariaLabel="Filter by category"
+                options={[
+                  { value: '', label: 'All Categories' },
+                  { value: 'NIC', label: 'NIC' },
+                  { value: 'Student ID', label: 'Student ID' },
+                  { value: 'Bank Card', label: 'Bank Card' },
+                  { value: 'Wallet', label: 'Wallet' },
+                  { value: 'Other', label: 'Other' }
+                ]}
+              />
 
               <form className="search-form" onSubmit={handleSearchSubmit}>
                 <input
@@ -324,11 +376,17 @@ const Dashboard = () => {
                 </button>
               </form>
 
-              <select name="sortBy" value={filters.sortBy} onChange={handleFilterChange}>
-                <option value={FOUND_ITEM_SORT.LATEST}>Latest</option>
-                <option value={FOUND_ITEM_SORT.NAME_ASC}>Alphabetical A → Z</option>
-                <option value={FOUND_ITEM_SORT.NAME_DESC}>Alphabetical Z → A</option>
-              </select>
+            <FilterSelect
+              name="sortBy"
+              value={filters.sortBy}
+              onChange={handleFilterChange}
+              ariaLabel="Sort items"
+              options={[
+                { value: FOUND_ITEM_SORT.LATEST, label: 'Latest' },
+                { value: FOUND_ITEM_SORT.NAME_ASC, label: 'Alphabetical A → Z' },
+                { value: FOUND_ITEM_SORT.NAME_DESC, label: 'Alphabetical Z → A' }
+              ]}
+            />
             </div>
             <div className="found-items-grid">
               {filteredFoundItems.length === 0 ? (
@@ -372,7 +430,7 @@ const Dashboard = () => {
           </div>
         )}
 
-        {user?.role === 'admin' && (
+        {(user?.role === 'admin' || user?.role === 'super_admin') && (
           <>
             <div className="section" style={{ marginTop: '2rem' }}>
               <div className="section-header" style={{ borderBottom: 'none', marginBottom: '0.25rem' }}>

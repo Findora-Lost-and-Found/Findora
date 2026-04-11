@@ -153,7 +153,17 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(password));
         user.setFullName(fullName);
         user.setPhone(normalizedPhone);
-        User.UserRole userRole = User.UserRole.valueOf(role.toUpperCase());
+        User.UserRole userRole;
+        try {
+            userRole = User.UserRole.valueOf(role.toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new RuntimeException("Invalid role");
+        }
+
+        if (userRole == User.UserRole.SUPER_ADMIN) {
+            throw new RuntimeException("Super admin cannot be created via signup");
+        }
+
         user.setRole(userRole);
         boolean requiresEmailVerification = (userRole == User.UserRole.STUDENT
             || userRole == User.UserRole.STAFF
@@ -168,6 +178,10 @@ public class AuthService {
         }
 
         User savedUser = userRepository.save(user);
+
+        if (userRole == User.UserRole.ADMIN) {
+            notifySuperAdminsOfAdminApprovalRequest(savedUser);
+        }
 
         String fallbackVerificationOtp = null;
         if (requiresEmailVerification) {
@@ -195,6 +209,8 @@ public class AuthService {
         String message;
         if (userRole == User.UserRole.SECURITY) {
             message = "Signup successful. Verify your email with OTP. After verification, your account will be sent for admin approval";
+        } else if (userRole == User.UserRole.ADMIN) {
+            message = "Signup request submitted. Please wait for super admin approval";
         } else if (requiresEmailVerification) {
             message = "Signup successful. Please verify your email with OTP";
         } else {
@@ -521,6 +537,25 @@ public class AuthService {
                     + ") has verified email and is waiting for admin approval."
             );
             notification.setRelatedId(securityUser.getId());
+            notificationRepository.save(notification);
+        }
+    }
+
+    private void notifySuperAdminsOfAdminApprovalRequest(User adminUser) {
+        List<User> superAdmins = userRepository.findByRole(User.UserRole.SUPER_ADMIN);
+        for (User superAdmin : superAdmins) {
+            Notification notification = new Notification();
+            notification.setUserId(superAdmin.getId());
+            notification.setType(Notification.NotificationType.APPROVAL);
+            notification.setTitle("Admin approval requested");
+            notification.setMessage(
+                "Admin user "
+                    + adminUser.getFullName()
+                    + " ("
+                    + adminUser.getEmail()
+                    + ") is waiting for super admin approval."
+            );
+            notification.setRelatedId(adminUser.getId());
             notificationRepository.save(notification);
         }
     }

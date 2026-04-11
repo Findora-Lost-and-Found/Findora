@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { adminAPI } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import './AdminUsers.css';
 
@@ -65,10 +66,13 @@ const compareValues = (a, b, direction) => {
 };
 
 const AdminUsers = () => {
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'super_admin';
+  const isAdmin = user?.role === 'admin';
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all');
+  const [roleFilter, setRoleFilter] = useState(isSuperAdmin ? 'admin' : 'all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sort, setSort] = useState({ key: 'fullName', direction: 'asc' });
   const [currentPage, setCurrentPage] = useState(1);
@@ -80,6 +84,13 @@ const AdminUsers = () => {
   });
 
   const actionMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (isSuperAdmin) {
+      setRoleFilter('admin');
+      setMenuOpenFor(null);
+    }
+  }, [isSuperAdmin]);
 
   useEffect(() => {
     loadData();
@@ -275,16 +286,20 @@ const AdminUsers = () => {
       <div className="au-page">
         <div className="au-header">
           <div className="au-header-block">
-            <h1>User Management</h1>
-            <p>Manage access, account state, and role governance across all platform users.</p>
+            <h1>{isSuperAdmin ? 'Admin Management' : 'User Management'}</h1>
+            <p>
+              {isSuperAdmin
+                ? 'Manage admin account state and governance.'
+                : 'Manage access, account state, and role governance across all platform users.'}
+            </p>
           </div>
           <div className="au-search-wrap">
-            <label htmlFor="user-search" className="au-search-label">Search users</label>
+            <label htmlFor="user-search" className="au-search-label">{isSuperAdmin ? 'Search admins' : 'Search users'}</label>
             <input
               id="user-search"
               type="search"
               className="au-search-input"
-              placeholder="Search by name, email, or username"
+              placeholder={isSuperAdmin ? 'Search by admin name, email, or username' : 'Search by name, email, or username'}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
@@ -292,30 +307,32 @@ const AdminUsers = () => {
         </div>
 
         <div className="au-toolbar" role="region" aria-label="User filters">
-          <div className="au-filter-group">
-            <label htmlFor="role-filter">Role</label>
-            <select id="role-filter" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
-              <option value="all">All roles</option>
-              <option value="admin">Admin</option>
-              <option value="security">Security</option>
-              <option value="staff">Staff</option>
-              <option value="student">Student</option>
-            </select>
-          </div>
+          {!isSuperAdmin && (
+            <div className="au-filter-group">
+              <label htmlFor="role-filter">Role</label>
+              <select id="role-filter" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
+                <option value="all">All roles</option>
+                {!isAdmin && <option value="admin">Admin</option>}
+                <option value="security">Security</option>
+                <option value="staff">Staff</option>
+                <option value="student">Student</option>
+              </select>
+            </div>
+          )}
 
           <div className="au-filter-group">
             <label htmlFor="status-filter">Status</label>
             <select id="status-filter" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
               <option value="all">All statuses</option>
               <option value="active">Active</option>
-              <option value="pending">Pending</option>
+              {!isSuperAdmin && <option value="pending">Pending</option>}
               <option value="suspended">Suspended</option>
               <option value="banned">Banned</option>
             </select>
           </div>
 
           <div className="au-toolbar-summary" aria-live="polite">
-            Showing <strong>{paginatedUsers.length}</strong> of <strong>{sortedUsers.length}</strong> users
+            Showing <strong>{paginatedUsers.length}</strong> of <strong>{sortedUsers.length}</strong> {isSuperAdmin ? 'admins' : 'users'}
           </div>
         </div>
 
@@ -329,7 +346,7 @@ const AdminUsers = () => {
                 className="au-soft-btn"
                 onClick={() => {
                   setQuery('');
-                  setRoleFilter('all');
+                  setRoleFilter(isSuperAdmin ? 'admin' : 'all');
                   setStatusFilter('all');
                 }}
               >

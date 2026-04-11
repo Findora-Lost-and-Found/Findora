@@ -2,9 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { adminAPI } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import './AdminAppeals.css';
 
 const AdminAppeals = () => {
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'super_admin';
   const [searchParams] = useSearchParams();
   const [appeals, setAppeals] = useState([]);
   const [selectedAppeal, setSelectedAppeal] = useState(null);
@@ -153,10 +156,10 @@ const AdminAppeals = () => {
                   value={adminNotes}
                   onChange={(e) => setAdminNotes(e.target.value)}
                   placeholder="Optional notes for this decision"
-                  disabled={selectedAppeal.status !== 'pending'}
+                  disabled={isSuperAdmin || selectedAppeal.status !== 'pending'}
                 />
 
-                {selectedAppeal.status === 'pending' && (
+                {selectedAppeal.status === 'pending' && !isSuperAdmin && (
                   <div className="admin-appeal-actions">
                     <button
                       className="btn-success appeal-approve-btn"
@@ -173,6 +176,10 @@ const AdminAppeals = () => {
                       Decline Appeal
                     </button>
                   </div>
+                )}
+
+                {selectedAppeal.status === 'pending' && isSuperAdmin && (
+                  <p className="admin-appeals-empty">Super admin has read-only access on appeals.</p>
                 )}
               </div>
 

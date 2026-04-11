@@ -122,12 +122,40 @@
   transition: border-color 0.2s;
 }
 
+.form-group select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  padding-right: 2.35rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #334155 50%),
+    linear-gradient(135deg, #334155 50%, transparent 50%),
+    linear-gradient(to right, #d1d5db, #d1d5db);
+  background-position:
+    calc(100% - 19px) 50%,
+    calc(100% - 13px) 50%,
+    calc(100% - 2.2rem) 50%;
+  background-size: 7px 7px, 7px 7px, 1px 62%;
+  background-repeat: no-repeat;
+}
+
 .form-group input:focus,
 .form-group textarea:focus,
 .form-group select:focus {
   outline: none;
   border-color: #16A34A;
   background: #F9FAFB;
+}
+
+.form-group select:focus {
+  background-image:
+    linear-gradient(45deg, transparent 50%, #16a34a 50%),
+    linear-gradient(135deg, #16a34a 50%, transparent 50%),
+    linear-gradient(to right, #86efac, #86efac);
+}
+
+.form-group select::-ms-expand {
+  display: none;
 }
 
 .form-group .input-invalid {

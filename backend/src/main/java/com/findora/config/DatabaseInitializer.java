@@ -51,7 +51,7 @@ public class DatabaseInitializer {
                       email VARCHAR(100) UNIQUE NOT NULL,
                       password VARCHAR(255) NOT NULL,
                       full_name VARCHAR(100) NOT NULL,
-                      role ENUM('student', 'staff', 'security', 'admin') NOT NULL,
+                      role ENUM('student', 'staff', 'security', 'admin', 'super_admin') NOT NULL,
                       phone VARCHAR(20),
                       pending_phone VARCHAR(20),
                       is_verified BOOLEAN DEFAULT FALSE,
@@ -81,19 +81,11 @@ public class DatabaseInitializer {
                     """);
             }
 
-                      // Backfill compatibility columns for existing databases that were created
-                      // before moderation and phone OTP updates.
-                      ensureColumnExists(stmt, "users", "pending_phone", "VARCHAR(20) NULL");
-                      ensureColumnExists(stmt, "users", "is_phone_verified", "BOOLEAN DEFAULT TRUE");
-                      ensureColumnExists(stmt, "users", "bad_post_attempts", "INT NOT NULL DEFAULT 0");
-                      ensureColumnExists(stmt, "users", "suspension_until", "DATETIME NULL");
-                      ensureColumnExists(stmt, "users", "is_deleted", "BOOLEAN NOT NULL DEFAULT FALSE");
-                      ensureColumnExists(stmt, "users", "deleted_at", "DATETIME NULL");
-                      ensureColumnExists(stmt, "users", "phone_verification_otp", "VARCHAR(6) NULL");
-                      ensureColumnExists(stmt, "users", "phone_otp_expiry", "DATETIME NULL");
-                      ensureColumnExists(stmt, "users", "phone_otp_reset", "VARCHAR(6) NULL");
-                      ensureColumnExists(stmt, "users", "pending_phone_otp", "VARCHAR(6) NULL");
-                      ensureUniqueIndexIfMissing(stmt, "users", "uq_users_pending_phone", "pending_phone");
+                // Keep enum in sync for existing databases created before SUPER_ADMIN support.
+                stmt.executeUpdate("""
+                  ALTER TABLE users
+                  MODIFY COLUMN role ENUM('student', 'staff', 'security', 'admin', 'super_admin') NOT NULL
+                  """);
 
             // Ensure user_access_appeals table exists
             checkTableSQL = "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='findora_db' AND TABLE_NAME='user_access_appeals'";

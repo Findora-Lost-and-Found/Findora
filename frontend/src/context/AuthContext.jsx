@@ -67,7 +67,7 @@ export const AuthProvider = ({ children }) => {
       const role = String(user?.role || '').toLowerCase();
       const isVerified = Boolean(user?.is_verified ?? user?.isVerified);
       const requiresVerification = Boolean(token) && (role === 'student' || role === 'staff' || role === 'security') && !isVerified;
-      const pendingApproval = !token && (role === 'security' || role === 'admin');
+      const pendingApproval = !token && (role === 'security' || role === 'admin' || role === 'super_admin');
       return { success: true, user, requiresVerification, pendingApproval };
     } catch (error) {
       const message = getApiErrorMessage(error, 'Registration failed');

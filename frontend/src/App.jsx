@@ -1,6 +1,6 @@
 import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
@@ -40,6 +40,14 @@ const AdminAppeals = lazy(() => import('./pages/admin/AdminAppeals'));
 const SecurityPendingClaims = lazy(() => import('./pages/security/SecurityPendingClaims'));
 const SecurityReceiveItems = lazy(() => import('./pages/security/SecurityReceiveItems'));
 const SecurityTransactions = lazy(() => import('./pages/security/SecurityTransactions'));
+
+function AdminDashboardRoute() {
+  const { user } = useAuth();
+  if (user?.role === 'super_admin') {
+    return <Dashboard />;
+  }
+  return <AdminDashboard />;
+}
 
 function App() {
   useEffect(() => {
@@ -88,12 +96,19 @@ function App() {
               <Route path="/security/transactions" element={<PrivateRoute roles={['security', 'admin']}><SecurityTransactions /></PrivateRoute>} />
 
               {/* Admin Routes */}
-              <Route path="/admin/dashboard" element={<PrivateRoute roles={['admin']}><Navigate to="/admin-panel" replace /></PrivateRoute>} />
-              <Route path="/admin-panel" element={<PrivateRoute roles={['admin']}><AdminDashboard /></PrivateRoute>} />
+              <Route path="/admin/dashboard" element={<PrivateRoute roles={['admin', 'super_admin']}><AdminDashboardRoute /></PrivateRoute>} />
+              <Route
+                path="/admin-panel"
+                element={
+                  <PrivateRoute roles={['admin', 'super_admin']}>
+                    <AdminDashboard />
+                  </PrivateRoute>
+                }
+              />
               <Route path="/admin/reports" element={<PrivateRoute roles={['admin']}><AdminReports /></PrivateRoute>} />
-              <Route path="/admin/users" element={<PrivateRoute roles={['admin']}><AdminUsers /></PrivateRoute>} />
-              <Route path="/admin/pending-approvals" element={<PrivateRoute roles={['admin']}><AdminPendingApprovals /></PrivateRoute>} />
-              <Route path="/admin/appeals" element={<PrivateRoute roles={['admin']}><AdminAppeals /></PrivateRoute>} />
+              <Route path="/admin/users" element={<PrivateRoute roles={['admin', 'super_admin']}><AdminUsers /></PrivateRoute>} />
+              <Route path="/admin/pending-approvals" element={<PrivateRoute roles={['admin', 'super_admin']}><AdminPendingApprovals /></PrivateRoute>} />
+              <Route path="/admin/appeals" element={<PrivateRoute roles={['admin', 'super_admin']}><AdminAppeals /></PrivateRoute>} />
               <Route path="/admin/items" element={<PrivateRoute roles={['admin']}><Navigate to="/admin/items/found" replace /></PrivateRoute>} />
               <Route path="/admin/items/:section" element={<PrivateRoute roles={['admin']}><AdminItemsByStatus /></PrivateRoute>} />
             </Routes>

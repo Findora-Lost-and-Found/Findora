@@ -218,13 +218,13 @@
 
 .found-item-card .btn-view {
   background: #f9fafb;
-  color: #2563eb;
+  color: #0f766e;
   border: 2px solid #d1d5db;
 }
 
 .found-item-card .btn-view:hover {
-  background: #eff6ff;
-  border-color: #2563eb;
+  background: #f0fdfa;
+  border-color: #0d9488;
 }
 
 .found-item-card .btn:active {
@@ -232,8 +232,8 @@
 }
 
 .own-item-notice {
-  background: #EFF6FF;
-  border: 2px solid #3B82F6;
+  background: #F0FDFA;
+  border: 2px solid #14B8A6;
   border-radius: 8px;
   padding: 1rem;
   text-align: center;
@@ -242,19 +242,19 @@
 
 .own-item-notice p {
   margin: 0;
-  color: #1E40AF;
+  color: #0F766E;
   font-weight: 600;
   font-size: 0.95rem;
 }
 
 body.dark-mode .own-item-notice {
-  background: #1E3A8A;
-  border-color: #60A5FA;
-  color: #93C5FD;
+  background: rgba(13, 148, 136, 0.2);
+  border-color: #14B8A6;
+  color: #5EEAD4;
 }
 
 body.dark-mode .own-item-notice p {
-  color: #93C5FD;
+  color: #5EEAD4;
 }
 
 body.dark-mode .found-item-card {

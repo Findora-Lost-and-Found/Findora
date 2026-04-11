@@ -95,7 +95,7 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
         <h3 className="card-title">{normalizedItem.name}</h3>
         {isWaitingForSecurity && (
           <div className="handed-over-label" style={{ color: '#f2994a', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-            Waiting for Approvel
+            Waiting for Approval
           </div>
         )}
         {isAlreadyHandedOver && (
@@ -125,7 +125,7 @@ const FoundItemCard = ({ item, onClaim, onHandover, handoverInProgress = false }
           {isOwnItem ? (
             isWaitingForSecurity ? (
               <button className="btn btn-secondary" disabled>
-                Waiting for Approvel
+                Waiting for Approval
               </button>
             ) : isAlreadyHandedOver ? (
               <button className="btn btn-secondary" disabled>
