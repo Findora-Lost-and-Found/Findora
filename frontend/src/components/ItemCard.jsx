@@ -18,7 +18,9 @@ const ItemCard = ({ item, showActions = false, onDelete, showPostedBy = true, on
   const formattedTime = item.time || '--:--';
   const displayStatus = item.status || 'active';
   const statusClass = String(displayStatus).toLowerCase();
-  const statusLabel = statusClass === 'active' ? 'view' : displayStatus;
+  const statusLabel = statusClass === 'active'
+    ? (onStatusClick ? 'View Matches' : 'active')
+    : displayStatus;
   const displayDescription = maskSensitiveDescription(item.description, normalizedCategory);
   const badgeLabel = normalizedCategory || 'Other';
   const rawImage = item.image_url || item.imageUrl || item.image;
@@ -53,6 +55,7 @@ const ItemCard = ({ item, showActions = false, onDelete, showPostedBy = true, on
               <button
                 type="button"
                 className={`status-badge status-clickable ${statusClass}`}
+                aria-label={`View matches for ${item.item_name || 'this item'}`}
                 onClick={() => onStatusClick(item)}
               >
                 {statusLabel}

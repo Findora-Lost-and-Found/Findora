@@ -7,10 +7,12 @@ import FoundItemCard from '../components/FoundItemCard';
 import FilterSelect from '../components/FilterSelect';
 import { normalizeCategory } from '../utils/categoryUtils';
 import { FOUND_ITEM_SORT, sortFoundItems } from '../utils/itemDisplayUtils';
+import { sampleFoundItems } from '../data/sampleFoundItems';
 
 const DEFAULT_POST_ROLES = ['student', 'staff', 'security'];
 const INITIAL_FOUND_VISIBLE = 6;
 const FOUND_LOAD_STEP = 3;
+const STUDENT_FOUND_FEED_STATUSES = ['active', 'handover_requested', 'held_by_security', 'handed_to_security'];
 const configuredApiUrl = import.meta.env.VITE_API_URL;
 const API_ORIGIN = (configuredApiUrl?.includes('localhost:5000')
   ? configuredApiUrl.replace('localhost:5000', 'localhost:8080')
@@ -84,10 +86,15 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
 
   const loadDashboardData = async () => {
     try {
-      const [itemsRes, claimsRes, foundRes] = await Promise.allSettled([
+      const foundRequests = STUDENT_FOUND_FEED_STATUSES.map((status) =>
+        itemsAPI.getAll({ type: 'found', status, page: 0, size: 100, sort: 'createdAt,desc' })
+      );
+
+      const [itemsRes, claimsRes, myFoundRes, ...foundStatusResults] = await Promise.allSettled([
         itemsAPI.getMy(),
         claimsAPI.getMy(),
-        itemsAPI.getMy({ type: 'found', page: 0, size: 100, sort: 'createdAt,desc' })
+        itemsAPI.getMy({ type: 'found', page: 0, size: 100, sort: 'createdAt,desc' }),
+        ...foundRequests
       ]);
 
       setStats({
@@ -95,8 +102,20 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
         myClaims: claimsRes.status === 'fulfilled' ? claimsRes.value.data.count : 0
       });
 
-      if (foundRes.status === 'fulfilled') {
-        const apiItems = (foundRes.value.data.items || foundRes.value.data.content || []).map((item) => ({
+      const fulfilledFoundResults = foundStatusResults.filter((result) => result.status === 'fulfilled');
+
+      if (fulfilledFoundResults.length > 0) {
+        const mergedFoundItemsById = new Map();
+
+        fulfilledFoundResults.forEach((result) => {
+          (result.value.data.items || result.value.data.content || []).forEach((item) => {
+            if (item?.id !== undefined && item?.id !== null) {
+              mergedFoundItemsById.set(item.id, item);
+            }
+          });
+        });
+
+        let apiItems = Array.from(mergedFoundItemsById.values()).map((item) => ({
           ...item,
           name: item.name || item.item_name,
           date_found: item.date_found || item.date || item.created_at,
@@ -107,17 +126,53 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
             full_name: item.full_name || item.username || 'Unknown User'
           }
         }));
+
+        if (apiItems.length === 0 && myFoundRes.status === 'fulfilled') {
+          apiItems = (myFoundRes.value.data.items || myFoundRes.value.data.content || []).map((item) => ({
+            ...item,
+            name: item.name || item.item_name,
+            date_found: item.date_found || item.date || item.created_at,
+            image: toImageUrl(readFirst(item, ['image_url', 'imageUrl', 'image'])),
+            category: normalizeCategory(item.category, item.name || item.item_name),
+            posted_by: item.posted_by || {
+              id: item.userId || item.user_id,
+              full_name: item.full_name || item.username || 'Unknown User'
+            }
+          }));
+        }
+
+        if (apiItems.length === 0) {
+          apiItems = sampleFoundItems.map((item) => ({
+            ...item,
+            image: '',
+            category: normalizeCategory(item.category, item.name || item.item_name)
+          }));
+        }
+
         const sortedFoundItems = sortFoundItems(apiItems, FOUND_ITEM_SORT.LATEST);
         setFoundItems(sortedFoundItems);
         setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
       } else {
-        console.error('Dashboard found items fetch failed:', foundRes.reason?.response?.data || foundRes.reason?.message);
-        setFoundItems([]);
+        const failedReasons = foundStatusResults.map((result) =>
+          result.status === 'rejected'
+            ? (result.reason?.response?.data || result.reason?.message || 'Unknown error')
+            : null
+        ).filter(Boolean);
+        console.error('Dashboard found items fetch failed:', failedReasons);
+        setFoundItems(sampleFoundItems.map((item) => ({
+          ...item,
+          image: '',
+          category: normalizeCategory(item.category, item.name || item.item_name)
+        })));
         setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
       }
     } catch (error) {
       console.error('Error loading dashboard:', error);
-      setFoundItems([]);
+      setFoundItems(sampleFoundItems.map((item) => ({
+        ...item,
+        image: '',
+        category: normalizeCategory(item.category, item.name || item.item_name)
+      })));
       setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
     } finally {
       setLoading(false);

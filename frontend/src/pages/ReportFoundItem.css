@@ -48,17 +48,19 @@
   color: #ef4444;
 }
 
-.form-group input,
-.form-group select,
-.form-group textarea {
+.report-found-page .form-group input,
+.report-found-page .form-group select,
+.report-found-page .form-group textarea {
   border: 1px solid #d1d5db;
   border-radius: 8px;
   padding: 0.7rem 0.8rem;
   font-size: 1rem;
   font-family: inherit;
+  background-color: #ffffff;
+  color: #111827;
 }
 
-.form-group select {
+.report-found-page .form-group select {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
@@ -75,23 +77,29 @@
   background-repeat: no-repeat;
 }
 
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
+.report-found-page .form-group input:focus,
+.report-found-page .form-group select:focus,
+.report-found-page .form-group textarea:focus {
   outline: none;
-  border-color: #16a34a;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+  border-color: #0d9488;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.14);
+  background-color: #ffffff;
 }
 
-.form-group select:focus {
+.report-found-page .form-group select:focus {
   background-image:
-    linear-gradient(45deg, transparent 50%, #16a34a 50%),
-    linear-gradient(135deg, #16a34a 50%, transparent 50%),
-    linear-gradient(to right, #86efac, #86efac);
+    linear-gradient(45deg, transparent 50%, #0d9488 50%),
+    linear-gradient(135deg, #0d9488 50%, transparent 50%),
+    linear-gradient(to right, #99f6e4, #99f6e4);
 }
 
-.form-group select::-ms-expand {
+.report-found-page .form-group select::-ms-expand {
   display: none;
+}
+
+.report-found-page .form-group select option {
+  background-color: #ffffff;
+  color: #111827;
 }
 
 .form-row {
