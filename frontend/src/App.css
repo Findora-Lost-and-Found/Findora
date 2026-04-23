@@ -1051,16 +1051,30 @@ body:not(.dark-mode) .item-card .category-badge {
 }
 
 .status-clickable {
-  border: 0;
+  border: 1px solid transparent;
   cursor: pointer;
+  padding: 0.38rem 0.8rem;
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 2px 6px rgba(15, 118, 110, 0.22);
+  transition: transform 0.16s ease, filter 0.16s ease, box-shadow 0.16s ease;
+}
+
+.status-badge.active.status-clickable {
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+  border-color: #0b5f58;
+  color: #ffffff;
 }
 
 .status-clickable:hover {
-  filter: brightness(1.05);
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.28);
 }
 
 .status-clickable:focus-visible {
-  outline: 2px solid rgba(15, 23, 42, 0.35);
+  outline: 2px solid rgba(13, 148, 136, 0.45);
   outline-offset: 2px;
 }
 
@@ -2085,6 +2099,17 @@ body.dark-mode .report-lost-section h4 {
 body.dark-mode .category-badge {
   background: #164e63;
   color: #ccfbf1;
+}
+
+body.dark-mode .status-badge.active.status-clickable {
+  background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+  border-color: #2dd4bf;
+  color: #ecfeff;
+  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.28);
+}
+
+body.dark-mode .status-clickable:focus-visible {
+  outline: 2px solid rgba(45, 212, 191, 0.6);
 }
 
 body.dark-mode .quick-link-card {

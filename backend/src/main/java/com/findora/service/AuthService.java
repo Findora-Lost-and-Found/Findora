@@ -41,6 +41,7 @@ public class AuthService {
     private final ItemRepository itemRepository;
     private final NotificationRepository notificationRepository;
     private final AccessControlService accessControlService;
+    private final RoleFeatureProvider roleFeatureProvider;
     @Value("${app.dev.expose-verification-otp:false}")
     private boolean exposeVerificationOtp;
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
@@ -57,7 +58,8 @@ public class AuthService {
             EmailService emailService,
             ItemRepository itemRepository,
             NotificationRepository notificationRepository,
-            AccessControlService accessControlService) {
+            AccessControlService accessControlService,
+            RoleFeatureProvider roleFeatureProvider) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
@@ -65,6 +67,7 @@ public class AuthService {
         this.itemRepository = itemRepository;
         this.notificationRepository = notificationRepository;
         this.accessControlService = accessControlService;
+        this.roleFeatureProvider = roleFeatureProvider;
     }
 
     /**
@@ -165,12 +168,10 @@ public class AuthService {
         }
 
         user.setRole(userRole);
-        boolean requiresEmailVerification = (userRole == User.UserRole.STUDENT
-            || userRole == User.UserRole.STAFF
-            || userRole == User.UserRole.SECURITY);
+        boolean requiresEmailVerification = roleFeatureProvider.requiresEmailVerification(userRole);
         user.setIsVerified(!requiresEmailVerification);
-        // Students are auto-approved; staff/security/admin require admin approval.
-        boolean autoApproved = (userRole == User.UserRole.STUDENT);
+        // Keep existing behavior: only students are auto-approved at signup.
+        boolean autoApproved = roleFeatureProvider.isAutoApprovedAtSignup(userRole);
         user.setIsApproved(autoApproved);
         if (requiresEmailVerification) {
             user.setVerificationOtp(generateOtp());
