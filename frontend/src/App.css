@@ -134,6 +134,88 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
+.mobile-nav-buttons {
+  display: none;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.mobile-account-toggle {
+  display: none;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.ellipsis-menu-desktop {
+  display: flex;
+}
+
+.nav-account-actions {
+  display: none;
+  position: fixed;
+  left: 0.75rem;
+  right: 0.75rem;
+  top: auto;
+  width: auto;
+  padding: 0.75rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-md);
+  z-index: 950;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 0;
+}
+
+.nav-account-actions.is-open {
+  display: flex;
+  top: 65px;
+}
+
+.account-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.account-menu-item {
+  color: var(--text-primary);
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  padding: 0.75rem 0.85rem;
+  width: 100%;
+  text-align: center;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background-color 0.2s ease;
+}
+
+.account-menu-item:hover {
+  background-color: var(--bg-hover);
+}
+
+.account-menu-item-danger {
+  color: var(--brand-red, #dc2626);
+}
+
+.account-menu-item-danger:hover {
+  background-color: rgba(220, 38, 38, 0.1);
+}
+
 .nav-actions {
   display: flex;
   align-items: center;
@@ -2430,7 +2512,18 @@ body.dark-mode .theme-photo-placeholder {
 
   .mobile-nav-toggle {
     display: inline-flex;
-    margin-left: auto;
+  }
+
+  .mobile-account-toggle {
+    display: inline-flex;
+  }
+
+  .mobile-nav-buttons {
+    display: flex;
+  }
+
+  .ellipsis-menu-desktop {
+    display: none;
   }
 
   .nav-menu {
@@ -2520,10 +2613,6 @@ body.dark-mode .theme-photo-placeholder {
 
   .nav-header {
     justify-content: space-between;
-  }
-
-  .nav-actions {
-    justify-content: flex-start;
   }
 
   .btn-posts {

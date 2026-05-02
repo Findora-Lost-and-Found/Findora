@@ -10,6 +10,7 @@ const Navbar = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileAccountMenuOpen, setIsMobileAccountMenuOpen] = useState(false);
   const moreMenuRef = useRef(null);
 
   const fetchUnreadCount = async () => {
@@ -54,6 +55,7 @@ const Navbar = () => {
   useEffect(() => {
     setIsMobileMenuOpen(false);
     setIsMoreMenuOpen(false);
+    setIsMobileAccountMenuOpen(false);
   }, [location.pathname]);
 
   const handleLogout = () => {
@@ -75,10 +77,21 @@ const Navbar = () => {
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen((prev) => !prev);
     setIsMoreMenuOpen(false);
+    setIsMobileAccountMenuOpen(false);
+  };
+
+  const toggleMobileAccountMenu = () => {
+    setIsMobileAccountMenuOpen((prev) => !prev);
+    setIsMoreMenuOpen(false);
+    setIsMobileMenuOpen(false);
   };
 
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false);
+  };
+
+  const closeMobileAccountMenu = () => {
+    setIsMobileAccountMenuOpen(false);
   };
 
   const getNavLinkClassName = ({ isActive }) => (
@@ -102,25 +115,42 @@ const Navbar = () => {
           )}
 
           {user && (
-            <button
-              type="button"
-              className="mobile-nav-toggle"
-              aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-              aria-expanded={isMobileMenuOpen}
-              aria-controls="mobile-navigation"
-              onClick={toggleMobileMenu}
-            >
-              <span className="hamburger-icon" aria-hidden="true">
-                <span />
-                <span />
-                <span />
-              </span>
-            </button>
+            <div className="mobile-nav-buttons">
+              <button
+                type="button"
+                className="mobile-nav-toggle"
+                aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+                aria-expanded={isMobileMenuOpen}
+                aria-controls="mobile-navigation"
+                onClick={toggleMobileMenu}
+              >
+                <span className="hamburger-icon" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                </span>
+              </button>
+
+              <button
+                type="button"
+                className="mobile-account-toggle"
+                aria-label={isMobileAccountMenuOpen ? 'Close account menu' : 'Open account menu'}
+                aria-expanded={isMobileAccountMenuOpen}
+                aria-controls="mobile-account-menu"
+                onClick={toggleMobileAccountMenu}
+              >
+                <span className="hamburger-icon" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                </span>
+              </button>
+            </div>
           )}
         </div>
 
         {user && (
-          <div className={`nav-actions ${isMobileMenuOpen ? 'is-open' : ''}`} aria-label="Navigation actions" id="mobile-navigation">
+          <div className={`nav-actions ${isMobileMenuOpen ? 'is-open' : ''}`} aria-label="Navigation menu" id="mobile-navigation">
             <div className="nav-menu">
               <NavLink to="/dashboard" className={getNavLinkClassName} onClick={closeMobileMenu}>Dashboard</NavLink>
 
@@ -177,38 +207,56 @@ const Navbar = () => {
                 </svg>
                 {unreadCount > 0 && <span className="notification-icon-badge">{unreadCount}</span>}
               </NavLink>
-
-              <div className="ellipsis-menu" ref={moreMenuRef}>
-                <button
-                  type="button"
-                  className="nav-link ellipsis-btn"
-                  aria-haspopup="menu"
-                  aria-expanded={isMoreMenuOpen}
-                  aria-label="Open account menu"
-                  onClick={() => setIsMoreMenuOpen((prev) => !prev)}
-                >
-                  <span className="hamburger-icon" aria-hidden="true">
-                    <span />
-                    <span />
-                    <span />
-                  </span>
-                </button>
-
-                {isMoreMenuOpen && (
-                  <div className="ellipsis-dropdown" role="menu" aria-label="Account options">
-                    <Link to="/profile" className="ellipsis-item" role="menuitem" onClick={() => { closeMoreMenu(); closeMobileMenu(); }}>
-                      Profile
-                    </Link>
-                    <Link to="/settings" className="ellipsis-item" role="menuitem" onClick={() => { closeMoreMenu(); closeMobileMenu(); }}>
-                      Settings
-                    </Link>
-                    <button type="button" className="ellipsis-item ellipsis-item-danger" role="menuitem" onClick={handleLogout}>
-                      Logout
-                    </button>
-                  </div>
-                )}
-              </div>
             </div>
+          </div>
+        )}
+
+        {user && (
+          <div className={`nav-account-actions ${isMobileAccountMenuOpen ? 'is-open' : ''}`} aria-label="Account menu" id="mobile-account-menu">
+            <div className="account-menu">
+              <Link to="/profile" className="account-menu-item" onClick={closeMobileAccountMenu}>
+                Profile
+              </Link>
+              <Link to="/settings" className="account-menu-item" onClick={closeMobileAccountMenu}>
+                Settings
+              </Link>
+              <button type="button" className="account-menu-item account-menu-item-danger" onClick={() => { handleLogout(); closeMobileAccountMenu(); }}>
+                Logout
+              </button>
+            </div>
+          </div>
+        )}
+
+        {user && (
+          <div className="ellipsis-menu-desktop" ref={moreMenuRef}>
+            <button
+              type="button"
+              className="nav-link ellipsis-btn"
+              aria-haspopup="menu"
+              aria-expanded={isMoreMenuOpen}
+              aria-label="Open account menu"
+              onClick={() => setIsMoreMenuOpen((prev) => !prev)}
+            >
+              <span className="hamburger-icon" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </span>
+            </button>
+
+            {isMoreMenuOpen && (
+              <div className="ellipsis-dropdown" role="menu" aria-label="Account options">
+                <Link to="/profile" className="ellipsis-item" role="menuitem" onClick={closeMoreMenu}>
+                  Profile
+                </Link>
+                <Link to="/settings" className="ellipsis-item" role="menuitem" onClick={closeMoreMenu}>
+                  Settings
+                </Link>
+                <button type="button" className="ellipsis-item ellipsis-item-danger" role="menuitem" onClick={handleLogout}>
+                  Logout
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
