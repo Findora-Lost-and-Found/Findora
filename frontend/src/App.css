@@ -2483,19 +2483,20 @@ body.dark-mode .theme-photo-placeholder {
 
   .nav-actions {
     display: none;
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: calc(100% + 0.5rem);
+    position: fixed;
+    left: 0.75rem;
+    right: 0.75rem;
+    top: auto;
     width: auto;
     padding: 0.75rem;
     border: 1px solid var(--border-soft);
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.98);
+    border-radius: 12px;
+    background: var(--bg-surface);
     box-shadow: var(--shadow-md);
     z-index: 950;
-    max-height: calc(100vh - 110px);
+    max-height: 70vh;
     overflow-y: auto;
+    margin-top: 0.5rem;
   }
 
   .nav-actions.is-open {
@@ -2503,6 +2504,7 @@ body.dark-mode .theme-photo-placeholder {
     flex-direction: column;
     align-items: stretch;
     justify-content: flex-start;
+    top: 65px;
   }
 
   .dashboard-grid, .stats-grid {
