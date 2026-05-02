@@ -44,6 +44,8 @@ public class AuthService {
     private final RoleFeatureProvider roleFeatureProvider;
     @Value("${app.dev.expose-verification-otp:false}")
     private boolean exposeVerificationOtp;
+    @Value("${app.dev.expose-reset-otp:false}")
+    private boolean exposeResetOtp;
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private static final Random RANDOM = new Random();
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
@@ -371,7 +373,14 @@ public class AuthService {
         user.setOtpExpiry(LocalDateTime.now().plusHours(24));
         userRepository.save(user);
 
-        emailService.sendPasswordResetOtp(user.getEmail(), user.getFullName(), otp);
+        try {
+            emailService.sendPasswordResetOtp(user.getEmail(), user.getFullName(), otp);
+        } catch (RuntimeException emailError) {
+            if (!exposeResetOtp) {
+                throw emailError;
+            }
+            log.warn("Password reset email delivery failed for {}. Exposing OTP in response for development fallback.", user.getUsername(), emailError);
+        }
 
         log.info("Password reset OTP generated for user {}", user.getUsername());
         // OTP is sent via emailService.sendPasswordResetOtp above.
