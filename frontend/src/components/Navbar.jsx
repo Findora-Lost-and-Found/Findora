@@ -152,9 +152,11 @@ const Navbar = () => {
                 aria-controls="mobile-navigation"
                 onClick={toggleMobileMenu}
               >
-                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="20" height="20">
-                  <path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z" fill="currentColor" />
-                </svg>
+                <span className="hamburger-icon" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                </span>
               </button>
 
               <button
@@ -165,11 +167,9 @@ const Navbar = () => {
                 aria-controls="mobile-account-menu"
                 onClick={toggleMobileAccountMenu}
               >
-                <span className="hamburger-icon" aria-hidden="true">
-                  <span />
-                  <span />
-                  <span />
-                </span>
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                </svg>
               </button>
             </div>
           )}

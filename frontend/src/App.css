@@ -196,6 +196,11 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
+.mobile-account-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+
 .ellipsis-menu-desktop {
   display: flex;
 }
