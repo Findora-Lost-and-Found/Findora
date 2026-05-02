@@ -152,11 +152,9 @@ const Navbar = () => {
                 aria-controls="mobile-navigation"
                 onClick={toggleMobileMenu}
               >
-                <span className="hamburger-icon" aria-hidden="true">
-                  <span />
-                  <span />
-                  <span />
-                </span>
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="20" height="20">
+                  <path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z" fill="currentColor" />
+                </svg>
               </button>
 
               <button
