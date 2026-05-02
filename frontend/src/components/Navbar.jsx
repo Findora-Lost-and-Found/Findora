@@ -104,7 +104,7 @@ const Navbar = () => {
           {user && (
             <button
               type="button"
-              className="nav-link mobile-nav-toggle"
+              className="mobile-nav-toggle"
               aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
               aria-expanded={isMobileMenuOpen}
               aria-controls="mobile-navigation"

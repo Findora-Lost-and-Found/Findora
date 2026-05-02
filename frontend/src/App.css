@@ -120,6 +120,18 @@ body {
 
 .mobile-nav-toggle {
   display: none;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
 }
 
 .nav-actions {
@@ -2416,7 +2428,6 @@ body.dark-mode .theme-photo-placeholder {
 
   .mobile-nav-toggle {
     display: inline-flex;
-    flex-shrink: 0;
     margin-left: auto;
   }
 
