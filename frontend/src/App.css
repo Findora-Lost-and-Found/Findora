@@ -208,7 +208,7 @@ body {
   width: 50vw;
   max-width: 400px;
   height: auto;
-  max-height: 100vh;
+  max-height: calc(100vh - 70px);
   padding: 0.75rem;
   border-left: 1px solid var(--border-soft);
   border-radius: 0;
@@ -220,6 +220,7 @@ body {
   justify-content: flex-start;
   gap: 0;
   overflow-y: auto;
+  margin-top: 70px;
 }
 
 .nav-account-actions.is-open {
@@ -2629,7 +2630,7 @@ body.dark-mode .theme-photo-placeholder {
     width: 50vw;
     max-width: 400px;
     height: auto;
-    max-height: 100vh;
+    max-height: calc(100vh - 70px);
     padding: 0.75rem;
     border-left: 1px solid var(--border-soft);
     border-radius: 0;
@@ -2640,6 +2641,7 @@ body.dark-mode .theme-photo-placeholder {
     align-items: stretch;
     justify-content: flex-start;
     gap: 0;
+    margin-top: 70px;
   }
 
   .nav-actions.is-open {
