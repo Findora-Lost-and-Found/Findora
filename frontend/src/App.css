@@ -2688,6 +2688,30 @@ body.dark-mode .theme-photo-placeholder {
     padding: 1.5rem 1rem;
   }
 
+  .filters {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .filters input, .filters select {
+    flex: 1;
+    min-width: 120px;
+    font-size: 0.9rem;
+    padding: 0.4rem 0.6rem;
+  }
+
+  .filters .filter-select {
+    min-width: 100px;
+    flex: 1;
+  }
+
+  .filter-select-trigger {
+    min-height: 38px;
+    font-size: 0.9rem;
+    padding: 0.4rem 0.6rem;
+  }
+
   .form-row {
     grid-template-columns: 1fr;
   }
