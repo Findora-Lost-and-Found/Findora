@@ -112,6 +112,16 @@ public class SecurityService {
             itemRepository.saveAndFlush(item);
         }
 
+        // Create a SecurityTransaction record to track the handover request
+        if (supportsSecurityTransactionWorkflowColumns()) {
+            SecurityTransaction handoverTx = new SecurityTransaction();
+            handoverTx.setItemId(itemId);
+            handoverTx.setTransactionType(SecurityTransaction.TransactionType.RECEIVE);
+            handoverTx.setStatus(SecurityTransaction.TransactionStatus.REQUESTED);
+            handoverTx.setReceivedFrom(item.getUser() != null ? item.getUser().getFullName() : "Unknown Finder");
+            securityTransactionRepository.save(handoverTx);
+        }
+
         log.info("Handover requested for item {} by user {}", itemId, currentUserId);
 
         List<User> securityUsers = userRepository.findByRole(User.UserRole.SECURITY);
