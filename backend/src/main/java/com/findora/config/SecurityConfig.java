@@ -79,7 +79,8 @@ public class SecurityConfig {
             "http://0.0.0.0:5173",
             "http://0.0.0.0:5174",
             "http://0.0.0.0:5175",
-            "http://localhost:3000"
+            "http://localhost:3000",
+            "https://findora-orcin.vercel.app"
         ));
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(List.of("*"));
