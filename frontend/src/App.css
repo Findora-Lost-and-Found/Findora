@@ -2527,17 +2527,21 @@ body.dark-mode .theme-photo-placeholder {
   }
 
   .nav-menu {
+    display: flex;
     flex-direction: column;
     width: 100%;
     gap: 0.45rem;
     align-items: stretch;
     justify-content: flex-start;
+    height: auto;
   }
 
   .nav-link {
+    display: flex;
     width: 100%;
     text-align: center;
     padding: 0.7rem 0.85rem;
+    justify-content: center;
   }
 
   .ellipsis-menu {
