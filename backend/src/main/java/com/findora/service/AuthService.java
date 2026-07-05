@@ -41,8 +41,11 @@ public class AuthService {
     private final ItemRepository itemRepository;
     private final NotificationRepository notificationRepository;
     private final AccessControlService accessControlService;
+    private final RoleFeatureProvider roleFeatureProvider;
     @Value("${app.dev.expose-verification-otp:false}")
     private boolean exposeVerificationOtp;
+    @Value("${app.dev.expose-reset-otp:false}")
+    private boolean exposeResetOtp;
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private static final Random RANDOM = new Random();
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
@@ -57,7 +60,8 @@ public class AuthService {
             EmailService emailService,
             ItemRepository itemRepository,
             NotificationRepository notificationRepository,
-            AccessControlService accessControlService) {
+            AccessControlService accessControlService,
+            RoleFeatureProvider roleFeatureProvider) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
@@ -65,6 +69,7 @@ public class AuthService {
         this.itemRepository = itemRepository;
         this.notificationRepository = notificationRepository;
         this.accessControlService = accessControlService;
+        this.roleFeatureProvider = roleFeatureProvider;
     }
 
     /**
@@ -165,12 +170,10 @@ public class AuthService {
         }
 
         user.setRole(userRole);
-        boolean requiresEmailVerification = (userRole == User.UserRole.STUDENT
-            || userRole == User.UserRole.STAFF
-            || userRole == User.UserRole.SECURITY);
+        boolean requiresEmailVerification = roleFeatureProvider.requiresEmailVerification(userRole);
         user.setIsVerified(!requiresEmailVerification);
-        // Students are auto-approved; staff/security/admin require admin approval.
-        boolean autoApproved = (userRole == User.UserRole.STUDENT);
+        // Keep existing behavior: only students are auto-approved at signup.
+        boolean autoApproved = roleFeatureProvider.isAutoApprovedAtSignup(userRole);
         user.setIsApproved(autoApproved);
         if (requiresEmailVerification) {
             user.setVerificationOtp(generateOtp());
@@ -370,7 +373,14 @@ public class AuthService {
         user.setOtpExpiry(LocalDateTime.now().plusHours(24));
         userRepository.save(user);
 
-        emailService.sendPasswordResetOtp(user.getEmail(), user.getFullName(), otp);
+        try {
+            emailService.sendPasswordResetOtp(user.getEmail(), user.getFullName(), otp);
+        } catch (RuntimeException emailError) {
+            if (!exposeResetOtp) {
+                throw emailError;
+            }
+            log.warn("Password reset email delivery failed for {}. Exposing OTP in response for development fallback.", user.getUsername(), emailError);
+        }
 
         log.info("Password reset OTP generated for user {}", user.getUsername());
         // OTP is sent via emailService.sendPasswordResetOtp above.

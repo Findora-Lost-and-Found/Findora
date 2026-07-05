@@ -97,7 +97,7 @@ CREATE TABLE claims (
 -- Security Transactions Table
 CREATE TABLE security_transactions (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  security_officer_id BIGINT NOT NULL,
+  security_officer_id BIGINT,
   item_id BIGINT NOT NULL,
   claim_id BIGINT,
   transaction_type ENUM('receive', 'release') NOT NULL,

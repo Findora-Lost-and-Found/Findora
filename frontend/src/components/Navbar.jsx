@@ -1,4 +1,4 @@
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect, useRef } from 'react';
 import { notificationsAPI } from '../services/api';
@@ -6,8 +6,11 @@ import { notificationsAPI } from '../services/api';
 const Navbar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileAccountMenuOpen, setIsMobileAccountMenuOpen] = useState(false);
   const moreMenuRef = useRef(null);
 
   const fetchUnreadCount = async () => {
@@ -49,6 +52,12 @@ const Navbar = () => {
     };
   }, []);
 
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+    setIsMoreMenuOpen(false);
+    setIsMobileAccountMenuOpen(false);
+  }, [location.pathname]);
+
   const handleLogout = () => {
     const confirmed = window.confirm('Are you sure you want to logout?');
     if (!confirmed) {
@@ -64,6 +73,43 @@ const Navbar = () => {
   const closeMoreMenu = () => {
     setIsMoreMenuOpen(false);
   };
+
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen((prev) => !prev);
+    setIsMoreMenuOpen(false);
+    setIsMobileAccountMenuOpen(false);
+  };
+
+  const toggleMobileAccountMenu = () => {
+    setIsMobileAccountMenuOpen((prev) => !prev);
+    setIsMoreMenuOpen(false);
+    setIsMobileMenuOpen(false);
+  };
+
+  const closeMobileMenu = () => {
+    setIsMobileMenuOpen(false);
+  };
+
+  const closeMobileAccountMenu = () => {
+    setIsMobileAccountMenuOpen(false);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      const navContainer = document.querySelector('.nav-container');
+      if (navContainer && !navContainer.contains(event.target)) {
+        setIsMobileMenuOpen(false);
+        setIsMobileAccountMenuOpen(false);
+      }
+    };
+
+    if (isMobileMenuOpen || isMobileAccountMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [isMobileMenuOpen, isMobileAccountMenuOpen]);
 
   const getNavLinkClassName = ({ isActive }) => (
     isActive ? 'nav-link nav-link-active' : 'nav-link'
@@ -84,97 +130,146 @@ const Navbar = () => {
               <span>Findora</span>
             </Link>
           )}
+
+          {user && (
+            <div className="mobile-nav-buttons">
+              <NavLink
+                to="/notifications"
+                className={({ isActive }) => (isActive ? 'mobile-notification-btn mobile-notification-active' : 'mobile-notification-btn')}
+                aria-label="Notifications"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M12 3a6 6 0 0 0-6 6v3.6l-1.6 2.6a1 1 0 0 0 .85 1.53h13.5a1 1 0 0 0 .85-1.53L18 12.6V9a6 6 0 0 0-6-6zm0 18a3 3 0 0 0 2.82-2H9.18A3 3 0 0 0 12 21z" />
+                </svg>
+                {unreadCount > 0 && <span className="notification-badge-mobile">{unreadCount}</span>}
+              </NavLink>
+
+              <button
+                type="button"
+                className="mobile-nav-toggle"
+                aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+                aria-expanded={isMobileMenuOpen}
+                aria-controls="mobile-navigation"
+                onClick={toggleMobileMenu}
+              >
+                <span className="hamburger-icon" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                </span>
+              </button>
+
+              <button
+                type="button"
+                className="mobile-account-toggle"
+                aria-label={isMobileAccountMenuOpen ? 'Close account menu' : 'Open account menu'}
+                aria-expanded={isMobileAccountMenuOpen}
+                aria-controls="mobile-account-menu"
+                onClick={toggleMobileAccountMenu}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
 
         {user && (
-          <div className="nav-actions" aria-label="Navigation actions">
+          <div className={`nav-actions ${isMobileMenuOpen ? 'is-open' : ''}`} aria-label="Navigation menu" id="mobile-navigation">
             <div className="nav-menu">
-              <NavLink to="/dashboard" className={getNavLinkClassName}>Dashboard</NavLink>
+              <NavLink to="/dashboard" className={getNavLinkClassName} onClick={closeMobileMenu}>Dashboard</NavLink>
 
               {(user.role === 'student' || user.role === 'staff' || user.role === 'security') && (
                 <>
-                  <NavLink to="/lost-items" className={getNavLinkClassName}>My Lost Items</NavLink>
-                  <NavLink to="/found-items" className={getNavLinkClassName}>My Found Items</NavLink>
+                  <NavLink to="/lost-items" className={getNavLinkClassName} onClick={closeMobileMenu}>My Lost Items</NavLink>
+                  <NavLink to="/found-items" className={getNavLinkClassName} onClick={closeMobileMenu}>My Found Items</NavLink>
                 </>
               )}
 
               {(user.role === 'student' || user.role === 'staff') && (
                 <>
-                  <NavLink to="/my-claims" className={getNavLinkClassName}>My Claims</NavLink>
+                  <NavLink to="/my-claims" className={getNavLinkClassName} onClick={closeMobileMenu}>My Claims</NavLink>
                 </>
               )}
 
               {user.role === 'security' && (
                 <>
-                  <NavLink to="/security/receive" className={getNavLinkClassName}>Receive Item</NavLink>
-                  <NavLink to="/security/pending-claims" className={getNavLinkClassName}>Pending Claims</NavLink>
-                  <NavLink to="/security/transactions" className={getNavLinkClassName}>Transactions</NavLink>
+                  <NavLink to="/security/receive" className={getNavLinkClassName} onClick={closeMobileMenu}>Receive Item</NavLink>
+                  <NavLink to="/security/pending-claims" className={getNavLinkClassName} onClick={closeMobileMenu}>Pending Claims</NavLink>
+                  <NavLink to="/security/transactions" className={getNavLinkClassName} onClick={closeMobileMenu}>Transactions</NavLink>
                 </>
               )}
 
               {user.role === 'admin' && (
                 <>
-                  <Link to="/admin-panel" className="nav-link">Admin Panel</Link>
-                  <Link to="/admin/users" className="nav-link">Users</Link>
-                  <Link to="/admin/pending-approvals" className="nav-link">Pending Approvals</Link>
-                  <Link to="/admin/appeals" className="nav-link">Appeals</Link>
-                  <Link to="/admin/items" className="nav-link">Items</Link>
-                  <Link to="/admin/reports" className="nav-link">Reports</Link>
+                  <Link to="/admin-panel" className="nav-link" onClick={closeMobileMenu}>Admin Panel</Link>
+                  <Link to="/admin/users" className="nav-link" onClick={closeMobileMenu}>Users</Link>
+                  <Link to="/admin/pending-approvals" className="nav-link" onClick={closeMobileMenu}>Pending Approvals</Link>
+                  <Link to="/admin/appeals" className="nav-link" onClick={closeMobileMenu}>Appeals</Link>
+                  <Link to="/admin/items" className="nav-link" onClick={closeMobileMenu}>Items</Link>
+                  <Link to="/admin/reports" className="nav-link" onClick={closeMobileMenu}>Reports</Link>
                 </>
               )}
 
               {user.role === 'super_admin' && (
                 <>
-                  <Link to="/admin-panel" className="nav-link">Super Admin Panel</Link>
-                  <Link to="/admin/users" className="nav-link">Admins</Link>
-                  <Link to="/admin/pending-approvals" className="nav-link">Pending Approvals</Link>
-                  <Link to="/admin/appeals" className="nav-link">Appeals</Link>
+                  <Link to="/admin-panel" className="nav-link" onClick={closeMobileMenu}>Super Admin Panel</Link>
+                  <Link to="/admin/users" className="nav-link" onClick={closeMobileMenu}>Admins</Link>
+                  <Link to="/admin/pending-approvals" className="nav-link" onClick={closeMobileMenu}>Pending Approvals</Link>
+                  <Link to="/admin/appeals" className="nav-link" onClick={closeMobileMenu}>Appeals</Link>
                 </>
               )}
-
-              <NavLink
-                to="/notifications"
-                className={({ isActive }) => (isActive ? 'nav-link notification-icon-btn notification-icon-active' : 'nav-link notification-icon-btn')}
-                aria-label="Notifications"
-                data-tooltip="Notifications"
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                  <path d="M12 3a6 6 0 0 0-6 6v3.6l-1.6 2.6a1 1 0 0 0 .85 1.53h13.5a1 1 0 0 0 .85-1.53L18 12.6V9a6 6 0 0 0-6-6zm0 18a3 3 0 0 0 2.82-2H9.18A3 3 0 0 0 12 21z" />
-                </svg>
-                {unreadCount > 0 && <span className="notification-icon-badge">{unreadCount}</span>}
-              </NavLink>
-
-              <div className="ellipsis-menu" ref={moreMenuRef}>
-                <button
-                  type="button"
-                  className="nav-link ellipsis-btn"
-                  aria-haspopup="menu"
-                  aria-expanded={isMoreMenuOpen}
-                  aria-label="Open account menu"
-                  onClick={() => setIsMoreMenuOpen((prev) => !prev)}
-                >
-                  <span className="hamburger-icon" aria-hidden="true">
-                    <span />
-                    <span />
-                    <span />
-                  </span>
-                </button>
-
-                {isMoreMenuOpen && (
-                  <div className="ellipsis-dropdown" role="menu" aria-label="Account options">
-                    <Link to="/profile" className="ellipsis-item" role="menuitem" onClick={closeMoreMenu}>
-                      Profile
-                    </Link>
-                    <Link to="/settings" className="ellipsis-item" role="menuitem" onClick={closeMoreMenu}>
-                      Settings
-                    </Link>
-                    <button type="button" className="ellipsis-item ellipsis-item-danger" role="menuitem" onClick={handleLogout}>
-                      Logout
-                    </button>
-                  </div>
-                )}
-              </div>
             </div>
+          </div>
+        )}
+
+        {user && (
+          <div className={`nav-account-actions ${isMobileAccountMenuOpen ? 'is-open' : ''}`} aria-label="Account menu" id="mobile-account-menu">
+            <div className="account-menu">
+              <Link to="/profile" className="account-menu-item" onClick={closeMobileAccountMenu}>
+                Profile
+              </Link>
+              <Link to="/settings" className="account-menu-item" onClick={closeMobileAccountMenu}>
+                Settings
+              </Link>
+              <button type="button" className="account-menu-item account-menu-item-danger" onClick={() => { handleLogout(); closeMobileAccountMenu(); }}>
+                Logout
+              </button>
+            </div>
+          </div>
+        )}
+
+        {user && (
+          <div className="ellipsis-menu-desktop" ref={moreMenuRef}>
+            <button
+              type="button"
+              className="nav-link ellipsis-btn"
+              aria-haspopup="menu"
+              aria-expanded={isMoreMenuOpen}
+              aria-label="Open account menu"
+              onClick={() => setIsMoreMenuOpen((prev) => !prev)}
+            >
+              <span className="hamburger-icon" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </span>
+            </button>
+
+            {isMoreMenuOpen && (
+              <div className="ellipsis-dropdown" role="menu" aria-label="Account options">
+                <Link to="/profile" className="ellipsis-item" role="menuitem" onClick={closeMoreMenu}>
+                  Profile
+                </Link>
+                <Link to="/settings" className="ellipsis-item" role="menuitem" onClick={closeMoreMenu}>
+                  Settings
+                </Link>
+                <button type="button" className="ellipsis-item ellipsis-item-danger" role="menuitem" onClick={handleLogout}>
+                  Logout
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

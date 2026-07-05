@@ -16,6 +16,7 @@ const CATEGORY_OPTIONS = [
   'Purse',
   'Others'
 ];
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 
 const ReportFoundItem = () => {
   const navigate = useNavigate();
@@ -117,8 +118,30 @@ const ReportFoundItem = () => {
     setFormData((prev) => ({ ...prev, [name]: nextValue }));
   };
 
+  const validateSelectedImage = (file) => {
+    if (!file) return null;
+
+    if (!String(file.type || '').toLowerCase().startsWith('image/')) {
+      return 'Only image files are allowed.';
+    }
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      return 'Image size must be 5 MB or less.';
+    }
+
+    return null;
+  };
+
   const handleFileChange = (e) => {
-    setFormData((prev) => ({ ...prev, otherPhoto: e.target.files?.[0] || null }));
+    const selectedFile = e.target.files?.[0] || null;
+    const errorMessage = validateSelectedImage(selectedFile);
+
+    setErrors((prev) => ({ ...prev, otherPhoto: errorMessage || undefined }));
+    setFormData((prev) => ({ ...prev, otherPhoto: errorMessage ? null : selectedFile }));
+
+    if (errorMessage) {
+      e.target.value = '';
+    }
   };
 
   const handleTimeChange = (name, nextValue) => {
@@ -126,7 +149,15 @@ const ReportFoundItem = () => {
   };
 
   const handlePurseFileChange = (e) => {
-    setFormData((prev) => ({ ...prev, pursePhoto: e.target.files?.[0] || null }));
+    const selectedFile = e.target.files?.[0] || null;
+    const errorMessage = validateSelectedImage(selectedFile);
+
+    setErrors((prev) => ({ ...prev, pursePhoto: errorMessage || undefined }));
+    setFormData((prev) => ({ ...prev, pursePhoto: errorMessage ? null : selectedFile }));
+
+    if (errorMessage) {
+      e.target.value = '';
+    }
   };
 
   const validate = () => {
@@ -161,6 +192,11 @@ const ReportFoundItem = () => {
     }
 
     if (category === 'Purse') {
+      if (formData.pursePhoto) {
+        const pursePhotoError = validateSelectedImage(formData.pursePhoto);
+        if (pursePhotoError) nextErrors.pursePhoto = pursePhotoError;
+      }
+
       if (purseOption === 'with-id') {
         if (!formData.purseName.trim()) nextErrors.purseName = 'Name is required.';
         if (!formData.purseIdNumber.trim()) nextErrors.purseIdNumber = 'Student ID or NIC number is required.';
@@ -188,6 +224,10 @@ const ReportFoundItem = () => {
     if (category === 'Others') {
       if (!formData.otherItemName.trim()) nextErrors.otherItemName = 'Item name is required.';
       if (!formData.otherPhoto) nextErrors.otherPhoto = 'Photo upload is required.';
+      if (formData.otherPhoto) {
+        const otherPhotoError = validateSelectedImage(formData.otherPhoto);
+        if (otherPhotoError) nextErrors.otherPhoto = otherPhotoError;
+      }
       if (!formData.otherPrivateLocation.trim()) nextErrors.otherPrivateLocation = 'Location is required.';
       if (!formData.otherPrivateDate) nextErrors.otherPrivateDate = 'Date is required.';
       else if (isFutureDate(formData.otherPrivateDate)) nextErrors.otherPrivateDate = 'Invalid date. Please select today or a past date.';
@@ -488,6 +528,7 @@ const ReportFoundItem = () => {
               <div className="form-group">
                 <label>Upload Photo of the Purse</label>
                 <input type="file" accept="image/*" onChange={handlePurseFileChange} />
+                {errors.pursePhoto && <p className="error-text">{errors.pursePhoto}</p>}
               </div>
 
               <div className="purse-options">

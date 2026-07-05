@@ -31,7 +31,7 @@ public class SecurityTransaction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "security_officer_id", nullable = false)
+    @Column(name = "security_officer_id")
     private Long securityOfficerId;
 
     @ManyToOne(fetch = FetchType.LAZY)

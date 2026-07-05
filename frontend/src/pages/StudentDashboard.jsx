@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
 import { itemsAPI, claimsAPI, securityAPI } from '../services/api';
+import { toast } from 'react-toastify';
 import PostModal from '../components/PostModal';
 import FoundItemCard from '../components/FoundItemCard';
 import FilterSelect from '../components/FilterSelect';
@@ -67,6 +67,24 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
     sortBy: FOUND_ITEM_SORT.LATEST
   });
   const [searchInput, setSearchInput] = useState('');
+  const [handoverLoadingById, setHandoverLoadingById] = useState({});
+
+  const handleHandoverRequest = async (itemId) => {
+    try {
+      setHandoverLoadingById((prev) => ({ ...prev, [itemId]: true }));
+      await securityAPI.handoverRequest(itemId);
+      setFoundItems((prev) =>
+        prev.map((item) =>
+          item.id === itemId ? { ...item, status: 'handover_requested' } : item
+        )
+      );
+      toast.success('Handover request submitted successfully');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to submit handover request');
+    } finally {
+      setHandoverLoadingById((prev) => ({ ...prev, [itemId]: false }));
+    }
+  };
   const [visibleFoundCount, setVisibleFoundCount] = useState(INITIAL_FOUND_VISIBLE);
   const [handoverLoadingById, setHandoverLoadingById] = useState({});
 
@@ -323,18 +341,18 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
               ) : (
                 visibleFoundItems.map((item) => (
                   <FoundItemCard
-                    key={item.id}
-                    item={item}
-                    onClaim={() => {
-                      claimsAPI.create(item.id).then(() => {
-                        navigate('/my-claims');
-                      }).catch((err) => {
-                        console.error('Claim error:', err);
-                      });
-                    }}
-                    onHandover={handleHandoverRequest}
-                    handoverInProgress={!!handoverLoadingById[item.id]}
-                  />
+                      key={item.id}
+                      item={item}
+                      onClaim={() => {
+                        claimsAPI.create(item.id).then(() => {
+                          navigate('/my-claims');
+                        }).catch((err) => {
+                          console.error('Claim error:', err);
+                        });
+                      }}
+                      onHandover={handleHandoverRequest}
+                      handoverInProgress={!!handoverLoadingById[item.id]}
+                    />
                 ))
               )}
             </div>

@@ -217,6 +217,10 @@ The frontend expects the backend API at:
 
 - `http://localhost:8080/api`
 
+For production, point `VITE_API_URL` at your Railway backend:
+
+- `https://findora-production.up.railway.app/api`
+
 ### 3. Start the frontend
 
 ```bash
@@ -230,7 +234,7 @@ Frontend default URL:
 
 ### Production deployment note
 
-When deploying the frontend to Vercel, set `VITE_API_URL` in the Vercel project environment variables to your deployed backend API URL, for example `https://your-backend-domain.com/api`.
+When deploying the frontend to Vercel, set `VITE_API_URL` in the Vercel project environment variables to your Railway backend API URL, for example `https://findora-production.up.railway.app/api`.
 
 The frontend does not ship with a production backend URL by default, so this variable must be configured for deployed builds.
 

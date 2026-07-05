@@ -112,6 +112,16 @@ public class SecurityService {
             itemRepository.saveAndFlush(item);
         }
 
+        // Create a SecurityTransaction record to track the handover request
+        if (supportsSecurityTransactionWorkflowColumns()) {
+            SecurityTransaction handoverTx = new SecurityTransaction();
+            handoverTx.setItemId(itemId);
+            handoverTx.setTransactionType(SecurityTransaction.TransactionType.RECEIVE);
+            handoverTx.setStatus(SecurityTransaction.TransactionStatus.REQUESTED);
+            handoverTx.setReceivedFrom(item.getUser() != null ? item.getUser().getFullName() : "Unknown Finder");
+            securityTransactionRepository.save(handoverTx);
+        }
+
         log.info("Handover requested for item {} by user {}", itemId, currentUserId);
 
         List<User> securityUsers = userRepository.findByRole(User.UserRole.SECURITY);
@@ -215,13 +225,23 @@ public class SecurityService {
         ensureItemStatusSupportsSecurityStates();
 
         if (supportsSecurityTransactionWorkflowColumns()) {
-            SecurityTransaction tx = securityTransactionRepository.findFirstByItemIdOrderByCreatedAtDesc(itemId)
-                .orElseThrow(() -> new IllegalArgumentException("No handover request found for item"));
-
-            if (tx.getStatus() != SecurityTransaction.TransactionStatus.REQUESTED) {
-                throw new IllegalArgumentException("Handover request already processed");
+            // Try to find existing security transaction, or create one if it doesn't exist
+            var existingTx = securityTransactionRepository.findFirstByItemIdOrderByCreatedAtDesc(itemId);
+            
+            SecurityTransaction tx;
+            if (existingTx.isPresent()) {
+                tx = existingTx.get();
+                if (tx.getStatus() == SecurityTransaction.TransactionStatus.RECEIVED) {
+                    throw new IllegalArgumentException("Handover request already processed");
+                }
+            } else {
+                // Create transaction for backwards compatibility with existing items
+                tx = new SecurityTransaction();
+                tx.setItemId(itemId);
+                tx.setTransactionType(SecurityTransaction.TransactionType.RECEIVE);
+                tx.setReceivedFrom(item.getUser() != null ? item.getUser().getFullName() : "Unknown Finder");
             }
-
+            
             tx.setStatus(SecurityTransaction.TransactionStatus.RECEIVED);
             tx.setSecurityOfficerId(securityOfficerId);
             securityTransactionRepository.save(tx);
