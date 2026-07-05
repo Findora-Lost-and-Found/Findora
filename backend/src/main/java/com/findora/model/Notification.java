@@ -14,6 +14,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 /**
@@ -39,8 +41,12 @@ public class Notification {
     private User user;
 
     @Convert(converter = NotificationTypeConverter.class)
-    @Column(nullable = false)
+    @Column(name = "notification_type", nullable = false)
     private NotificationType type;
+
+    // Legacy schema compatibility: some DBs still expose a nullable `type` column.
+    @Column(name = "type")
+    private String legacyType;
 
     @Column(nullable = false, length = 200)
     private String title;
@@ -92,6 +98,7 @@ public class Notification {
 
     public void setType(NotificationType type) {
         this.type = type;
+        this.legacyType = type != null ? type.name().toLowerCase() : null;
     }
 
     public String getTitle() {
@@ -132,5 +139,11 @@ public class Notification {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    @PrePersist
+    @PreUpdate
+    private void syncLegacyTypeColumn() {
+        this.legacyType = this.type != null ? this.type.name().toLowerCase() : null;
     }
 }

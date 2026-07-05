@@ -116,14 +116,20 @@ public class SecurityService {
 
         List<User> securityUsers = userRepository.findByRole(User.UserRole.SECURITY);
         for (User securityUser : securityUsers) {
-            Notification notification = new Notification();
-            notification.setUserId(securityUser.getId());
-            notification.setType(Notification.NotificationType.SYSTEM);
-            notification.setTitle("New Handover Request");
-            notification.setMessage("New item handover request received");
-            notification.setRelatedId(itemId);
-            notification.setIsRead(false);
-            notificationRepository.save(notification);
+            try {
+                Notification notification = new Notification();
+                notification.setUserId(securityUser.getId());
+                notification.setType(Notification.NotificationType.SYSTEM);
+                notification.setTitle("New Handover Request");
+                notification.setMessage("New item handover request received");
+                notification.setRelatedId(itemId);
+                notification.setIsRead(false);
+                notificationRepository.save(notification);
+            } catch (RuntimeException e) {
+                // Do not roll back a successful handover status transition because of notification persistence.
+                log.warn("Skipping handover notification for security user {} due to persistence issue: {}",
+                    securityUser.getId(), e.getMessage());
+            }
         }
     }
 

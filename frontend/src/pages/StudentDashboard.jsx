@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
-import { itemsAPI, claimsAPI } from '../services/api';
+import { toast } from 'react-toastify';
+import { itemsAPI, claimsAPI, securityAPI } from '../services/api';
 import PostModal from '../components/PostModal';
 import FoundItemCard from '../components/FoundItemCard';
 import FilterSelect from '../components/FilterSelect';
@@ -67,6 +68,7 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
   });
   const [searchInput, setSearchInput] = useState('');
   const [visibleFoundCount, setVisibleFoundCount] = useState(INITIAL_FOUND_VISIBLE);
+  const [handoverLoadingById, setHandoverLoadingById] = useState({});
 
   const canUseItemDashboard = !!user && postRoles.includes(user.role);
 
@@ -216,6 +218,21 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
     setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
   };
 
+  const handleHandoverRequest = async (itemId) => {
+    try {
+      setHandoverLoadingById((prev) => ({ ...prev, [itemId]: true }));
+      await securityAPI.handoverRequest(itemId);
+      setFoundItems((prevItems) => prevItems.map((item) => (
+        item.id === itemId ? { ...item, status: 'handover_requested' } : item
+      )));
+      toast.success('Handover request submitted successfully');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to submit handover request');
+    } finally {
+      setHandoverLoadingById((prev) => ({ ...prev, [itemId]: false }));
+    }
+  };
+
   if (loading) {
     return <div className="loading">Loading...</div>;
   }
@@ -315,6 +332,8 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
                         console.error('Claim error:', err);
                       });
                     }}
+                    onHandover={handleHandoverRequest}
+                    handoverInProgress={!!handoverLoadingById[item.id]}
                   />
                 ))
               )}

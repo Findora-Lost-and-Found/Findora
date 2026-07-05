@@ -27,10 +27,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.findora.model.Claim;
 import com.findora.model.Item;
 import com.findora.model.ItemStatus;
 import com.findora.model.ItemType;
-import com.findora.model.Claim;
 import com.findora.model.Report;
 import com.findora.model.SecurityTransaction;
 import com.findora.model.User;
@@ -551,13 +551,8 @@ public class AdminController {
     }
 
     private Map<String, Object> toAdminItemPayload(Item item, String status) {
-        SecurityTransaction latestReceive = securityTransactionRepository
-            .findFirstByItemIdAndTransactionTypeOrderByCreatedAtDesc(item.getId(), SecurityTransaction.TransactionType.RECEIVE)
-            .orElse(null);
-
-        SecurityTransaction latestRelease = securityTransactionRepository
-            .findFirstByItemIdAndTransactionTypeOrderByCreatedAtDesc(item.getId(), SecurityTransaction.TransactionType.RELEASE)
-            .orElse(null);
+        SecurityTransaction latestReceive = safeFindLatestTransaction(item.getId(), SecurityTransaction.TransactionType.RECEIVE);
+        SecurityTransaction latestRelease = safeFindLatestTransaction(item.getId(), SecurityTransaction.TransactionType.RELEASE);
 
         Claim bestClaim = findBestClaimForItem(item.getId()).orElse(null);
         Claim linkedReleaseClaim = null;
@@ -606,6 +601,20 @@ public class AdminController {
             ? (bestClaim == null || bestClaim.getCollectedAt() == null ? null : bestClaim.getCollectedAt().toString())
             : latestRelease.getCreatedAt().toString());
         return payload;
+    }
+
+    private SecurityTransaction safeFindLatestTransaction(Long itemId, SecurityTransaction.TransactionType type) {
+        try {
+            return securityTransactionRepository
+                .findFirstByItemIdAndTransactionTypeOrderByCreatedAtDesc(itemId, type)
+                .orElse(null);
+        } catch (RuntimeException e) {
+            // Legacy DBs can miss newer security_transactions columns (claim_id/status/transaction_date).
+            // Keep admin item listing available instead of failing the entire response.
+            log.warn("Skipping {} transaction lookup for item {} due to legacy schema mismatch: {}",
+                type, itemId, e.getMessage());
+            return null;
+        }
     }
 
     private Optional<Claim> findBestClaimForItem(Long itemId) {
