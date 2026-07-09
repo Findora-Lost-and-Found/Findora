@@ -112,7 +112,7 @@ public class SecurityService {
             itemRepository.saveAndFlush(item);
         }
 
-        // Create a SecurityTransaction record to track the handover request
+        // Track the handover request even before a security officer accepts it.
         if (supportsSecurityTransactionWorkflowColumns()) {
             SecurityTransaction handoverTx = new SecurityTransaction();
             handoverTx.setItemId(itemId);

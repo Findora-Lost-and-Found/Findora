@@ -1,14 +1,15 @@
 package com.findora.config;
 
-import jakarta.annotation.PostConstruct;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 
 @Component
 @Slf4j
@@ -189,6 +190,8 @@ public class DatabaseInitializer {
                 )
                 """);
 
+            ensureSecurityTransactionsOfficerColumnNullable(stmt, resolveUsersIdColumnType(stmt));
+
             stmt.close();
             conn.close();
             
@@ -233,6 +236,21 @@ public class DatabaseInitializer {
           log.info("Creating missing unique index {} on {}({})", indexName, tableName, columnName);
           stmt.executeUpdate("CREATE UNIQUE INDEX " + indexName + " ON " + tableName + " (" + columnName + ")");
         }
+      }
+
+      private void ensureSecurityTransactionsOfficerColumnNullable(Statement stmt, String usersIdType) throws Exception {
+        ResultSet rs = stmt.executeQuery(
+          "SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS "
+            + "WHERE TABLE_SCHEMA='findora_db' AND TABLE_NAME='security_transactions' AND COLUMN_NAME='security_officer_id'"
+        );
+        if (rs.next()) {
+          String isNullable = rs.getString(1);
+          if (!"YES".equalsIgnoreCase(isNullable)) {
+            log.info("Aligning security_transactions.security_officer_id to allow null values for request-stage records");
+            stmt.executeUpdate("ALTER TABLE security_transactions MODIFY COLUMN security_officer_id " + usersIdType + " NULL");
+          }
+        }
+        rs.close();
       }
 
       private String resolveUsersIdColumnType(Statement stmt) {

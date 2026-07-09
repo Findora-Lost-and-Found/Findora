@@ -86,7 +86,6 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
     }
   };
   const [visibleFoundCount, setVisibleFoundCount] = useState(INITIAL_FOUND_VISIBLE);
-  const [handoverLoadingById, setHandoverLoadingById] = useState({});
 
   const canUseItemDashboard = !!user && postRoles.includes(user.role);
 
@@ -234,21 +233,6 @@ const StudentDashboard = ({ extraPanel = null, postRoles = DEFAULT_POST_ROLES })
     event.preventDefault();
     setFilters((prev) => ({ ...prev, search: searchInput.trim() }));
     setVisibleFoundCount(INITIAL_FOUND_VISIBLE);
-  };
-
-  const handleHandoverRequest = async (itemId) => {
-    try {
-      setHandoverLoadingById((prev) => ({ ...prev, [itemId]: true }));
-      await securityAPI.handoverRequest(itemId);
-      setFoundItems((prevItems) => prevItems.map((item) => (
-        item.id === itemId ? { ...item, status: 'handover_requested' } : item
-      )));
-      toast.success('Handover request submitted successfully');
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to submit handover request');
-    } finally {
-      setHandoverLoadingById((prev) => ({ ...prev, [itemId]: false }));
-    }
   };
 
   if (loading) {
